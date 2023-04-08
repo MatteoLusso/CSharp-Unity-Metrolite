@@ -58,17 +58,17 @@ public static class BezierCurveCalculator
         fixedLenghtCurve.Add( baseBezierCurve[ 0 ] );
 
         int i = 0;
-        int k = 1;
+        int j = 1;
 
-        while( k < baseBezierCurve.Count )
+        while( j < baseBezierCurve.Count )
         {
-            if( ( baseBezierCurve[ k ] - fixedLenghtCurve[ i ] ).magnitude < fixedLenght )
+            if( ( baseBezierCurve[ j ] - fixedLenghtCurve[ i ] ).magnitude < fixedLenght )
             {
-                k++;
+                j++;
             }
             else
             {
-                fixedLenghtCurve.Add( fixedLenghtCurve[ i ] + ( ( baseBezierCurve[ k ] - fixedLenghtCurve[ i ] ).normalized * fixedLenght ) );
+                fixedLenghtCurve.Add( fixedLenghtCurve[ i ] + ( ( baseBezierCurve[ j ] - fixedLenghtCurve[ i ] ).normalized * fixedLenght ) );
                 i++;
             }
         }
@@ -77,12 +77,12 @@ public static class BezierCurveCalculator
 
     }
 
-    public static List<Vector3> RecalcultateCurveWithLimitedAngle( List<Vector3> baseBezierCurve, float angleLimit )
+    public static List<Vector3> RecalcultateCurveWithLimitedAngle( List<Vector3> baseCurve, float angleLimit )
     {
         // I primi due punti della curva combaciano sempre, perché mi servono per calcolare la prima prevDir
         List<Vector3> limitedAngleCurve = new List<Vector3>();
-        limitedAngleCurve.Add( baseBezierCurve[ 0 ] );
-        limitedAngleCurve.Add( baseBezierCurve[ 1 ] );
+        limitedAngleCurve.Add( baseCurve[ 0 ] );
+        limitedAngleCurve.Add( baseCurve[ 1 ] );
 
         Vector3 prevDir, nextDir, leftLimitDir, rightLimitDir;
 
@@ -90,25 +90,34 @@ public static class BezierCurveCalculator
         float beta;
 
         int i = 1;
-        while( i < baseBezierCurve.Count - 1 ) {
-
+        while( i < baseCurve.Count - 1 ) {
             prevDir = limitedAngleCurve[ i ] - limitedAngleCurve[ i - 1 ];
-            nextDir = baseBezierCurve[ i + 1 ] - limitedAngleCurve[ i ];
 
-            // Se l'angolo fra la prevDir e la newDir è minore o uguale al limite imposto, allora la
-            // nuova curva deve "andare" verso la curva originale
-            beta = Vector3.SignedAngle( prevDir, nextDir, Vector3.forward );
-            if( Mathf.Abs( beta ) <= alpha ) {
-                limitedAngleCurve.Add( limitedAngleCurve[ i ] + nextDir.normalized * ( baseBezierCurve[ i + 1 ] - baseBezierCurve[ i ] ).magnitude );
+            bool inRange = false;
+
+            for( int j = i; j < baseCurve.Count - 1; j++ ) {
+                nextDir = baseCurve[ j + 1 ] - limitedAngleCurve[ i ];
+                beta = Vector3.SignedAngle( prevDir, nextDir, Vector3.forward );
+                
+                if( Mathf.Abs( beta ) <= alpha ) {
+                    limitedAngleCurve.Add( limitedAngleCurve[ i ] + nextDir.normalized * ( baseCurve[ j + 1 ] - baseCurve[ j ] ).magnitude );
+                    inRange = true;
+                    break;
+                }
             }
-            // Altrimenti continuo a costeggiarla a seconda che la curva originale vada a destra o a sinistra
-            else if( beta > 0 ) {
-                leftLimitDir = Quaternion.Euler( 0.0f, 0.0f, alpha ) * prevDir.normalized;
-                limitedAngleCurve.Add( limitedAngleCurve[ i ] + ( leftLimitDir * ( baseBezierCurve[ i + 1 ] - baseBezierCurve[ i ] ).magnitude ) );
-            }
-            else if( beta < 0 ) {
-                rightLimitDir = Quaternion.Euler( 0.0f, 0.0f, -alpha ) * prevDir.normalized;
-                limitedAngleCurve.Add( limitedAngleCurve[ i ] + ( rightLimitDir * ( baseBezierCurve[ i + 1 ] - baseBezierCurve[ i ] ).magnitude ) );
+
+            if( !inRange ) {
+                nextDir = baseCurve[ i + 1 ] - limitedAngleCurve[ i ];
+                beta = Vector3.SignedAngle( prevDir, nextDir, Vector3.forward );
+
+                if( beta > 0 ) {
+                    leftLimitDir = Quaternion.Euler( 0.0f, 0.0f, alpha ) * prevDir.normalized;
+                    limitedAngleCurve.Add( limitedAngleCurve[ i ] + ( leftLimitDir * ( baseCurve[ i + 1 ] - baseCurve[ i ] ).magnitude ) );
+                }
+                else if( beta < 0 ) {
+                    rightLimitDir = Quaternion.Euler( 0.0f, 0.0f, -alpha ) * prevDir.normalized;
+                    limitedAngleCurve.Add( limitedAngleCurve[ i ] + ( rightLimitDir * ( baseCurve[ i + 1 ] - baseCurve[ i ] ).magnitude ) );
+                }
             }
 
             i++;
