@@ -9,13 +9,16 @@ public class FullLineGenerator : MonoBehaviour
     public int sectionsNumber = 1;
     public float maxAngle = 2.5f;
     //public float fixedLenght = 5.0f;
+    public int stationsDistance = 3;
+    public Vector3 stationRotationCorrections = new Vector3( 90.0f, -90.0f, 90.0f );
+    public GameObject station;
     public int baseBezierCurvePointsNumber = 50;
     public bool tunnelParabolic = false;
     public float tunnelWidth = 5.0f;
     public float tunnelStraightness = 0.5f;
     public Material texture;
 
-    private Dictionary<string, List<LineSection>> lineMap = new Dictionary<string, List<LineSection>>();
+    public Dictionary<string, List<LineSection>> lineMap = new Dictionary<string, List<LineSection>>();
 
     private enum Direction{
         North,
@@ -46,7 +49,7 @@ public class FullLineGenerator : MonoBehaviour
             }
 
             Vector3 startingPoint = gameObject.transform.position;
-            Vector3 startingDir = Vector3.zero; // dipenederà dalla main direction della linea
+            Vector3 startingDir = Vector3.zero; // dipenderà dalla main direction della linea
             if( sections.Count > 0 ) {
                 startingPoint = sections[ sections.Count - 1 ].nextStartingPoints[ 0 ]; //Per il momento gli starting point successivi possono essere solo 1
                 startingDir =  sections[ sections.Count - 1 ].nextStartingDirections[ 0 ]; //Per il momento le starting direction successive possono essere solo 1
@@ -58,53 +61,75 @@ public class FullLineGenerator : MonoBehaviour
 
 
             LineSection section = new LineSection();
-            section.type = Type.Tunnel;
+            if( i % stationsDistance == 0 && i > 0) {
+                section.type = Type.Station;
 
-            List<Vector3> controlPoints = GenerateControlPoints( lineMainDir, startingDir, startingPoint, distanceMultiplier, controlPointsNumber, tunnelStraightness );
-            List<Vector3> baseCurve = CalculateBaseBezierCurve( controlPoints );
-            List<Vector3> fixedLenghtCurve = BezierCurveCalculator.RecalcultateCurveWithFixedLenght( baseCurve, baseCurve.Count );
-            List<Vector3> limitedAngleCurve = BezierCurveCalculator.RecalcultateCurveWithLimitedAngle( fixedLenghtCurve, maxAngle );
+                GameObject newStation = Instantiate( station, startingPoint, station.transform.rotation );
 
-            //Debug.Log( "# punti curva: " + limitedAngleCurve.Count );
-            //Debug.Log( "Lunghezza curva: " + BezierCurveCalculator.CalculateBezierCurveLenght( limitedAngleCurve ) );
+                newStation.transform.localRotation *= Quaternion.Euler( Vector3.SignedAngle( Vector3.right, startingDir, newStation.transform.forward ) + stationRotationCorrections.x, stationRotationCorrections.y, stationRotationCorrections.z );
 
-            List<List<Vector3>> rightAndLeftVertexPoints = CalculateFloorMeshVertex( limitedAngleCurve, controlPoints );
-            Mesh floorMesh = GenerateFloorMesh( limitedAngleCurve, ConvertListsToMatrix_2xM( rightAndLeftVertexPoints[ 0 ], rightAndLeftVertexPoints[ 1 ] ) );
+                List<Vector3> nextStartingDirections = new List<Vector3>();
+                nextStartingDirections.Add( startingDir );
+                section.nextStartingDirections = nextStartingDirections;
 
-            // Update dettagli LineSection 
-            section.controlsPoints = controlPoints;
-            section.bezierCurveBase = baseCurve;
-            section.bezierCurveFixedLenght = fixedLenghtCurve;
-            section.bezierCurveLimitedAngle = limitedAngleCurve;
-            section.floorRightPoints = rightAndLeftVertexPoints[ 0 ];
-            section.floorLeftPoints = rightAndLeftVertexPoints[ 1 ];
-            section.floorMesh = floorMesh;
+                List<Vector3> nextStartingPoints = new List<Vector3>();
+                nextStartingPoints.Add( newStation.transform.Find( "End" ).transform.position );
+                section.nextStartingPoints = nextStartingPoints;
 
-            GameObject floorGameObj = new GameObject( "Binari" );
-            floorGameObj.transform.parent = lineGameObj.transform;
-            floorGameObj.transform.position = Vector3.zero;
-            floorGameObj.AddComponent<MeshFilter>();
-            floorGameObj.AddComponent<MeshRenderer>();
-            floorGameObj.GetComponent<MeshFilter>().sharedMesh = floorMesh;
-            floorGameObj.GetComponent<MeshRenderer>().material = texture;
+                newStation.name = "Stazione";
+                newStation.transform.parent = sectionGameObj.transform;
 
-            int k = 0;
-            foreach( Vector3 controlPoint in controlPoints ) {
-                string controlPointName = "CP " + k;
-
-                GameObject controlPointGameObj = new GameObject( controlPointName );
-                controlPointGameObj.transform.parent = sectionGameObj.transform;
-                controlPointGameObj.transform.position = controlPoint;
-                k++;
+                section.bezierCurveLimitedAngle = new List<Vector3>{ startingPoint, newStation.transform.Find( "End" ).transform.position };
             }
+            else {
+                section.type = Type.Tunnel;
 
-            List<Vector3> nextStartingDirections = new List<Vector3>();
-            nextStartingDirections.Add( limitedAngleCurve[ limitedAngleCurve.Count - 1 ] - limitedAngleCurve[ limitedAngleCurve.Count - 2 ] );
-            section.nextStartingDirections = nextStartingDirections;
+                List<Vector3> controlPoints = GenerateControlPoints( lineMainDir, startingDir, startingPoint, distanceMultiplier, controlPointsNumber, tunnelStraightness );
+                List<Vector3> baseCurve = CalculateBaseBezierCurve( controlPoints );
+                List<Vector3> fixedLenghtCurve = BezierCurveCalculator.RecalcultateCurveWithFixedLenght( baseCurve, baseCurve.Count );
+                List<Vector3> limitedAngleCurve = BezierCurveCalculator.RecalcultateCurveWithLimitedAngle( fixedLenghtCurve, maxAngle );
 
-            List<Vector3> nextStartingPoints = new List<Vector3>();
-            nextStartingPoints.Add( limitedAngleCurve[ limitedAngleCurve.Count - 1 ] );
-            section.nextStartingPoints = nextStartingPoints;
+                //Debug.Log( "# punti curva: " + limitedAngleCurve.Count );
+                //Debug.Log( "Lunghezza curva: " + BezierCurveCalculator.CalculateBezierCurveLenght( limitedAngleCurve ) );
+
+                List<List<Vector3>> rightAndLeftVertexPoints = CalculateFloorMeshVertex( limitedAngleCurve, controlPoints );
+                Mesh floorMesh = GenerateFloorMesh( limitedAngleCurve, ConvertListsToMatrix_2xM( rightAndLeftVertexPoints[ 0 ], rightAndLeftVertexPoints[ 1 ] ) );
+
+                // Update dettagli LineSection 
+                section.controlsPoints = controlPoints;
+                section.bezierCurveBase = baseCurve;
+                section.bezierCurveFixedLenght = fixedLenghtCurve;
+                section.bezierCurveLimitedAngle = limitedAngleCurve;
+                section.floorRightPoints = rightAndLeftVertexPoints[ 0 ];
+                section.floorLeftPoints = rightAndLeftVertexPoints[ 1 ];
+                section.floorMesh = floorMesh;
+
+                GameObject floorGameObj = new GameObject( "Binari" );
+                floorGameObj.transform.parent = sectionGameObj.transform;
+                floorGameObj.transform.position = Vector3.zero;
+                floorGameObj.AddComponent<MeshFilter>();
+                floorGameObj.AddComponent<MeshRenderer>();
+                floorGameObj.GetComponent<MeshFilter>().sharedMesh = floorMesh;
+                floorGameObj.GetComponent<MeshRenderer>().material = texture;
+
+                int k = 0;
+                foreach( Vector3 controlPoint in controlPoints ) {
+                    string controlPointName = "CP " + k;
+
+                    GameObject controlPointGameObj = new GameObject( controlPointName );
+                    controlPointGameObj.transform.parent = sectionGameObj.transform;
+                    controlPointGameObj.transform.position = controlPoint;
+                    k++;
+                }
+
+                List<Vector3> nextStartingDirections = new List<Vector3>();
+                nextStartingDirections.Add( limitedAngleCurve[ limitedAngleCurve.Count - 1 ] - limitedAngleCurve[ limitedAngleCurve.Count - 2 ] );
+                section.nextStartingDirections = nextStartingDirections;
+
+                List<Vector3> nextStartingPoints = new List<Vector3>();
+                nextStartingPoints.Add( limitedAngleCurve[ limitedAngleCurve.Count - 1 ] );
+                section.nextStartingPoints = nextStartingPoints;
+            }
 
             sections.Add( section );
         }
@@ -183,6 +208,11 @@ public class FullLineGenerator : MonoBehaviour
 
                                     for( int i = 2; i < pointsNumber; i++ ) { 
 
+                                        range = new Vector2( 0.0f, 180.0f );
+                                        range.x += 90.0f * straightness;
+                                        range.y -= 90.0f * straightness;
+                                        angle = Random.Range( range.x, range.y ) - 90.0f;
+
                                         Vector3 newDir = Quaternion.Euler( 0.0f, 0.0f, angle ) * Vector3.right;
 
                                         furthermostPoint = furthermostPoint + ( newDir.normalized * pointsDistanceMultiplier );
@@ -206,6 +236,11 @@ public class FullLineGenerator : MonoBehaviour
                                     }
 
                                     for( int i = 2; i < pointsNumber; i++ ) { 
+                                        range = new Vector2( 0.0f, 180.0f );
+                                        range.x += 90.0f * straightness;
+                                        range.y -= 90.0f * straightness;
+                                        angle = Random.Range( range.x, range.y ) + 90.0f;
+
                                         Vector3 newDir = Quaternion.Euler( 0.0f, 0.0f, angle ) * Vector3.right;
 
                                         furthermostPoint = furthermostPoint + ( newDir.normalized * pointsDistanceMultiplier );
@@ -229,6 +264,11 @@ public class FullLineGenerator : MonoBehaviour
                                     }
 
                                     for( int i = 2; i < pointsNumber; i++ ) { 
+                                        range = new Vector2( 0.0f, 180.0f );
+                                        range.x += 90.0f * straightness;
+                                        range.y -= 90.0f * straightness;
+                                        angle = Random.Range( range.x, range.y ) + 0.0f;
+
                                         Vector3 newDir = Quaternion.Euler( 0.0f, 0.0f, angle ) * Vector3.right;
 
                                         furthermostPoint = furthermostPoint + ( newDir.normalized * pointsDistanceMultiplier );
@@ -252,6 +292,11 @@ public class FullLineGenerator : MonoBehaviour
                                     }
 
                                     for( int i = 2; i < pointsNumber; i++ ) { 
+                                        range = new Vector2( 0.0f, 180.0f );
+                                        range.x += 90.0f * straightness;
+                                        range.y -= 90.0f * straightness;
+                                        angle = Random.Range( range.x, range.y ) + 180.0f;
+
                                         Vector3 newDir = Quaternion.Euler( 0.0f, 0.0f, angle ) * Vector3.right;
 
                                         furthermostPoint = furthermostPoint + ( newDir.normalized * pointsDistanceMultiplier );
@@ -359,39 +404,44 @@ public class FullLineGenerator : MonoBehaviour
         foreach( string line in lineMap.Keys ) {
             foreach( LineSection segment in lineMap[ line ] ) {
 
-                for( int i = 0; i < segment.controlsPoints.Count; i++ ) {
-                    
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawSphere( segment.controlsPoints[ i ], 0.1f );
+                if( segment.type == Type.Tunnel ) {
+                    for( int i = 0; i < segment.controlsPoints.Count; i++ ) {
+                        
+                        Gizmos.color = Color.red;
+                        Gizmos.DrawSphere( segment.controlsPoints[ i ], 0.1f );
 
-                    if( i > 0 ) {
-                        Gizmos.color = Color.blue;
-                        Gizmos.DrawLine( segment.controlsPoints[ i - 1 ], segment.controlsPoints[ i ] );
-                    }
-                }
-
-                for( int i = 0; i < segment.bezierCurveBase.Count; i++ ) {
-                    
-                    if( i > 0 ) {
-                        Gizmos.color = Color.white;
-                        Gizmos.DrawLine( segment.bezierCurveBase[ i - 1 ], segment.bezierCurveBase[ i ] );
-                    }
-                }
-
-                for( int i = 0; i < segment.bezierCurveLimitedAngle.Count; i++ ) {
-                    
-                    if( i > 0 ) {
-                        Gizmos.color = Color.cyan;
-                        Gizmos.DrawLine( segment.bezierCurveFixedLenght[ i - 1 ], segment.bezierCurveFixedLenght[ i ] );
-                    
-                        Gizmos.color = Color.yellow;
-                        Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i - 1 ], segment.bezierCurveLimitedAngle[ i ] );
-
-                        if( i % 10 == 0 ) {
-                            Gizmos.color = Color.magenta;
-                            Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i ], segment.bezierCurveFixedLenght[ i ] );
+                        if( i > 0 ) {
+                            Gizmos.color = Color.blue;
+                            Gizmos.DrawLine( segment.controlsPoints[ i - 1 ], segment.controlsPoints[ i ] );
                         }
+                    }
 
+                    for( int i = 0; i < segment.bezierCurveBase.Count; i++ ) {
+                        
+                        if( i > 0 ) {
+                            Gizmos.color = Color.white;
+                            Gizmos.DrawLine( segment.bezierCurveBase[ i - 1 ], segment.bezierCurveBase[ i ] );
+                        }
+                    }
+
+                    for( int i = 0; i < segment.bezierCurveLimitedAngle.Count; i++ ) {
+                        
+                        if( i > 0 ) {
+                            Gizmos.color = Color.cyan;
+                            Gizmos.DrawLine( segment.bezierCurveFixedLenght[ i - 1 ], segment.bezierCurveFixedLenght[ i ] );
+                        
+                            Gizmos.color = Color.yellow;
+                            Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i - 1 ], segment.bezierCurveLimitedAngle[ i ] );
+
+                            if( i % 25 == 0 ) {
+                                Gizmos.color = Color.magenta;
+                                Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i ], segment.bezierCurveFixedLenght[ i ] );
+
+                                Gizmos.color = Color.green;
+                                Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i ], new Vector3( segment.bezierCurveLimitedAngle[ i ].x, segment.bezierCurveLimitedAngle[ i ].y, 0.0f ) );
+                            }
+
+                        }
                     }
                 }
             }
