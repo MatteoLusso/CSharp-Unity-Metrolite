@@ -13,9 +13,9 @@ public static class BezierCurveCalculator
 
         for(int i = 0; i < n; i++)
         {
-            long binCoeff = binomialCoeffFactorial2(n, i);
+            long binCoeff = binomialCoeffFactorial2( n, i );
 
-            bezierPoint += binCoeff * controlPoints[i].position * (Mathf.Pow((1 - t), ((n - 1) - i)) * Mathf.Pow(t, i));
+            bezierPoint += binCoeff * controlPoints[ i ].position * ( Mathf.Pow( ( 1 - t ), ( ( n - 1 ) - i ) ) * Mathf.Pow( t, i ) );
         }
 
         return bezierPoint;
@@ -48,27 +48,27 @@ public static class BezierCurveCalculator
         return distance;
     }
 
-    public static List<Vector3> RecalcultateCurveWithFixedLenght( List<Vector3> baseBezierCurve, float fixedCurvePointsNumber )
+    public static List<Vector3> RecalcultateCurveWithFixedLenght( List<Vector3> baseCurve, float fixedCurvePointsNumber )
     {
         List<Vector3> fixedLenghtCurve = new List<Vector3>();
 
-        float baseBezierCurveLenght = CalculateBezierCurveLenght( baseBezierCurve );
+        float baseBezierCurveLenght = CalculateBezierCurveLenght( baseCurve );
         float fixedLenght = baseBezierCurveLenght / fixedCurvePointsNumber;
 
-        fixedLenghtCurve.Add( baseBezierCurve[ 0 ] );
+        fixedLenghtCurve.Add( baseCurve[ 0 ] );
 
         int i = 0;
         int j = 1;
 
-        while( j < baseBezierCurve.Count )
+        while( j < baseCurve.Count )
         {
-            if( ( baseBezierCurve[ j ] - fixedLenghtCurve[ i ] ).magnitude < fixedLenght )
+            if( ( baseCurve[ j ] - fixedLenghtCurve[ i ] ).magnitude < fixedLenght )
             {
                 j++;
             }
             else
             {
-                fixedLenghtCurve.Add( fixedLenghtCurve[ i ] + ( ( baseBezierCurve[ j ] - fixedLenghtCurve[ i ] ).normalized * fixedLenght ) );
+                fixedLenghtCurve.Add( fixedLenghtCurve[ i ] + ( ( baseCurve[ j ] - fixedLenghtCurve[ i ] ).normalized * fixedLenght ) );
                 i++;
             }
         }
