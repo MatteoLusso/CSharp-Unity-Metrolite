@@ -6,6 +6,7 @@ public class TrainController : MonoBehaviour
 {
     private enum Direction
     {
+        None,
         Forward,
         Backward,
     }
@@ -14,6 +15,7 @@ public class TrainController : MonoBehaviour
     public float maxSpeed = 10.0f;
     public float acceleration = 2.5f;
     public float curveDrag = 0.1f;
+    public float drag = 0.1f;
     public float smooth = 1.0f;
 
     private Dictionary<string, List<LineSection>> lines;
@@ -24,6 +26,7 @@ public class TrainController : MonoBehaviour
     private bool goBackwardActive = false;
     private float brakingNoiseDecreasingSpeed = 2.0f;
     private float previousSpeed = 0.0f;
+    private Direction mainDir = Direction.None;
 
     private string keyLine = "Linea 1";
     private int indexPoint = 0;
@@ -262,13 +265,21 @@ public class TrainController : MonoBehaviour
                     deltaDist = Time.deltaTime * Mathf.Abs( speed );
                     Vector3 nextPoint = Vector3.zero;
 
+                    if( mainDir == Direction.Backward ) {
+
+                        Debug.Log( "Previous index: " + indexPoint );
+                        indexPoint++;
+                        Debug.Log( "Next index: " + indexPoint );
+                    }
+                    mainDir = Direction.Forward;
+
                     for( int j = indexPoint; j < points.Count; j++ ) {
                         dist = ( points[ j ] - this.transform.position ).magnitude;
 
                         if( dist > deltaDist ) {
                             indexPoint = j;
                             nextPoint = points[ j ];
-                            Debug.Log( "indexPoint: " + indexPoint );
+                            //Debug.Log( "indexPoint: " + indexPoint );
                             Debug.DrawLine( this.transform.position, nextPoint, Color.cyan, 1.0f );
                             break;
                         }
@@ -331,13 +342,20 @@ public class TrainController : MonoBehaviour
                     deltaDist = Time.deltaTime * Mathf.Abs( speed );
                     Vector3 previousPoint = Vector3.zero;
 
-                    for( int j = indexPoint - 1; j >= 0; j-- ) {
+                    if( mainDir == Direction.Forward ) {
+                        Debug.Log( "Previous index: " + indexPoint );
+                        indexPoint--;
+                        Debug.Log( "Next index: " + indexPoint );
+                    }
+                    mainDir = Direction.Backward;
+
+                    for( int j = indexPoint; j >= 0; j-- ) {
                         dist = ( points[ j ] - this.transform.position ).magnitude;
 
                         if( dist > deltaDist ) {
                             indexPoint = j;
                             previousPoint = points[ j ];
-                            Debug.Log( "indexPoint: " + indexPoint );
+                            //Debug.Log( "indexPoint: " + indexPoint );
                             Debug.DrawLine( this.transform.position, previousPoint, Color.cyan, 1.0f );
                             break;
                         }
