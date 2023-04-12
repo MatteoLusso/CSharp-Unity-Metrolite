@@ -67,24 +67,24 @@ public class TrainController : MonoBehaviour
         if( speed > 1f && !goFowardActive )
         {
             noise.Play();
-            StartCoroutine( "GoForward2" );
+            StartCoroutine( "GoForward" );
             goFowardActive = true;
         }
         else if( speed <= 1f && goFowardActive) {
             noise.Stop();
-            StopCoroutine( "GoForward2" );
+            StopCoroutine( "GoForward" );
             goFowardActive = false;
         }
 
         if( speed < -1f && !goBackwardActive )
         {
             noise.Play();
-            StartCoroutine( "GoBackward2" );
+            StartCoroutine( "GoBackward" );
             goBackwardActive = true;
         }
         else if( speed >= -1f && goBackwardActive) {
             noise.Stop();
-            StopCoroutine( "GoBackward2" );
+            StopCoroutine( "GoBackward" );
             goBackwardActive = false;
         }
 
@@ -126,132 +126,12 @@ public class TrainController : MonoBehaviour
         previousSpeed = speed;
     }
 
-    IEnumerator GoBackward()
-    {
-
-        //Debug.Log( "GoBackward started" );
-        //foreach( string lineName in lines.Keys ) {
-            List<LineSection> sections = lines[ keyLine ];
-
-            for( int i = indexSection; i >= 0; i-- ) {
-
-                //Debug.Log( "Section: " + i );
-
-                List<Vector3> coords = sections[ i ].bezierCurveLimitedAngle;
-
-                while( Mathf.Abs( speed ) < ( coords[ 0 ] - this.transform.position ).magnitude ) {
-
-                    noise.pitch = Mathf.Abs( speed ) / maxSpeed;
-                    
-                    Vector3 nearestPoint = Vector3.zero;
-
-                    for( int j = indexPoint; j >= 0; j-- ) {
-
-                        //Debug.Log( "Point: " + j );
-                        
-                        nearestPoint = coords[ j ];
-                        nearestPoint.z += heightCorrection;
-                        if( ( nearestPoint - this.transform.position ).magnitude > Mathf.Abs( speed ) && j >= 0 ) { 
-                            indexPoint = j;
-                            break;
-                        }
-                    }
-
-                    //Debug.Log( "nearestPoint: " + nearestPoint + " | this.transform.position: " + this.transform.position );
-                    Debug.DrawLine( this.transform.position, nearestPoint, Color.red, Time.deltaTime );
-
-                    this.transform.position = Vector3.Lerp( this.transform.position, nearestPoint, Mathf.Abs( speed ) * Time.deltaTime );
-                    //float losedSpeed = curveDrag * Vector3.Angle( this.transform.right, nearestPoint - this.transform.position ) / 360.0f;
-                    this.transform.right = Vector3.Lerp( this.transform.right, this.transform.position - nearestPoint, Mathf.Abs( speed ) * Time.deltaTime );
-                    //speed += losedSpeed;
-
-                    yield return new WaitForEndOfFrame();
-                }
-
-                if( i >= 0 ) {
-                    indexSection--;
-                    indexPoint = sections[ indexSection ].bezierCurveLimitedAngle.Count - 1;
-                }
-            }
-        //}
-    }
-
     IEnumerator GoForward()
     {
-        //Debug.Log( "GoForward started" );
         //foreach( string lineName in lines.Keys ) {
             List<LineSection> sections = lines[ keyLine ];
 
-            for( int i = indexSection; i < sections.Count; i++ ) {
-
-                //Debug.Log( "Section: " + i );
-
-                List<Vector3> coords = sections[ i ].bezierCurveLimitedAngle;
-                float sectionLength = 0.0f;
-                for( int k = 1; k < coords.Count; k++ ) {
-                    sectionLength += ( coords[ k ] - coords[ k - 1 ] ).magnitude;
-                }
-                
-                float segmentLength = sectionLength / coords.Count;
-
-                while( Mathf.Abs( speed ) < ( coords[ coords.Count - 1 ] - this.transform.position ).magnitude ) {
-                    Debug.Log( "Section: " + i );
-                    Debug.Log( "Mathf.Abs( speed ) : " + segmentLength / Mathf.Abs( speed )  + " ( coords[ coords.Count - 1 ] - this.transform.position ).magnitude: " + ( coords[ coords.Count - 1 ] - this.transform.position ).magnitude );
-
-                    noise.pitch = Mathf.Abs( speed ) / maxSpeed;
-                    
-                    Vector3 nearestPoint = Vector3.zero;
-
-                    //int nextIndex = indexPoint + ( int )( segmentLength * Mathf.Abs( speed ) * Time.deltaTime );
-                    //if( nextIndex >= coords.Count ) {
-                        //break;
-                    //}
-                    //indexPoint = nextIndex;
-                    //nearestPoint = coords[ nextIndex ];
-
-
-                    for( int j = indexPoint; j < coords.Count; j++ ) {
-
-                        Debug.Log( "Point: " + j );
-                        
-                        nearestPoint = coords[ j ];
-                        nearestPoint.z += heightCorrection;
-                        if( ( nearestPoint - this.transform.position ).magnitude > Mathf.Abs( speed ) ) { 
-                            indexPoint = j;
-                            break;
-                        }
-                    }
-
-                    //Debug.Log( "nearestPoint: " + nearestPoint );
-                    //Debug.DrawLine( this.transform.position, nearestPoint, Color.green, Time.deltaTime );
-
-                    //while( ( nearestPoint - this.transform.position ).magnitude > Mathf.Abs( speed ) ) {
-
-                        //this.transform.position = Vector3.Lerp( this.transform.position, nearestPoint, ( Mathf.Abs( speed ) / segmentLength ) * Time.deltaTime );
-                        this.transform.position = Vector3.Lerp( this.transform.position, nearestPoint, Mathf.Abs( speed ) * Time.deltaTime );
-                        //this.transform.position = Vector3.Lerp( this.transform.position, this.transform.position + ( nearestPoint - this.transform.position ).normalized, Mathf.Abs( speed ) * Time.deltaTime );
-                        //float losedSpeed = curveDrag * Vector3.Angle( this.transform.right, nearestPoint - this.transform.position ) / 360.0f;
-                        this.transform.right = Vector3.Lerp( this.transform.right, nearestPoint - this.transform.position, Mathf.Abs( speed ) * Time.deltaTime );
-                        //speed -= losedSpeed;
-
-
-                        yield return new WaitForEndOfFrame();
-
-                    //}
-                }
-
-                indexSection++;
-                indexPoint = 0;
-            }
-        //}
-    }
-
-
-    IEnumerator GoForward2()
-    {
-        //foreach( string lineName in lines.Keys ) {
-            List<LineSection> sections = lines[ keyLine ];
-
+            // Ciclo le sezioni della linea in avanti
             for( int i = indexSection; i < sections.Count; i++ ) {
 
                 Debug.Log( "Section: " + i );
@@ -260,59 +140,60 @@ public class TrainController : MonoBehaviour
                 
                 float deltaDist = 0.0f;
                 float dist = 0.0f;
+                // Finché non sono abbastanza vicino all'ultimo punto della curva (mi sto muovendo in avanti, quindi "navigo" la lista dei punti in avanti)
+                // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
                 while( ( points[ points.Count - 1 ] - this.transform.position ).magnitude > deltaDist ) {
-                    
+                    // Distanza che sarà percorsa in un frame
                     deltaDist = Time.deltaTime * Mathf.Abs( speed );
                     Vector3 nextPoint = Vector3.zero;
 
+                    // Aggiornamento del movimento attuale del vagone (in questo caso avanti)
                     if( mainDir == Direction.Backward ) {
-
-                        Debug.Log( "Previous index: " + indexPoint );
-                        indexPoint++;
-                        Debug.Log( "Next index: " + indexPoint );
+                        // Se il vagone stava andando indietro, allora devo puntare all'index successivo, ma se sono
+                        // già all'ultimo punto della curva passo alla sezione succcessiva
+                        if( indexPoint + 1 >= points.Count ) {
+                            break;
+                        }
+                        else {
+                            indexPoint++;
+                        }
                     }
                     mainDir = Direction.Forward;
 
+                    // Ricerca del punto della curva successivo più lontano della distanza (per frame) percorsa dal vagone, che diventerà
+                    // il punto successivo verso cui si dirigerà il vagone
                     for( int j = indexPoint; j < points.Count; j++ ) {
                         dist = ( points[ j ] - this.transform.position ).magnitude;
 
                         if( dist > deltaDist ) {
                             indexPoint = j;
                             nextPoint = points[ j ];
-                            //Debug.Log( "indexPoint: " + indexPoint );
-                            Debug.DrawLine( this.transform.position, nextPoint, Color.cyan, 1.0f );
+
+                            //Debug.DrawLine( this.transform.position, nextPoint, Color.cyan, 1.0f );
                             break;
                         }
                     }
                     
-                    //int k = 0;
+                    // Posizione e rotazione iniziale del vagone per punto della curva
                     Vector3 nextDir = nextPoint - this.transform.position;
                     Vector3 startDir = this.transform.right;
                     Vector3 startPos = this.transform.position;
                     float sumDist = 0.0f;
-                    while( sumDist < ( nextPoint - this.transform.position ).magnitude ) {
-                        //Debug.Log( "deltaDist: " + deltaDist + " - dist: " + ( nextPoint - this.transform.position ).magnitude );
+                    Debug.DrawLine( startPos, nextPoint, Color.green, 1.0f );
+                    while( sumDist < ( nextPoint - startPos ).magnitude ) {
 
-                        //k++;
-                        
-                        //Vector3 nextDir = nextPoint - this.transform.position;
-                        sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                        //Debug.Log( "Frame: " + k + " - t: " +  deltaDist / dist );
-                        //this.transform.position += nextDir.normalized * deltaDist;
-
+                        // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
                         this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist ); 
-
-                        //Debug.DrawRay( this.transform.position, this.transform.right * 20, Color.red, 3.0f );
-                        //Debug.Log( "this.transform.right (before): " + this.transform.right );
-                        //this.transform.right = Vector3.Lerp( startDir, nextDir, sumDist / dist );
-                        //Debug.DrawRay( this.transform.position, this.transform.right * 20, Color.green, 3.0f );
-                        //Debug.Log( "this.transform.right (after): " + this.transform.right );
-                        this.transform.right = nextDir;
+                        this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
 
                         noise.pitch = Mathf.Abs( speed ) / maxSpeed;
 
-                        yield return new WaitForFixedUpdate();
+                        Debug.DrawRay( this.transform.position, this.transform.right * 20, Color.red, 1.0f );
+                        Debug.DrawLine( this.transform.position, nextPoint, Color.cyan, Time.deltaTime );
+
+                        sumDist += Time.deltaTime * Mathf.Abs( speed );
+
+                        yield return new WaitForEndOfFrame();
                     }
                 }
 
@@ -324,11 +205,12 @@ public class TrainController : MonoBehaviour
         Debug.Log( "GoFoward ended" );
     }
 
-    IEnumerator GoBackward2()
+    IEnumerator GoBackward()
     {
         //foreach( string lineName in lines.Keys ) {
             List<LineSection> sections = lines[ keyLine ];
 
+            // Ciclo le sezioni della linea all'indietro
             for( int i = indexSection; i >= 0; i-- ) {
 
                 Debug.Log( "Section: " + i );
@@ -337,61 +219,60 @@ public class TrainController : MonoBehaviour
                 
                 float deltaDist = 0.0f;
                 float dist = 0.0f;
+                // Finché non sono abbastanza vicino al primo punto della curva (mi sto muovendo all'indietro, quindi "navigo" la lista dei punti all'indietro)
+                // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
                 while( ( points[ 0 ] - this.transform.position ).magnitude > deltaDist ) {
-                    
+                    // Distanza che sarà percorsa in un frame
                     deltaDist = Time.deltaTime * Mathf.Abs( speed );
                     Vector3 previousPoint = Vector3.zero;
 
+                    // Aggiornamento del movimento attuale del vagone (in questo caso indietro)
                     if( mainDir == Direction.Forward ) {
-                        Debug.Log( "Previous index: " + indexPoint );
-                        indexPoint--;
-                        Debug.Log( "Next index: " + indexPoint );
+                        // Se il vagone stava andando avanti, allora devo puntare all'index precedente, ma se sono
+                        // già al primo punto della curva passo alla sezione precedente
+                        if( indexPoint - 1 < 0 ) {
+                            break;
+                        }
+                        else {
+                            indexPoint--;
+                        }
                     }
                     mainDir = Direction.Backward;
 
+                    // Ricerca del punto della curva precedente più lontano della distanza (per frame) percorsa dal vagone, che diventerà
+                    // il punto successivo verso cui si dirigerà il vagone
                     for( int j = indexPoint; j >= 0; j-- ) {
                         dist = ( points[ j ] - this.transform.position ).magnitude;
 
                         if( dist > deltaDist ) {
                             indexPoint = j;
                             previousPoint = points[ j ];
-                            //Debug.Log( "indexPoint: " + indexPoint );
-                            Debug.DrawLine( this.transform.position, previousPoint, Color.cyan, 1.0f );
+
+                            //Debug.DrawLine( this.transform.position, previousPoint, Color.cyan, 1.0f );
                             break;
                         }
                     }
                     
-                    //int k = 0;
+                    // Posizione e rotazione iniziale del vagone per punto della curva
                     Vector3 previousDir = this.transform.position - previousPoint;
                     Vector3 startDir = this.transform.right;
                     Vector3 startPos = this.transform.position;
                     float sumDist = 0.0f;
-                    while( sumDist < ( previousPoint - this.transform.position ).magnitude ) {
-                        //Debug.Log( "deltaDist: " + deltaDist + " - dist: " + ( previousPoint - this.transform.position ).magnitude );
+                    while( sumDist < ( previousPoint - startPos ).magnitude ) {
 
-                        //k++;
-                        
-                        //Vector3 nextDir = nextPoint - this.transform.position;
-                        sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                        //Debug.Log( "Frame: " + k + " - t: " +  deltaDist / dist );
-                        //this.transform.position += nextDir.normalized * deltaDist;
-
+                        // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
                         this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
-
-                        //Debug.DrawRay( this.transform.position, this.transform.right * 20, Color.red, 3.0f );
-                        //Debug.Log( "this.transform.right (before): " + this.transform.right );
-                        //this.transform.right = Vector3.Lerp( startDir, previousDir, sumDist / dist );
-                        //Debug.DrawRay( this.transform.position, this.transform.right * 20, Color.green, 3.0f );
-                        //Debug.Log( "this.transform.right (after): " + this.transform.right );
-                        this.transform.right = previousDir;
+                        this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
 
                         noise.pitch = Mathf.Abs( speed ) / maxSpeed;
+
+                        sumDist += Time.deltaTime * Mathf.Abs( speed );
 
                         yield return new WaitForFixedUpdate();
                     }
                 }
 
+                // Aggiornamento index una volta raggiunto il punto iniziale della curva
                 if( i >= 0 ) {
                     indexSection--;
                     indexPoint = sections[ indexSection ].bezierCurveLimitedAngle.Count - 1;
