@@ -36,13 +36,14 @@ public static class BezierCurveCalculator
         return bezierPoint;
     }
 
-    public static float CalculateBezierCurveLenght( List<Vector3> baseBezierCurve )
+    public static float CalculateCurveLenght( List<Vector3> curve )
     {
         float distance = 0.0f;
 
-        for( int i = 0; i < baseBezierCurve.Count - 1; i++ )
+        for( int i = 0; i < curve.Count - 1; i++ )
         {
-            distance = Vector3.Distance( baseBezierCurve[ i ], baseBezierCurve[ i + 1 ] );
+            // ERRORE, per ora lascio così per altri test
+            distance += Vector3.Distance( curve[ i ], curve[ i + 1 ] );
         }
 
         return distance;
@@ -52,7 +53,7 @@ public static class BezierCurveCalculator
     {
         List<Vector3> fixedLenghtCurve = new List<Vector3>();
 
-        float baseBezierCurveLenght = CalculateBezierCurveLenght( baseCurve );
+        float baseBezierCurveLenght = CalculateCurveLenght( baseCurve );
         float fixedLenght = baseBezierCurveLenght / fixedCurvePointsNumber;
 
         fixedLenghtCurve.Add( baseCurve[ 0 ] );
