@@ -151,10 +151,7 @@ public class TrainController : MonoBehaviour
                     if( mainDir == Direction.Backward ) {
                         // Se il vagone stava andando indietro, allora devo puntare all'index successivo, ma se sono
                         // già all'ultimo punto della curva passo alla sezione succcessiva
-                        if( indexPoint + 1 >= points.Count ) {
-                            break;
-                        }
-                        else {
+                        if( indexPoint + 1 < points.Count ) {
                             indexPoint++;
                         }
                     }
@@ -165,14 +162,15 @@ public class TrainController : MonoBehaviour
                     for( int j = indexPoint; j < points.Count; j++ ) {
                         dist = ( points[ j ] - this.transform.position ).magnitude;
 
+                        indexPoint = j;
+                        nextPoint = points[ j ];
                         if( dist > deltaDist ) {
-                            indexPoint = j;
-                            nextPoint = points[ j ];
-
                             //Debug.DrawLine( this.transform.position, nextPoint, Color.cyan, 1.0f );
                             break;
                         }
                     }
+
+                    Debug.Log( "indexPoint: " + indexPoint );
                     
                     // Posizione e rotazione iniziale del vagone per punto della curva
                     Vector3 nextDir = nextPoint - this.transform.position;
@@ -230,10 +228,7 @@ public class TrainController : MonoBehaviour
                     if( mainDir == Direction.Forward ) {
                         // Se il vagone stava andando avanti, allora devo puntare all'index precedente, ma se sono
                         // già al primo punto della curva passo alla sezione precedente
-                        if( indexPoint - 1 < 0 ) {
-                            break;
-                        }
-                        else {
+                        if( indexPoint - 1 >= 0 ) {
                             indexPoint--;
                         }
                     }
@@ -244,14 +239,14 @@ public class TrainController : MonoBehaviour
                     for( int j = indexPoint; j >= 0; j-- ) {
                         dist = ( points[ j ] - this.transform.position ).magnitude;
 
+                        indexPoint = j;
+                        previousPoint = points[ j ];
                         if( dist > deltaDist ) {
-                            indexPoint = j;
-                            previousPoint = points[ j ];
-
-                            //Debug.DrawLine( this.transform.position, previousPoint, Color.cyan, 1.0f );
                             break;
                         }
                     }
+
+                    Debug.Log( "indexPoint: " + indexPoint );
                     
                     // Posizione e rotazione iniziale del vagone per punto della curva
                     Vector3 previousDir = this.transform.position - previousPoint;
