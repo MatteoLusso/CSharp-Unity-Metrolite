@@ -78,21 +78,31 @@ public static class BezierCurveCalculator
 
     }
 
-    public static List<Vector3> RecalcultateCurveWithLimitedAngle( List<Vector3> baseCurve, float angleLimit )
+    public static List<Vector3> RecalcultateCurveWithLimitedAngle( List<Vector3> baseCurve, float angleLimit, Vector3 startingDir )
     {
-        // I primi due punti della curva combaciano sempre, perché mi servono per calcolare la prima prevDir
         List<Vector3> limitedAngleCurve = new List<Vector3>();
+        int i;
         limitedAngleCurve.Add( baseCurve[ 0 ] );
-        limitedAngleCurve.Add( baseCurve[ 1 ] );
+        if( startingDir == Vector3.zero ) {
+            limitedAngleCurve.Add( baseCurve[ 1 ] );
+            i = 1;
+        }
+        else {
+            i = 0;
+        }
 
         Vector3 prevDir, nextDir, leftLimitDir, rightLimitDir;
 
         float alpha = angleLimit;
         float beta;
 
-        int i = 1;
         while( i < baseCurve.Count - 1 ) {
-            prevDir = limitedAngleCurve[ i ] - limitedAngleCurve[ i - 1 ];
+            if( i == 0 ) {
+                prevDir = startingDir;
+            }
+            else {
+                prevDir = limitedAngleCurve[ i ] - limitedAngleCurve[ i - 1 ];
+            }
 
             bool inRange = false;
 
