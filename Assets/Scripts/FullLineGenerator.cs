@@ -19,6 +19,7 @@ public class FullLineGenerator : MonoBehaviour
     public float tunnelWidth = 5.0f;
     public float tunnelStraightness = 0.5f;
     public Material texture;
+    public float deltaLText = 1.0f;
 
     public Dictionary<string, List<LineSection>> lineMap = new Dictionary<string, List<LineSection>>();
 
@@ -373,21 +374,26 @@ public class FullLineGenerator : MonoBehaviour
 
     private Mesh GenerateFloorMesh( List<Vector3> curve, Vector3[ , ] vertMatrix )
     {
+        float curveLenght = BezierCurveCalculator.CalculateCurveLenght( curve );
+        float deltaLCurve = curveLenght / curve.Count;
+
         Mesh floorMesh = new Mesh();
 
         Vector3[] vertices = new Vector3[ curve.Count * 2 ];
         int[] edges = new int[( curve.Count - 1) * 6 ];
         Vector2[] uvs = new Vector2[ vertices.Length ];
 
-        float curveLenght = BezierCurveCalculator.CalculateCurveLenght( curve );
-
         for( int i = 0; i < curve.Count; i++ )
         {
             vertices[ i * 2 ] = vertMatrix[ 0, i ];
             vertices[ ( i * 2 ) + 1 ] = vertMatrix[ 1, i ];
 
-            float meshPercent = curveLenght * i;
-            //float meshPercent = ( i / ( float )( vertices.Length - 1 ) );
+            // deltaLText rappresenta la distanza della curva che una singola ripetizione di texture deve coprire,
+            // considerando la lunghezza dell'intera curva e dividendola per il numero di punti ho la 
+            // distanza (costante) fra ogni punto deltaLCurve. In questo modo, dividendo deltaLCurve per deltaLText
+            // ottengo quante volte la texture deve ripetersi per ogni segmento e moltiplico per i in modo da mappare la texture
+            // sulla curva indipendentemente dalla lunghezza della stessa.
+            float meshPercent = i * ( float )( deltaLCurve / deltaLText );
             uvs[ ( i * 2 ) ] = new Vector2( meshPercent, 0 );
             uvs[ ( i * 2 ) + 1 ] = new Vector2( meshPercent, 1 );
 
