@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class FullLineGenerator : MonoBehaviour
 {
+    public GameObject train;
+    public float trainHeightFromGround = 1.5f;
     public int controlPointsNumber = 3;
     public int distanceMultiplier = 25;
     public int sectionsNumber = 1;
@@ -87,7 +89,7 @@ public class FullLineGenerator : MonoBehaviour
                 List<Vector3> controlPoints = GenerateControlPoints( lineMainDir, startingDir, startingPoint, distanceMultiplier, controlPointsNumber, tunnelStraightness );
                 List<Vector3> baseCurve = CalculateBaseBezierCurve( controlPoints );
                 List<Vector3> fixedLenghtCurve = BezierCurveCalculator.RecalcultateCurveWithFixedLenght( baseCurve, baseCurve.Count );
-                List<Vector3> limitedAngleCurve = BezierCurveCalculator.RecalcultateCurveWithLimitedAngle( fixedLenghtCurve, maxAngle );
+                List<Vector3> limitedAngleCurve = BezierCurveCalculator.RecalcultateCurveWithLimitedAngle( fixedLenghtCurve, maxAngle, startingDir );
 
                 //Debug.Log( "# punti curva: " + limitedAngleCurve.Count );
                 //Debug.Log( "Lunghezza curva: " + BezierCurveCalculator.CalculateBezierCurveLenght( limitedAngleCurve ) );
@@ -133,6 +135,15 @@ public class FullLineGenerator : MonoBehaviour
 
             sections.Add( section );
         }
+
+        InstantiateTrain();
+    }
+
+    private void InstantiateTrain() {
+        Vector3 trainPos = lineMap[ "Linea 1" ][ 0 ].bezierCurveLimitedAngle[ 0 ];
+        trainPos.z += trainHeightFromGround;
+        Vector3 trainDir = lineMap[ "Linea 1" ][ 0 ].bezierCurveLimitedAngle[ 1 ] - lineMap[ "Linea 1" ][ 0 ].bezierCurveLimitedAngle[ 0 ];
+        Instantiate( train, trainPos, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, trainDir, Vector3.forward ) ) );
     }
 
     private Vector3[,] ConvertListsToMatrix_2xM( List<Vector3> up, List<Vector3> down )
@@ -368,7 +379,7 @@ public class FullLineGenerator : MonoBehaviour
         int[] edges = new int[( curve.Count - 1) * 6 ];
         Vector2[] uvs = new Vector2[ vertices.Length ];
 
-        float curveLenght = BezierCurveCalculator.CalculateBezierCurveLenght( curve );
+        float curveLenght = BezierCurveCalculator.CalculateCurveLenght( curve );
 
         for( int i = 0; i < curve.Count; i++ )
         {
@@ -407,20 +418,12 @@ public class FullLineGenerator : MonoBehaviour
                 if( segment.type == Type.Tunnel ) {
                     for( int i = 0; i < segment.controlsPoints.Count; i++ ) {
                         
-                        Gizmos.color = Color.red;
-                        Gizmos.DrawSphere( segment.controlsPoints[ i ], 0.1f );
+                        Gizmos.color = Color.blue;
+                        Gizmos.DrawCube( segment.controlsPoints[ i ], Vector3.one );
 
                         if( i > 0 ) {
                             Gizmos.color = Color.blue;
                             Gizmos.DrawLine( segment.controlsPoints[ i - 1 ], segment.controlsPoints[ i ] );
-                        }
-                    }
-
-                    for( int i = 0; i < segment.bezierCurveBase.Count; i++ ) {
-                        
-                        if( i > 0 ) {
-                            Gizmos.color = Color.white;
-                            Gizmos.DrawLine( segment.bezierCurveBase[ i - 1 ], segment.bezierCurveBase[ i ] );
                         }
                     }
 
@@ -433,17 +436,23 @@ public class FullLineGenerator : MonoBehaviour
                             Gizmos.color = Color.yellow;
                             Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i - 1 ], segment.bezierCurveLimitedAngle[ i ] );
 
-                            if( i % 25 == 0 ) {
+                            if( i % ( int )( baseBezierCurvePointsNumber * 0.1f ) == 0 ) {
                                 Gizmos.color = Color.magenta;
                                 Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i ], segment.bezierCurveFixedLenght[ i ] );
-
-                                Gizmos.color = Color.green;
-                                Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i ], new Vector3( segment.bezierCurveLimitedAngle[ i ].x, segment.bezierCurveLimitedAngle[ i ].y, 0.0f ) );
                             }
-
                         }
                     }
                 }
+                Vector3 firstDir = segment.bezierCurveLimitedAngle[ 1 ] - segment.bezierCurveLimitedAngle[ 0 ];
+                Vector3 lastDir = segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 1 ] - segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 2 ];
+            
+                Gizmos.color = Color.red;
+                Gizmos.DrawRay( segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 1 ] - Vector3.forward, lastDir );
+                Gizmos.DrawRay( segment.bezierCurveLimitedAngle[ 0 ] - Vector3.forward, -firstDir );
+                Gizmos.DrawRay( segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 1 ] - Vector3.forward, Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * lastDir );
+                Gizmos.DrawRay( segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 1 ] - Vector3.forward, Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * lastDir );
+
+
             }
         }
     }   
