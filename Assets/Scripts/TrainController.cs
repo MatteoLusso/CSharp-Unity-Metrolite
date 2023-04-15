@@ -12,11 +12,11 @@ public class TrainController : MonoBehaviour
     }
 
     public float speed = 0.0f;
-    public float maxSpeed = 10.0f;
-    public float acceleration = 2.5f;
+    public float maxSpeed = 250.0f;
+    public float acceleration = 50.0f;
+    public float deceleration = 75.0f;
     public float curveDrag = 0.1f;
-    public float drag = 0.1f;
-    public float smooth = 1.0f;
+    public float drag = 5.0f;
 
     private Dictionary<string, List<LineSection>> lines;
     private AudioSource noise;
@@ -24,7 +24,7 @@ public class TrainController : MonoBehaviour
 
     private bool goFowardActive = false;
     private bool goBackwardActive = false;
-    private float brakingNoiseDecreasingSpeed = 2.0f;
+    private float brakingNoiseDecreasingSpeed = 5.0f;
     private float previousSpeed = 0.0f;
     private Direction mainDir = Direction.None;
 
@@ -59,71 +59,101 @@ public class TrainController : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
+        previousSpeed = speed;
         HandleMovement();
         HandleBrakingNoise();
     }
 
     private void HandleMovement() {
-        if( speed > 1f && !goFowardActive )
+        if( speed > 1.0f && !goFowardActive )
         {
             noise.Play();
             StartCoroutine( "GoForward" );
             goFowardActive = true;
         }
-        else if( speed <= 1f && goFowardActive) {
+        else if( speed <= 1.0f && goFowardActive) {
             noise.Stop();
             StopCoroutine( "GoForward" );
             goFowardActive = false;
         }
 
-        if( speed < -1f && !goBackwardActive )
+        if( speed < -1.0f && !goBackwardActive )
         {
             noise.Play();
             StartCoroutine( "GoBackward" );
             goBackwardActive = true;
         }
-        else if( speed >= -1f && goBackwardActive) {
+        else if( speed >= -1.0f && goBackwardActive) {
             noise.Stop();
             StopCoroutine( "GoBackward" );
             goBackwardActive = false;
         }
 
-        if(Input.GetKey( KeyCode.D ) ) {
-            speed = Mathf.Lerp( speed, speed + acceleration, smooth * Time.fixedDeltaTime );
+        if( Input.GetKey( KeyCode.D ) ) {
+
+            if( mainDir == Direction.Forward || mainDir == Direction.None ) {
+                speed += acceleration * Time.fixedDeltaTime;
+            }
+            else if( mainDir == Direction.Backward ) {
+                // In questo caso la speed è negativa
+                speed += deceleration * Time.fixedDeltaTime;
+            }
+
             if( speed > maxSpeed ) {
                 speed = maxSpeed;
             }
         }
-        if(Input.GetKey( KeyCode.A ) ) {
-             speed = Mathf.Lerp( speed, speed - acceleration, smooth * Time.fixedDeltaTime );
+        if( Input.GetKey( KeyCode.A ) ) {
+
+            if( mainDir == Direction.Backward || mainDir == Direction.None ) {
+                speed -= acceleration * Time.fixedDeltaTime;
+            }
+            else if( mainDir == Direction.Forward ) {
+                // In questo caso la speed è positiva
+                speed -= deceleration * Time.fixedDeltaTime;
+            }
+
             if( speed < -maxSpeed ) {
                 speed = -maxSpeed;
             }
         }
+
+        if( Mathf.Abs( speed ) >= acceleration * Time.fixedDeltaTime ) {
+            if( mainDir == Direction.Forward ) {
+                speed -= drag * Time.deltaTime;
+            }
+            else if( mainDir == Direction.Backward ) {
+                speed += drag * Time.deltaTime;
+            }
+        }
+        else if( Mathf.Abs( speed ) <= acceleration * Time.fixedDeltaTime ) {
+            speed = 0.0f;
+        }
     }
 
     private void HandleBrakingNoise() {
-        if( Mathf.Abs( previousSpeed ) > Mathf.Abs( speed ) ) {
 
+        if( ( Input.GetKey( KeyCode.D ) && mainDir == Direction.Backward ) || ( Input.GetKey( KeyCode.A ) && mainDir == Direction.Forward ) ) { 
+
+            Debug.Log( "Braking" );
             if( !braking.isPlaying ) {
-                Debug.Log( "Braking" );
                 braking.volume = Mathf.Abs( speed ) / maxSpeed;
                 braking.time = 0.0f;
                 braking.Play();
             }
             else {
-                braking.volume = Mathf.Lerp( braking.volume, Mathf.Abs( speed ), brakingNoiseDecreasingSpeed * Time.fixedDeltaTime );
+                braking.volume = Mathf.Lerp( 0.0f, 1.0f, ( Mathf.Abs( speed ) / maxSpeed ) );
             }
-        }
-        else if( Mathf.Abs( previousSpeed ) <= Mathf.Abs( speed ) ) {
 
+        }
+        else{
             braking.volume = Mathf.Lerp( braking.volume, 0.0f, brakingNoiseDecreasingSpeed * Time.fixedDeltaTime );
 
             if( braking.isPlaying && braking.volume <= 0.0f ) {
+                Debug.Log( "Stop Braking" );
                 braking.Stop();
             }
         }
-        previousSpeed = speed;
     }
 
     IEnumerator GoForward()
