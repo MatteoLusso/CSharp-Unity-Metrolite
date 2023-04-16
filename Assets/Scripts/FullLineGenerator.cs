@@ -5,6 +5,7 @@ using UnityEngine;
 public class FullLineGenerator : MonoBehaviour
 {
     public GameObject train;
+    public GameObject mainCamera;
     public float trainHeightFromGround = 1.5f;
     public int controlPointsNumber = 3;
     public int distanceMultiplier = 25;
@@ -17,9 +18,15 @@ public class FullLineGenerator : MonoBehaviour
     public int baseBezierCurvePointsNumber = 50;
     public bool tunnelParabolic = false;
     public float tunnelWidth = 5.0f;
+    public float centerWidth = 5.0f;
     public float tunnelStraightness = 0.5f;
-    public Material texture;
-    public float deltaLText = 1.0f;
+    public Material railTexture;
+    public Vector2 railTextureTilting;
+
+    public Material centerTexture;
+    public Vector2 centerTextureTilting;
+
+    public bool bidirectional = true;
 
     public Dictionary<string, List<LineSection>> lineMap = new Dictionary<string, List<LineSection>>();
 
@@ -86,6 +93,7 @@ public class FullLineGenerator : MonoBehaviour
             }
             else {
                 section.type = Type.Tunnel;
+                section.bidirectional = bidirectional;
 
                 List<Vector3> controlPoints = GenerateControlPoints( lineMainDir, startingDir, startingPoint, distanceMultiplier, controlPointsNumber, tunnelStraightness );
                 List<Vector3> baseCurve = CalculateBaseBezierCurve( controlPoints );
@@ -95,25 +103,66 @@ public class FullLineGenerator : MonoBehaviour
                 //Debug.Log( "# punti curva: " + limitedAngleCurve.Count );
                 //Debug.Log( "Lunghezza curva: " + BezierCurveCalculator.CalculateBezierCurveLenght( limitedAngleCurve ) );
 
-                List<List<Vector3>> rightAndLeftVertexPoints = MeshGenerator.CalculateFloorMeshVertex( limitedAngleCurve, controlPoints, tunnelWidth, tunnelParabolic );
-                Mesh floorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( rightAndLeftVertexPoints[ 0 ], rightAndLeftVertexPoints[ 1 ] ), deltaLText );
+                //List<List<Vector3>> rightAndLeftVertexPoints;
+                MeshGenerator.Floor floorVertexPoints = new MeshGenerator.Floor();
+                if( section.bidirectional ) {
+                    Mesh leftFloorMesh = new Mesh();
+                    Mesh centerFloorMesh = new Mesh();
+                    Mesh rightFloorMesh = new Mesh();
+
+                    floorVertexPoints = MeshGenerator.CalculateBidirectionalFloorMeshVertex( limitedAngleCurve, controlPoints, centerWidth, tunnelWidth, tunnelParabolic );
+
+                    leftFloorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.leftR, floorVertexPoints.leftL ), railTextureTilting.x, railTextureTilting.y );
+                    GameObject leftFloorGameObj = new GameObject( "Binari sinistra" );
+                    leftFloorGameObj.transform.parent = sectionGameObj.transform;
+                    leftFloorGameObj.transform.position = Vector3.zero;
+                    leftFloorGameObj.AddComponent<MeshFilter>();
+                    leftFloorGameObj.AddComponent<MeshRenderer>();
+                    leftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftFloorMesh;
+                    leftFloorGameObj.GetComponent<MeshRenderer>().material = railTexture;
+
+                    centerFloorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.centerR, floorVertexPoints.centerL ), centerTextureTilting.x, centerTextureTilting.y );
+                    GameObject centerFloorGameObj = new GameObject( "Divisore centrale" );
+                    centerFloorGameObj.transform.parent = sectionGameObj.transform;
+                    centerFloorGameObj.transform.position = Vector3.zero;
+                    centerFloorGameObj.AddComponent<MeshFilter>();
+                    centerFloorGameObj.AddComponent<MeshRenderer>();
+                    centerFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerFloorMesh;
+                    centerFloorGameObj.GetComponent<MeshRenderer>().material = centerTexture;
+
+                    rightFloorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.rightR, floorVertexPoints.rightL ), railTextureTilting.x, railTextureTilting.y );
+                    GameObject rightFloorGameObj = new GameObject( "Binari destra" );
+                    rightFloorGameObj.transform.parent = sectionGameObj.transform;
+                    rightFloorGameObj.transform.position = Vector3.zero;
+                    rightFloorGameObj.AddComponent<MeshFilter>();
+                    rightFloorGameObj.AddComponent<MeshRenderer>();
+                    rightFloorGameObj.GetComponent<MeshFilter>().sharedMesh = rightFloorMesh;
+                    rightFloorGameObj.GetComponent<MeshRenderer>().material = railTexture;
+                }
+                else {
+                    Mesh floorMesh = new Mesh();
+
+                    floorVertexPoints = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( limitedAngleCurve, controlPoints, tunnelWidth, tunnelParabolic );
+                    Debug.Log( "floorVertexPoints: " + floorVertexPoints.centerL );
+                    //floorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( rightAndLeftVertexPoints[ 0 ], rightAndLeftVertexPoints[ 1 ] ), railTextureTilting.x, railTextureTilting.y );
+                    floorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.centerR, floorVertexPoints.centerL ), railTextureTilting.x, railTextureTilting.y );
+
+                    GameObject floorGameObj = new GameObject( "Binari centrali" );
+                    floorGameObj.transform.parent = sectionGameObj.transform;
+                    floorGameObj.transform.position = Vector3.zero;
+                    floorGameObj.AddComponent<MeshFilter>();
+                    floorGameObj.AddComponent<MeshRenderer>();
+                    floorGameObj.GetComponent<MeshFilter>().sharedMesh = floorMesh;
+                    floorGameObj.GetComponent<MeshRenderer>().material = railTexture;
+                }
 
                 // Update dettagli LineSection 
                 section.controlsPoints = controlPoints;
                 section.bezierCurveBase = baseCurve;
                 section.bezierCurveFixedLenght = fixedLenghtCurve;
                 section.bezierCurveLimitedAngle = limitedAngleCurve;
-                section.floorRightPoints = rightAndLeftVertexPoints[ 0 ];
-                section.floorLeftPoints = rightAndLeftVertexPoints[ 1 ];
-                section.floorMesh = floorMesh;
-
-                GameObject floorGameObj = new GameObject( "Binari" );
-                floorGameObj.transform.parent = sectionGameObj.transform;
-                floorGameObj.transform.position = Vector3.zero;
-                floorGameObj.AddComponent<MeshFilter>();
-                floorGameObj.AddComponent<MeshRenderer>();
-                floorGameObj.GetComponent<MeshFilter>().sharedMesh = floorMesh;
-                floorGameObj.GetComponent<MeshRenderer>().material = texture;
+                section.floorPoints = floorVertexPoints;
+                //section.floorMesh = floorMesh;
 
                 int k = 0;
                 foreach( Vector3 controlPoint in controlPoints ) {
@@ -138,13 +187,22 @@ public class FullLineGenerator : MonoBehaviour
         }
 
         InstantiateTrain();
+        InstantiateMainCamera();
     }
 
     private void InstantiateTrain() {
         Vector3 trainPos = lineMap[ "Linea 1" ][ 0 ].bezierCurveLimitedAngle[ 0 ];
         trainPos.z += trainHeightFromGround;
         Vector3 trainDir = lineMap[ "Linea 1" ][ 0 ].bezierCurveLimitedAngle[ 1 ] - lineMap[ "Linea 1" ][ 0 ].bezierCurveLimitedAngle[ 0 ];
-        Instantiate( train, trainPos, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, trainDir, Vector3.forward ) ) );
+        GameObject instantiatedTrain = Instantiate( train, trainPos, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, trainDir, Vector3.forward ) ) );
+        instantiatedTrain.name = "Train";
+    }
+
+    private void InstantiateMainCamera() {
+        Vector3 trainPos = lineMap[ "Linea 1" ][ 0 ].bezierCurveLimitedAngle[ 0 ];
+        trainPos.z += trainHeightFromGround;
+        Vector3 trainDir = lineMap[ "Linea 1" ][ 0 ].bezierCurveLimitedAngle[ 1 ] - lineMap[ "Linea 1" ][ 0 ].bezierCurveLimitedAngle[ 0 ];
+        Instantiate( mainCamera, trainPos, Quaternion.identity );
     }
 
     private List<Vector3> CalculateBaseBezierCurve( List<Vector3> controlsPoints )
