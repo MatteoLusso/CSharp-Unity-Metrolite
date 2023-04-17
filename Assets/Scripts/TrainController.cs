@@ -22,7 +22,6 @@ public class TrainController : MonoBehaviour
     public float maxSpeed = 250.0f;
     public float acceleration = 50.0f;
     public float deceleration = 75.0f;
-    public float curveDrag = 0.1f;
     public float drag = 5.0f;
 
     public float deadZoneTriggerRight = 0.1f;
@@ -46,7 +45,6 @@ public class TrainController : MonoBehaviour
 
     private Side railSide = Side.Left;
 
-    // Start is called before the first frame update
     void Start()
     {
         AudioSource[] audios = this.transform.GetComponents<AudioSource>();
@@ -108,7 +106,7 @@ public class TrainController : MonoBehaviour
                 rightTriggerPression = Input.GetAxis( "RT" );
             }
 
-            Debug.Log( "rightTriggerPression: " + rightTriggerPression );
+            //Debug.Log( "rightTriggerPression: " + rightTriggerPression );
 
             if( mainDir == Direction.Forward || mainDir == Direction.None ) {
                 speed += acceleration * rightTriggerPression * Time.deltaTime;
@@ -153,13 +151,15 @@ public class TrainController : MonoBehaviour
         else if( Mathf.Abs( speed ) <= acceleration * Time.deltaTime ) {
             speed = 0.0f;
         }
+
+        noise.pitch = Mathf.Abs( speed ) / maxSpeed;
     }
 
     private void HandleBrakingNoise() {
 
         if( ( ( Input.GetKey( KeyCode.D ) || Input.GetAxis( "RT" ) > ( deadZoneTriggerRight ) ) && mainDir == Direction.Backward ) || ( ( Input.GetKey( KeyCode.A ) || Input.GetAxis( "LT" ) > ( deadZoneTriggerLeft ) ) && mainDir == Direction.Forward ) ) { 
 
-            Debug.Log( "Braking" );
+            //Debug.Log( "Braking" );
             if( !braking.isPlaying ) {
                 braking.volume = Mathf.Abs( speed ) / maxSpeed;
                 braking.time = 0.0f;
@@ -173,7 +173,7 @@ public class TrainController : MonoBehaviour
             braking.volume = Mathf.Lerp( braking.volume, 0.0f, brakingNoiseDecreasingSpeed * Time.deltaTime );
 
             if( braking.isPlaying && braking.volume <= 0.0f ) {
-                Debug.Log( "Stop Braking" );
+                //Debug.Log( "Stop Braking" );
                 braking.Stop();
             }
         }
@@ -221,6 +221,7 @@ public class TrainController : MonoBehaviour
 
                     // Aggiornamento del movimento attuale del vagone (in questo caso avanti)
                     if( mainDir == Direction.Backward ) {
+
                         // Se il vagone stava andando indietro, allora devo puntare all'index successivo, ma se sono
                         // già all'ultimo punto della curva passo alla sezione succcessiva
                         if( indexPoint + 1 < points.Count ) {
@@ -235,9 +236,6 @@ public class TrainController : MonoBehaviour
                     for( int j = indexPoint; j < points.Count; j++ ) {
                         int indexDiff = j - startingIndex;
                         dist = ( points[ j ] - this.transform.position ).magnitude;
-
-                        indexPoint = j;
-                        nextPoint = points[ j ];
 
                         if( j + indexDiff >= points.Count ) {
                             if( i + 1 < sections.Count ) {
@@ -268,19 +266,26 @@ public class TrainController : MonoBehaviour
                             nextOrientationPoint = points[ j + indexDiff ];
                         }
 
-
                         if( dist > deltaDist ) {
-                            //Debug.Log( "indexDiff: " + indexDiff );
+                            indexPoint = j;
+                            nextPoint = points[ j ];
+                            Debug.Log( "Indice nextPoint trovato: " + indexPoint );
                             break;
                         }
+                    }
+
+                    if( nextPoint == Vector3.zero ) {
+                        Debug.Log( "Sezione terminata" );
+                        break;
                     }
                     
                     // Posizione e rotazione iniziale del vagone per punto della curva
                     Vector3 nextDir = nextOrientationPoint - this.transform.position;
                     Vector3 startDir = this.transform.right;
                     Vector3 startPos = this.transform.position;
+                    float segmentDist = ( nextPoint - startPos ).magnitude;
                     float sumDist = 0.0f;
-                    while( sumDist < ( nextPoint - startPos ).magnitude ) {
+                    while( sumDist < segmentDist ) {
                         Debug.DrawLine( this.transform.position, nextPoint, Color.red, Time.deltaTime );
                         Debug.DrawLine( this.transform.position, nextOrientationPoint, Color.magenta, Time.deltaTime );
 
@@ -288,14 +293,18 @@ public class TrainController : MonoBehaviour
                         this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist ); 
                         this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
 
-                        noise.pitch = Mathf.Abs( speed ) / maxSpeed;
-
-                        //Debug.DrawRay( this.transform.position, this.transform.right * 20, Color.red, 1.0f );
-
                         sumDist += Time.deltaTime * Mathf.Abs( speed );
 
-                        yield return new WaitForEndOfFrame();
+                        if( sumDist < segmentDist ) {
+                            yield return null;
+                        }
+                        else{
+                            Debug.Log( "Next Point raggiunto" );
+                            break;
+                        }
                     }
+
+                    Debug.Log( "While segmento terminato" );
                 }
 
                 indexSection++;
@@ -361,9 +370,6 @@ public class TrainController : MonoBehaviour
                         int indexDiff = startingIndex - j;
                         dist = ( points[ j ] - this.transform.position ).magnitude;
 
-                        indexPoint = j;
-                        previousPoint = points[ j ];
-
                         if( j - indexDiff < 0 ) {
                             if( i - 1 >= 0 ) {
                                 indexDiff = ( sections[ i - 1 ].bezierCurveLimitedAngle.Count - 1 ) + ( j - indexDiff );
@@ -394,17 +400,23 @@ public class TrainController : MonoBehaviour
                         }
 
                         if( dist > deltaDist ) {
-                            Debug.Log( "indexPoint: " + indexPoint );
+                            indexPoint = j;
+                            previousPoint = points[ j ];
                             break;
                         }
                     }
                     
+                    if( previousPoint == Vector3.zero ) {
+                        break;
+                    }
+
                     // Posizione e rotazione iniziale del vagone per punto della curva
                     Vector3 previousDir = this.transform.position - previousOrientationPoint;
                     Vector3 startDir = this.transform.right;
                     Vector3 startPos = this.transform.position;
+                    float segmentDist = ( previousPoint - startPos ).magnitude;
                     float sumDist = 0.0f;
-                    while( sumDist < ( previousPoint - startPos ).magnitude ) {
+                    while( sumDist < segmentDist ) {
 
                         Debug.DrawLine( this.transform.position, previousPoint, Color.red, Time.deltaTime );
                         Debug.DrawLine( this.transform.position, previousOrientationPoint, Color.magenta, Time.deltaTime );
@@ -412,13 +424,16 @@ public class TrainController : MonoBehaviour
                         // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
                         this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
                         this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
-                        //Debug.DrawRay( this.transform.position, -this.transform.right * 20, Color.red, 1.0f );
-
-                        noise.pitch = Mathf.Abs( speed ) / maxSpeed;
 
                         sumDist += Time.deltaTime * Mathf.Abs( speed );
 
-                        yield return new WaitForEndOfFrame();
+                        if( sumDist < segmentDist ) {
+                            yield return null;
+                        }
+                        else{
+                            Debug.Log( "Next Point raggiunto" );
+                            break;
+                        }
                     }
                 }
 
