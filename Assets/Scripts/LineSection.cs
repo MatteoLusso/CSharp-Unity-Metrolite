@@ -5,8 +5,15 @@ using UnityEngine;
 public enum Type {
     Tunnel,
     Station,
-    Intersection,
+    Switch,
     Terminus,
+}
+
+public enum SwitchDirection {
+    Right,
+    Left,
+    RightToLeft,
+    LeftToRight,
 }
 
 public class LineSection
@@ -22,4 +29,7 @@ public class LineSection
     public List<Vector3> bezierCurveLimitedAngle { get; set; }
     public MeshGenerator.Floor floorPoints { get; set; }
     public Mesh floorMesh { get; set; }
+    public SwitchDirection activeSwitch { get; set; }
+    public Dictionary<SwitchDirection, List<GameObject>> switchLights { get; set; }
+
 }
