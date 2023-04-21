@@ -17,6 +17,9 @@ public static class MeshGenerator
         public List<Vector3> leftR { get; set; }
         public List<Vector3> leftLine { get; set; }
         public List<Vector3> leftL { get; set; }
+
+        public List<Vector3> leftRightLine { get; set; }
+        public List<Vector3> rightLeftLine { get; set; }
     }
 
     public static Vector3[,] ConvertListsToMatrix_2xM( List<Vector3> up, List<Vector3> down )
@@ -73,14 +76,14 @@ public static class MeshGenerator
 
         Vector3 dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized;
 
-        leftL.Add( curve[ 0 ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
-        leftLine.Add( curve[ 0 ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
+        leftL.Add( curve[ 0 ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
+        leftLine.Add( curve[ 0 ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
         
-        centerL.Add( curve[ 0 ] + ( dir * ( centerWidth / 2 ) ) );
-        centerR.Add( curve[ 0 ] - ( dir * ( centerWidth / 2 ) ) );
+        centerL.Add( curve[ 0 ] - ( dir * ( centerWidth / 2 ) ) );
+        centerR.Add( curve[ 0 ] + ( dir * ( centerWidth / 2 ) ) );
 
-        rightLine.Add( curve[ 0 ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
-        rightR.Add( curve[ 0 ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
+        rightLine.Add( curve[ 0 ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
+        rightR.Add( curve[ 0 ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
 
         for( int i = 1; i < curve.Count - 1; i++ )
         {
@@ -92,14 +95,14 @@ public static class MeshGenerator
 
             dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized;
 
-            leftL.Add( curve[ i ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
-            leftLine.Add( curve[ i ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
+            leftL.Add( curve[ i ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
+            leftLine.Add( curve[ i ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
             
-            centerL.Add( curve[ i ] + ( dir * ( centerWidth / 2 ) ) );
-            centerR.Add( curve[ i ] - ( dir * ( centerWidth / 2 ) ) );
+            centerL.Add( curve[ i ] - ( dir * ( centerWidth / 2 ) ) );
+            centerR.Add( curve[ i ] + ( dir * ( centerWidth / 2 ) ) );
 
-            rightLine.Add( curve[ i ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
-            rightR.Add( curve[ i ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
+            rightLine.Add( curve[ i ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
+            rightR.Add( curve[ i ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
         }
 
         if( floorParabolic )
@@ -110,14 +113,14 @@ public static class MeshGenerator
 
         dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized;
         
-        leftL.Add( curve[ curve.Count - 1 ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
-        leftLine.Add( curve[ curve.Count - 1 ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
+        leftL.Add( curve[ curve.Count - 1 ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
+        leftLine.Add( curve[ curve.Count - 1 ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
         
-        centerL.Add( curve[ curve.Count - 1 ] + ( dir * ( centerWidth / 2 ) ) );
-        centerR.Add( curve[ curve.Count - 1 ] - ( dir * ( centerWidth / 2 ) ) );
+        centerL.Add( curve[ curve.Count - 1 ] - ( dir * ( centerWidth / 2 ) ) );
+        centerR.Add( curve[ curve.Count - 1 ] + ( dir * ( centerWidth / 2 ) ) );
 
-        rightLine.Add( curve[ curve.Count - 1 ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
-        rightR.Add( curve[ curve.Count - 1 ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
+        rightLine.Add( curve[ curve.Count - 1 ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
+        rightR.Add( curve[ curve.Count - 1 ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
 
         Floor singleFloor = new Floor();
         singleFloor.leftL = leftL;

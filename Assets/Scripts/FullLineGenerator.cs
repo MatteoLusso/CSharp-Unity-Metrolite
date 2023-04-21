@@ -13,8 +13,12 @@ public class FullLineGenerator : MonoBehaviour
     public float maxAngle = 2.5f;
     //public float fixedLenght = 5.0f;
     public int stationsDistance = 3;
+    public int switchDistance = 5;
+    public float switchLenght = 100.0f;
     public Vector3 stationRotationCorrections = new Vector3( 90.0f, -90.0f, 90.0f );
     public GameObject station;
+    public float stationLenght = 25.0f;
+    public GameObject pillar;
     public int baseBezierCurvePointsNumber = 50;
     public bool tunnelParabolic = false;
     public float tunnelWidth = 5.0f;
@@ -27,6 +31,11 @@ public class FullLineGenerator : MonoBehaviour
     public Vector2 centerTextureTilting;
 
     public bool bidirectional = true;
+
+    public GameObject switchLight;
+    public float switchLightDistance;
+    public float switchLightHeight;
+    public Vector3 switchLightRotation;
 
     public Dictionary<string, List<LineSection>> lineMap = new Dictionary<string, List<LineSection>>();
 
@@ -69,27 +78,144 @@ public class FullLineGenerator : MonoBehaviour
             sectionGameObj.transform.parent = lineGameObj.transform;
             sectionGameObj.transform.position = startingPoint;
 
-
             LineSection section = new LineSection();
-            if( i % stationsDistance == 0 && i > 0) {
+            if( i % stationsDistance == 0 && i > 0 ) {
                 section.type = Type.Station;
-
-                GameObject newStation = Instantiate( station, startingPoint, station.transform.rotation );
-
-                newStation.transform.localRotation *= Quaternion.Euler( Vector3.SignedAngle( Vector3.right, startingDir, newStation.transform.forward ) + stationRotationCorrections.x, stationRotationCorrections.y, stationRotationCorrections.z );
+                section.bidirectional = sections[ i - 1 ].bidirectional;
 
                 List<Vector3> nextStartingDirections = new List<Vector3>();
                 nextStartingDirections.Add( startingDir );
                 section.nextStartingDirections = nextStartingDirections;
 
                 List<Vector3> nextStartingPoints = new List<Vector3>();
-                nextStartingPoints.Add( newStation.transform.Find( "End" ).transform.position );
+                nextStartingPoints.Add( startingPoint + ( startingDir.normalized * stationLenght ) );
                 section.nextStartingPoints = nextStartingPoints;
 
-                newStation.name = "Stazione";
-                newStation.transform.parent = sectionGameObj.transform;
+                List<Vector3> stationsPoints = new List<Vector3>{ startingPoint, nextStartingPoints[ 0 ] };
 
-                section.bezierCurveLimitedAngle = new List<Vector3>{ startingPoint, newStation.transform.Find( "End" ).transform.position };
+                MeshGenerator.Floor stationRails = new MeshGenerator.Floor();
+
+                if( section.bidirectional ) {
+                    stationRails = MeshGenerator.CalculateBidirectionalFloorMeshVertex( stationsPoints, stationsPoints, centerWidth, tunnelWidth, tunnelParabolic );
+
+                    Mesh leftFloorMesh = new Mesh();
+                    Mesh centerFloorMesh = new Mesh();
+                    Mesh rightFloorMesh = new Mesh();
+
+                    leftFloorMesh = MeshGenerator.GenerateFloorMesh( stationsPoints, MeshGenerator.ConvertListsToMatrix_2xM( stationRails.leftR, stationRails.leftL ), railTextureTilting.x, railTextureTilting.y );
+                    GameObject leftFloorGameObj = new GameObject( "Binari sinistra" );
+                    leftFloorGameObj.transform.parent = sectionGameObj.transform;
+                    leftFloorGameObj.transform.position = Vector3.zero;
+                    leftFloorGameObj.AddComponent<MeshFilter>();
+                    leftFloorGameObj.AddComponent<MeshRenderer>();
+                    leftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftFloorMesh;
+                    leftFloorGameObj.GetComponent<MeshRenderer>().material = railTexture;
+
+                    centerFloorMesh = MeshGenerator.GenerateFloorMesh( stationsPoints, MeshGenerator.ConvertListsToMatrix_2xM( stationRails.centerR, stationRails.centerL ), centerTextureTilting.x, centerTextureTilting.y );
+                    GameObject centerFloorGameObj = new GameObject( "Divisore centrale" );
+                    centerFloorGameObj.transform.parent = sectionGameObj.transform;
+                    centerFloorGameObj.transform.position = Vector3.zero;
+                    centerFloorGameObj.AddComponent<MeshFilter>();
+                    centerFloorGameObj.AddComponent<MeshRenderer>();
+                    centerFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerFloorMesh;
+                    centerFloorGameObj.GetComponent<MeshRenderer>().material = centerTexture;
+
+                    for( int p = 0; p < stationRails.centerLine.Count; p += 2 ) {
+                        GameObject pillarGameObj = Instantiate( pillar, stationRails.centerLine[ p ] + new Vector3( 0.0f, 0.0f, -pillar.transform.localScale.y / 2 ), Quaternion.Euler( 0.0f, -90.0f, 90.0f ) );
+                        pillarGameObj.transform.parent = sectionGameObj.transform;
+                        pillarGameObj.name = "Pilastro";
+                    }
+
+                    rightFloorMesh = MeshGenerator.GenerateFloorMesh( stationsPoints, MeshGenerator.ConvertListsToMatrix_2xM( stationRails.rightR, stationRails.rightL ), railTextureTilting.x, railTextureTilting.y );
+                    GameObject rightFloorGameObj = new GameObject( "Binari destra" );
+                    rightFloorGameObj.transform.parent = sectionGameObj.transform;
+                    rightFloorGameObj.transform.position = Vector3.zero;
+                    rightFloorGameObj.AddComponent<MeshFilter>();
+                    rightFloorGameObj.AddComponent<MeshRenderer>();
+                    rightFloorGameObj.GetComponent<MeshFilter>().sharedMesh = rightFloorMesh;
+                    rightFloorGameObj.GetComponent<MeshRenderer>().material = railTexture;
+                }
+                else {
+                    
+                    // implementare stazione monobinario
+                }
+
+                section.controlsPoints = stationsPoints;
+                section.floorPoints = stationRails;
+            }
+            else if( i % switchDistance == 0 && i > 0 ) {
+                section.type = Type.Switch;
+                section.bidirectional = sections[ i - 1 ].bidirectional;
+
+                MeshGenerator.Floor switchFloor = new MeshGenerator.Floor();
+                Vector3 switchDir = startingDir.normalized;
+
+                Dictionary<SwitchDirection, List<GameObject>> switchLights = new Dictionary<SwitchDirection, List<GameObject>>();
+
+                if( section.bidirectional ) {
+
+                    ///////////////////// Bidirectional 4 ways
+                    Vector3 c0 = startingPoint;
+                    Vector3 r0 = c0 + Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir * ( ( centerWidth / 2 ) + ( tunnelWidth / 2 ) ); 
+                    Vector3 l0 = c0 + Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir * ( ( centerWidth / 2 ) + ( tunnelWidth / 2 ) );
+
+                    Vector3 lb = l0 + switchDir * ( switchLenght / 2 ); 
+                    Vector3 rb = r0 + switchDir * ( switchLenght / 2 ); 
+
+                    Vector3 c1 = c0 + switchDir * switchLenght;
+                    Vector3 l1 = l0 + switchDir * switchLenght; 
+                    Vector3 r1 = r0 + switchDir * switchLenght;
+
+                    GameObject lightR0 = Instantiate( switchLight, r0 + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * startingDir.normalized * switchLightDistance ) - Vector3.forward * switchLightHeight, Quaternion.Euler( switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) - 180.0f , switchLightRotation.y, switchLightRotation.z ) );
+                    lightR0.transform.parent = sectionGameObj.transform;
+                    lightR0.name = "Semaforo R0";
+                    GameObject lightR1 = Instantiate( switchLight, r1 + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * startingDir.normalized * switchLightDistance ) - Vector3.forward * switchLightHeight, Quaternion.Euler( switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ), switchLightRotation.y, switchLightRotation.z ) );
+                    lightR1.transform.parent = sectionGameObj.transform;
+                    lightR1.name = "Semaforo R1";
+                    GameObject lightL0 = Instantiate( switchLight, l0 + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * startingDir.normalized * switchLightDistance ) - Vector3.forward * switchLightHeight, Quaternion.Euler( switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) - 180.0f, switchLightRotation.y, switchLightRotation.z ) );
+                    lightL0.transform.parent = sectionGameObj.transform;
+                    lightL0.name = "Semaforo L0";
+                    GameObject lightL1 = Instantiate( switchLight, l1 + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * startingDir.normalized * switchLightDistance ) - Vector3.forward * switchLightHeight, Quaternion.Euler( switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ), switchLightRotation.y, switchLightRotation.z ) );
+                    lightL1.transform.parent = sectionGameObj.transform;
+                    lightL1.name = "Semaforo L1";
+                    switchLights.Add( SwitchDirection.Right, new List<GameObject>{ lightR0, lightR1 } );
+                    switchLights.Add( SwitchDirection.RightToLeft, new List<GameObject>{ lightR0, lightL1 } );
+                    switchLights.Add( SwitchDirection.Left, new List<GameObject>{ lightL0, lightL1 } );
+                    switchLights.Add( SwitchDirection.LeftToRight, new List<GameObject>{ lightL0, lightR1 } );
+                    section.switchLights = switchLights;
+
+                    List<Vector3> rightLeftLine = CalculateBaseBezierCurve( new List<Vector3>{ r0, rb, lb, l1 } );
+                    List<Vector3> leftRightLine = CalculateBaseBezierCurve( new List<Vector3>{ l0, lb, rb, r1 } );
+
+                    switchFloor.leftRightLine = leftRightLine;
+                    switchFloor.rightLeftLine = rightLeftLine;
+
+                    switchFloor.leftLine = new List<Vector3>{ l0, lb, l1 };
+                    switchFloor.centerLine = new List<Vector3>{ c0, c1 };
+                    switchFloor.rightLine = new List<Vector3>{ r0, rb, r1 };
+
+                    List<Vector3> nextStartingDirections = new List<Vector3>();
+                    nextStartingDirections.Add( startingDir );
+                    section.nextStartingDirections = nextStartingDirections;
+
+                    List<Vector3> nextStartingPoints = new List<Vector3>();
+                    nextStartingPoints.Add( c1 );
+                    section.nextStartingPoints = nextStartingPoints;
+
+                    section.nextStartingDirections = nextStartingDirections; 
+                    section.nextStartingPoints =  nextStartingPoints;
+                    section.floorPoints = switchFloor;
+
+                    section.activeSwitch = SwitchDirection.RightToLeft;
+
+                    ////////////////////
+                }
+                else {
+
+                }
+
+                section.floorPoints = switchFloor;
+
             }
             else {
                 section.type = Type.Tunnel;
@@ -103,7 +229,6 @@ public class FullLineGenerator : MonoBehaviour
                 //Debug.Log( "# punti curva: " + limitedAngleCurve.Count );
                 //Debug.Log( "Lunghezza curva: " + BezierCurveCalculator.CalculateBezierCurveLenght( limitedAngleCurve ) );
 
-                //List<List<Vector3>> rightAndLeftVertexPoints;
                 MeshGenerator.Floor floorVertexPoints = new MeshGenerator.Floor();
                 if( section.bidirectional ) {
                     Mesh leftFloorMesh = new Mesh();
@@ -112,7 +237,7 @@ public class FullLineGenerator : MonoBehaviour
 
                     floorVertexPoints = MeshGenerator.CalculateBidirectionalFloorMeshVertex( limitedAngleCurve, controlPoints, centerWidth, tunnelWidth, tunnelParabolic );
 
-                    leftFloorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.leftR, floorVertexPoints.leftL ), railTextureTilting.x, railTextureTilting.y );
+                    leftFloorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.leftL, floorVertexPoints.leftR ), railTextureTilting.x, railTextureTilting.y );
                     GameObject leftFloorGameObj = new GameObject( "Binari sinistra" );
                     leftFloorGameObj.transform.parent = sectionGameObj.transform;
                     leftFloorGameObj.transform.position = Vector3.zero;
@@ -121,7 +246,7 @@ public class FullLineGenerator : MonoBehaviour
                     leftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftFloorMesh;
                     leftFloorGameObj.GetComponent<MeshRenderer>().material = railTexture;
 
-                    centerFloorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.centerR, floorVertexPoints.centerL ), centerTextureTilting.x, centerTextureTilting.y );
+                    centerFloorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.centerL, floorVertexPoints.centerR ), centerTextureTilting.x, centerTextureTilting.y );
                     GameObject centerFloorGameObj = new GameObject( "Divisore centrale" );
                     centerFloorGameObj.transform.parent = sectionGameObj.transform;
                     centerFloorGameObj.transform.position = Vector3.zero;
@@ -130,7 +255,13 @@ public class FullLineGenerator : MonoBehaviour
                     centerFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerFloorMesh;
                     centerFloorGameObj.GetComponent<MeshRenderer>().material = centerTexture;
 
-                    rightFloorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.rightR, floorVertexPoints.rightL ), railTextureTilting.x, railTextureTilting.y );
+                    for( int p = 0; p < floorVertexPoints.centerLine.Count; p += 2 ) {
+                        GameObject pillarGameObj = Instantiate( pillar, floorVertexPoints.centerLine[ p ] + new Vector3( 0.0f, 0.0f, -pillar.transform.localScale.y / 2 ), Quaternion.Euler( 0.0f, -90.0f, 90.0f ) );
+                        pillarGameObj.transform.parent = sectionGameObj.transform;
+                        pillarGameObj.name = "Pilastro";
+                    }
+
+                    rightFloorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.rightL, floorVertexPoints.rightR ), railTextureTilting.x, railTextureTilting.y );
                     GameObject rightFloorGameObj = new GameObject( "Binari destra" );
                     rightFloorGameObj.transform.parent = sectionGameObj.transform;
                     rightFloorGameObj.transform.position = Vector3.zero;
@@ -145,7 +276,7 @@ public class FullLineGenerator : MonoBehaviour
                     floorVertexPoints = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( limitedAngleCurve, controlPoints, tunnelWidth, tunnelParabolic );
                     Debug.Log( "floorVertexPoints: " + floorVertexPoints.centerL );
                     //floorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( rightAndLeftVertexPoints[ 0 ], rightAndLeftVertexPoints[ 1 ] ), railTextureTilting.x, railTextureTilting.y );
-                    floorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.centerR, floorVertexPoints.centerL ), railTextureTilting.x, railTextureTilting.y );
+                    floorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.centerL, floorVertexPoints.centerR ), railTextureTilting.x, railTextureTilting.y );
 
                     GameObject floorGameObj = new GameObject( "Binari centrali" );
                     floorGameObj.transform.parent = sectionGameObj.transform;
@@ -301,17 +432,61 @@ public class FullLineGenerator : MonoBehaviour
                                 Gizmos.color = Color.magenta;
                                 Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i ], segment.bezierCurveFixedLenght[ i ] );
                             }
+
+                            Gizmos.color = Color.green;
+                            Gizmos.DrawWireSphere( segment.bezierCurveLimitedAngle[ i ], 0.5f );
                         }
                     }
                 }
-                Vector3 firstDir = segment.bezierCurveLimitedAngle[ 1 ] - segment.bezierCurveLimitedAngle[ 0 ];
-                Vector3 lastDir = segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 1 ] - segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 2 ];
+                else if(  segment.type == Type.Switch ) {
+                    for( int i = 0; i < segment.floorPoints.leftLine.Count; i++ ) {
+                        
+                        if( i > 0 ) {
+                            if( segment.activeSwitch == SwitchDirection.Left ) {
+                                Gizmos.color = Color.green;
+                            }
+                            else {
+                                Gizmos.color = Color.yellow;
+                            }
+                            Gizmos.DrawLine( segment.floorPoints.leftLine[ i - 1 ], segment.floorPoints.leftLine[ i ] );
+
+                            if( segment.activeSwitch == SwitchDirection.Right ) {
+                                Gizmos.color = Color.green;
+                            }
+                            else {
+                                Gizmos.color = Color.blue;
+                            }
+                            Gizmos.DrawLine( segment.floorPoints.rightLine[ i - 1 ], segment.floorPoints.rightLine[ i ] );
+                        }
+                    }
+                    for( int i = 0; i < segment.floorPoints.leftRightLine.Count; i++ ) {
+                        
+                        if( i > 0 ) {
+                            if( segment.activeSwitch == SwitchDirection.LeftToRight ) {
+                                Gizmos.color = Color.green;
+                            }
+                            else {
+                                Gizmos.color = Color.yellow;
+                            }
+                            Gizmos.DrawLine( segment.floorPoints.leftRightLine[ i - 1 ], segment.floorPoints.leftRightLine[ i ] );
+                            if( segment.activeSwitch == SwitchDirection.RightToLeft ) {
+                                Gizmos.color = Color.green;
+                            }
+                            else {
+                                Gizmos.color = Color.blue;
+                            }
+                            Gizmos.DrawLine( segment.floorPoints.rightLeftLine[ i - 1 ], segment.floorPoints.rightLeftLine[ i ] );
+                        }
+                    }
+                }
+                Vector3 firstDir = segment.floorPoints.centerLine[ 1 ] - segment.floorPoints.centerLine[ 0 ];
+                //Vector3 lastDir = segment.floorPoints.centerLine[ segment.floorPoints.centerLine.Count - 1 ] - segment.bezierCurveLimitedAngle[ segment.floorPoints.centerLine.Count - 2 ];
             
                 Gizmos.color = Color.red;
-                Gizmos.DrawRay( segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 1 ] - Vector3.forward, lastDir );
-                Gizmos.DrawRay( segment.bezierCurveLimitedAngle[ 0 ] - Vector3.forward, -firstDir );
-                Gizmos.DrawRay( segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 1 ] - Vector3.forward, Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * lastDir );
-                Gizmos.DrawRay( segment.bezierCurveLimitedAngle[ segment.bezierCurveLimitedAngle.Count - 1 ] - Vector3.forward, Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * lastDir );
+                //Gizmos.DrawRay( segment.floorPoints.centerLine[ segment.floorPoints.centerLine.Count - 1 ] - Vector3.forward, lastDir );
+                Gizmos.DrawRay( segment.floorPoints.centerLine[ 0 ] - Vector3.forward, -firstDir );
+                //Gizmos.DrawRay( segment.floorPoints.centerLine[ segment.floorPoints.centerLine.Count - 1 ] - Vector3.forward, Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * lastDir );
+                //Gizmos.DrawRay( segment.floorPoints.centerLine[ segment.floorPoints.centerLine.Count - 1 ] - Vector3.forward, Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * lastDir );
 
 
             }
