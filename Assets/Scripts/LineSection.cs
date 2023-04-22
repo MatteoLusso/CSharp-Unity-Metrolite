@@ -9,16 +9,25 @@ public enum Type {
     Terminus,
 }
 
+public enum SwitchType {
+    BiToBi,
+    BiToMono,
+    MonoToBi,
+}
+
 public enum SwitchDirection {
     Right,
     Left,
     RightToLeft,
     LeftToRight,
+    RightToCenter,
+    LeftToCenter,
 }
 
 public class LineSection
 {
     public Type type { get; set; }
+    public SwitchType switchType { get; set; }
     public bool bidirectional { get; set; }
     public int number { get; set; }
     public List<Vector3> controlsPoints {get; set; }
@@ -31,5 +40,6 @@ public class LineSection
     public Mesh floorMesh { get; set; }
     public SwitchDirection activeSwitch { get; set; }
     public Dictionary<SwitchDirection, List<GameObject>> switchLights { get; set; }
+    public int curvePointsCount { get; set; }
 
 }

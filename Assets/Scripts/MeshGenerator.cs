@@ -20,6 +20,9 @@ public static class MeshGenerator
 
         public List<Vector3> leftRightLine { get; set; }
         public List<Vector3> rightLeftLine { get; set; }
+
+        public List<Vector3> leftCenterLine { get; set; }
+        public List<Vector3> rightCenterLine { get; set; }
     }
 
     public static Vector3[,] ConvertListsToMatrix_2xM( List<Vector3> up, List<Vector3> down )
@@ -156,8 +159,8 @@ public static class MeshGenerator
         //Vector3 dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3(curve[ 0 ].x, curve[ 0 ].y, zHeightPrev) - new Vector3(curve[ 1 ].x, curve[ 1 ].y, zHeightNext ) ).normalized * tunnelWidth;
         Vector3 dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * ( floorWidth / 2 );
 
-        leftPoints.Add( curve[ 0 ] + dir );
-        rightPoints.Add(curve[ 0 ] - dir );
+        leftPoints.Add( curve[ 0 ] - dir );
+        rightPoints.Add(curve[ 0 ] + dir );
 
         for( int i = 1; i < curve.Count - 1; i++ )
         {
@@ -169,8 +172,8 @@ public static class MeshGenerator
 
             dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * ( floorWidth / 2 );
 
-            leftPoints.Add( curve[ i ] + dir );
-            rightPoints.Add(curve[ i ] - dir );
+            leftPoints.Add( curve[ i ] - dir );
+            rightPoints.Add(curve[ i ] + dir );
         }
 
         if( floorParabolic )
@@ -180,8 +183,8 @@ public static class MeshGenerator
         }
 
         dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * ( floorWidth / 2 );
-        leftPoints.Add( curve[ curve.Count - 1 ] + dir );
-        rightPoints.Add( curve[ curve.Count - 1 ] - dir );
+        leftPoints.Add( curve[ curve.Count - 1 ] - dir );
+        rightPoints.Add( curve[ curve.Count - 1 ] + dir );
 
         Floor singleFloor = new Floor();
         singleFloor.centerL = leftPoints;
