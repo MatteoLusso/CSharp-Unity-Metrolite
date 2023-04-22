@@ -107,7 +107,7 @@ public class TrainController : MonoBehaviour
 
             List<LineSection> sections = lines[ keyLine ];
 
-            actualSwitchIndex = -1;
+            actualSwitchIndex = sections.Count;
             for( int i = indexSection; i >= 0; i-- ) {
                 if( sections[ i ].type == Type.Switch ) {
                     actualSwitchIndex = i;
@@ -121,15 +121,31 @@ public class TrainController : MonoBehaviour
         if( ( Input.GetButtonDown( "RB" ) || Input.GetKeyDown( KeyCode.F ) ) && indexSection != actualSwitchIndex && actualSwitchIndex != -1 ) {
             List<LineSection> sections = lines[ keyLine ];
 
-            switch( sections[ actualSwitchIndex ].activeSwitch ) {
-                case SwitchDirection.Right:         sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.RightToLeft;
-                                                    break;
-                case SwitchDirection.RightToLeft:   sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Left;
-                                                    break;
-                case SwitchDirection.Left:          sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToRight;
-                                                    break;
-                case SwitchDirection.LeftToRight:   sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Right;
-                                                    break;
+            if( sections[ actualSwitchIndex ].switchType == SwitchType.BiToBi ) {
+                switch( sections[ actualSwitchIndex ].activeSwitch ) {
+                    case SwitchDirection.Right:         sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.RightToLeft;
+                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightLeftLine.Count;
+                                                        break;
+                    case SwitchDirection.RightToLeft:   sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Left;
+                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftLine.Count;
+                                                        break;
+                    case SwitchDirection.Left:          sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToRight;
+                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftRightLine.Count;
+                                                        break;
+                    case SwitchDirection.LeftToRight:   sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Right;
+                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightLine.Count;
+                                                        break;
+                }
+            }
+            else if( sections[ actualSwitchIndex ].switchType == SwitchType.BiToMono || sections[ actualSwitchIndex ].switchType == SwitchType.MonoToBi ) {
+                switch( sections[ actualSwitchIndex ].activeSwitch ) {
+                    case SwitchDirection.RightToCenter: sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToCenter;
+                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftCenterLine.Count;
+                                                        break;
+                    case SwitchDirection.LeftToCenter:  sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.RightToCenter;
+                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightCenterLine.Count;
+                                                        break;
+                }
             }
 
             Debug.Log( "Scambio sezione " + actualSwitchIndex + " selezionato: " + sections[ actualSwitchIndex ].activeSwitch );
@@ -308,38 +324,37 @@ public class TrainController : MonoBehaviour
                 Debug.Log( "Section: " + i );
 
                 List<Vector3> points = null;
-                //if( sections[ i ].type == Type.Tunnel ) {
+                if( sections[ i ].type == Type.Switch ) {
+                    switch ( sections[ i ].activeSwitch ) {
+                        case SwitchDirection.Right:         points = sections[ i ].floorPoints.rightLine; 
+                                                            break;
+                        case SwitchDirection.RightToLeft:   points = sections[ i ].floorPoints.rightLeftLine; 
+                                                            break;
+                        case SwitchDirection.Left:          points = sections[ i ].floorPoints.leftLine; 
+                                                            break;
+                        case SwitchDirection.LeftToRight:   points = sections[ i ].floorPoints.leftRightLine; 
+                                                            break;
+                        case SwitchDirection.RightToCenter: points = sections[ i ].floorPoints.rightCenterLine; 
+                                                            break;
+                        case SwitchDirection.LeftToCenter:  points = sections[ i ].floorPoints.leftCenterLine; 
+                        break; 
+                    }
+                }
+                else {
                     if( sections[ i ].bidirectional ) {
-                        if( sections[ i ].type == Type.Switch ) {
-                            switch ( sections[ i ].activeSwitch ) {
-                                case SwitchDirection.Right:         points = sections[ i ].floorPoints.rightLine; 
-                                                                    break;
-                                case SwitchDirection.RightToLeft:   points = sections[ i ].floorPoints.rightLeftLine; 
-                                                                    break;
-                                case SwitchDirection.Left:          points = sections[ i ].floorPoints.leftLine; 
-                                                                    break;
-                                case SwitchDirection.LeftToRight:   points = sections[ i ].floorPoints.leftRightLine; 
-                                                                    break;
-                            } 
+                    
+                        if( railSide == Side.Left ) {
+                            points = sections[ i ].floorPoints.leftLine;
                         }
-                        else {
-                            if( railSide == Side.Left ) {
-                                points = sections[ i ].floorPoints.leftLine;
-                            }
-                            else if( railSide == Side.Right ) {
-                                points = sections[ i ].floorPoints.rightLine;
-                            }
+                        else if( railSide == Side.Right ) {
+                            points = sections[ i ].floorPoints.rightLine;
                         }
                     }
                     else {
                         points = sections[ i ].floorPoints.centerLine;
                     }
-
-                    actualSectionPoints = points;
-                //}
-                //else {
-                    //points = sections[ i ].bezierCurveLimitedAngle;
-                //}
+                }
+                actualSectionPoints = points;
                 
                 float deltaDist = 0.0f;
                 float dist = 0.0f;
@@ -443,11 +458,24 @@ public class TrainController : MonoBehaviour
                 }
 
                 if( sections[ i ].type == Type.Switch ) {
-                    if( railSide == Side.Right && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                        railSide = Side.Left;
+                    if( sections[ i ].switchType == SwitchType.BiToBi ) {
+                        if( railSide == Side.Right && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
+                            railSide = Side.Left;
+                        }
+                        else if( railSide == Side.Left && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
+                            railSide = Side.Right;
+                        }
                     }
-                    else if( railSide == Side.Left && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
-                        railSide = Side.Right;
+                    else if( sections[ i ].switchType == SwitchType.BiToMono ) {
+                        railSide = Side.Center;
+                    }
+                    else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
+                        if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
+                            railSide = Side.Left;
+                        }
+                        else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
+                            railSide = Side.Right;
+                        }
                     }
                 }
 
@@ -471,40 +499,43 @@ public class TrainController : MonoBehaviour
             for( int i = indexSection; i >= 0; i-- ) {
 
                 Debug.Log( "Section: " + i );
+                Debug.Log( "Bidirectional: " + sections[ i ].bidirectional );
 
                 List<Vector3> points = null;
-                //if( sections[ i ].type == Type.Tunnel ) {
+                if( sections[ i ].type == Type.Switch ) {
+
+                    Debug.Log( "Switch dir: " + sections[ i ].activeSwitch );
+
+                    switch ( sections[ i ].activeSwitch ) {
+                        case SwitchDirection.Right:         points = sections[ i ].floorPoints.rightLine; 
+                                                            break;
+                        case SwitchDirection.RightToLeft:   points = sections[ i ].floorPoints.rightLeftLine; 
+                                                            break;
+                        case SwitchDirection.Left:          points = sections[ i ].floorPoints.leftLine; 
+                                                            break;
+                        case SwitchDirection.LeftToRight:   points = sections[ i ].floorPoints.leftRightLine; 
+                                                            break;
+                        case SwitchDirection.RightToCenter: points = sections[ i ].floorPoints.rightCenterLine; 
+                                                            break;
+                        case SwitchDirection.LeftToCenter:  points = sections[ i ].floorPoints.leftCenterLine; 
+                        break; 
+                    }
+                }
+                else {
                     if( sections[ i ].bidirectional ) {
-                        if( sections[ i ].type == Type.Switch ) {
-                            switch ( sections[ i ].activeSwitch ) {
-                                case SwitchDirection.Right:         points = sections[ i ].floorPoints.rightLine; 
-                                                                    break;
-                                case SwitchDirection.RightToLeft:   points = sections[ i ].floorPoints.rightLeftLine; 
-                                                                    break;
-                                case SwitchDirection.Left:          points = sections[ i ].floorPoints.leftLine; 
-                                                                    break;
-                                case SwitchDirection.LeftToRight:   points = sections[ i ].floorPoints.leftRightLine; 
-                                                                    break;
-                            } 
+                    
+                        if( railSide == Side.Left ) {
+                            points = sections[ i ].floorPoints.leftLine;
                         }
-                        else {
-                            if( railSide == Side.Left ) {
-                                points = sections[ i ].floorPoints.leftLine;
-                            }
-                            else if( railSide == Side.Right ) {
-                                points = sections[ i ].floorPoints.rightLine;
-                            }
+                        else if( railSide == Side.Right ) {
+                            points = sections[ i ].floorPoints.rightLine;
                         }
                     }
                     else {
                         points = sections[ i ].floorPoints.centerLine;
                     }
-
-                    actualSectionPoints = points;
-                //}
-                //else {
-                    //points = sections[ i ].bezierCurveLimitedAngle;
-                //}
+                }
+                actualSectionPoints = points;
                 
                 float deltaDist = 0.0f;
                 float dist = 0.0f;
@@ -608,44 +639,35 @@ public class TrainController : MonoBehaviour
                 }
 
                 if( sections[ i ].type == Type.Switch ) {
-                    if( railSide == Side.Right && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
+                    if( sections[ i ].switchType == SwitchType.BiToBi ) {
+                        if( railSide == Side.Right && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
                         railSide = Side.Left;
+                        }
+                        else if( railSide == Side.Left && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
+                            railSide = Side.Right;
+                        }
                     }
-                    else if( railSide == Side.Left && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                        railSide = Side.Right;
+                    else if( sections[ i ].switchType == SwitchType.BiToMono ) {
+                        if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
+                            railSide = Side.Left;
+                        }
+                        else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
+                            railSide = Side.Right;
+                        }
+                    }
+                    else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
+                        railSide = Side.Center;
                     }
                 }
+
+                Debug.Log( "railSide: " + railSide );
 
                 // Aggiornamento index una volta raggiunto il punto iniziale della curva
                 if( i > 0 ) {
                     indexSection--;
-                    //indexPoint = sections[ indexSection ].bezierCurveLimitedAngle.Count - 1;
+                    indexPoint = sections[ i - 1 ].curvePointsCount - 1;
 
-                    if( sections[ indexSection ].bidirectional ) {
-                        if( sections[ indexSection ].type == Type.Switch ) {
-                            switch ( sections[ indexSection ].activeSwitch ) {
-                                case SwitchDirection.Right:         indexPoint = sections[ indexSection ].floorPoints.rightLine.Count - 1; 
-                                                                    break;
-                                case SwitchDirection.RightToLeft:   indexPoint = sections[ indexSection ].floorPoints.rightLeftLine.Count - 1; 
-                                                                    break;
-                                case SwitchDirection.Left:          indexPoint = sections[ indexSection ].floorPoints.leftLine.Count - 1; 
-                                                                    break;
-                                case SwitchDirection.LeftToRight:   indexPoint = sections[ indexSection ].floorPoints.leftRightLine.Count - 1; 
-                                                                    break;
-                            } 
-                        }
-                        else {
-                            if( railSide == Side.Left ) {
-                                indexPoint = sections[ indexSection ].floorPoints.leftLine.Count - 1;
-                            }
-                            else if( railSide == Side.Right ) {
-                                indexPoint = sections[ indexSection ].floorPoints.rightLine.Count - 1;
-                            }
-                        }
-                    }
-                    else {
-                        indexPoint = sections[ indexSection ].floorPoints.centerLine.Count - 1;
-                    }
+                    Debug.Log( "Previous indexPoint: " + indexPoint );
                 }
             }
         //}
@@ -655,14 +677,16 @@ public class TrainController : MonoBehaviour
 
         private void OnDrawGizmos()
     {
-        for( int i = 1; i < actualSectionPoints.Count; i++ ) {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawSphere( actualSectionPoints[ i ], 0.5f );
-        }
+        if( actualSectionPoints != null ) {
+            for( int i = 1; i < actualSectionPoints.Count; i++ ) {
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawSphere( actualSectionPoints[ i ], 0.5f );
+            }
 
-        Gizmos.color = Color.green;
-        Gizmos.DrawSphere( actualPoint, 1.0f );
-        Gizmos.color = Color.red;
-        Gizmos.DrawSphere( actualOrientationPoint, 0.75f );
+            Gizmos.color = Color.green;
+            Gizmos.DrawSphere( actualPoint, 1.0f );
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere( actualOrientationPoint, 0.75f );
+        }
     }
 }
