@@ -122,29 +122,66 @@ public class TrainController : MonoBehaviour
             List<LineSection> sections = lines[ keyLine ];
 
             if( sections[ actualSwitchIndex ].switchType == SwitchType.BiToBi ) {
-                switch( sections[ actualSwitchIndex ].activeSwitch ) {
-                    case SwitchDirection.Right:         sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.RightToLeft;
-                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightLeftLine.Count;
-                                                        break;
-                    case SwitchDirection.RightToLeft:   sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Left;
-                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftLine.Count;
-                                                        break;
-                    case SwitchDirection.Left:          sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToRight;
-                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftRightLine.Count;
-                                                        break;
-                    case SwitchDirection.LeftToRight:   sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Right;
-                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightLine.Count;
-                                                        break;
+                if( actualMovement == Direction.Forward && railSide == Side.Right ) {
+                    switch( sections[ actualSwitchIndex ].activeSwitch ) {
+                        case SwitchDirection.Right:         sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.RightToLeft;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightLeftLine.Count;
+                                                            break;
+                        default:                            sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Right;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightLine.Count;
+                                                            break;
+                    }
+                }
+                else if( actualMovement == Direction.Forward && railSide == Side.Left ) {
+                    switch( sections[ actualSwitchIndex ].activeSwitch ) {
+                        case SwitchDirection.Left:          sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToRight;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftRightLine.Count;
+                                                            break;
+                        default:                            sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Left;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftLine.Count;
+                                                            break;
+                    }
+                }
+                else if( actualMovement == Direction.Backward && railSide == Side.Right ) {
+                    switch( sections[ actualSwitchIndex ].activeSwitch ) {
+                        case SwitchDirection.Right:          sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToRight;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftRightLine.Count;
+                                                            break;
+                        default:                            sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Right;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightLine.Count;
+                                                            break;
+                    }
+                }
+                else if( actualMovement == Direction.Backward && railSide == Side.Left ) {
+                    switch( sections[ actualSwitchIndex ].activeSwitch ) {
+                        case SwitchDirection.Left:          sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToRight;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftRightLine.Count;
+                                                            break;
+                        default:                            sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.Left;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftLine.Count;
+                                                            break;
+                    }
                 }
             }
             else if( sections[ actualSwitchIndex ].switchType == SwitchType.BiToMono || sections[ actualSwitchIndex ].switchType == SwitchType.MonoToBi ) {
-                switch( sections[ actualSwitchIndex ].activeSwitch ) {
-                    case SwitchDirection.RightToCenter: sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToCenter;
-                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftCenterLine.Count;
-                                                        break;
-                    case SwitchDirection.LeftToCenter:  sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.RightToCenter;
-                                                        sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightCenterLine.Count;
-                                                        break;
+
+                if( railSide == Side.Center ) {
+                    switch( sections[ actualSwitchIndex ].activeSwitch ) {
+                        case SwitchDirection.RightToCenter: sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToCenter;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftCenterLine.Count;
+                                                            break;
+                        case SwitchDirection.LeftToCenter:  sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.RightToCenter;
+                                                            sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightCenterLine.Count;
+                                                            break;
+                    }
+                }
+                else if( railSide == Side.Right ) {
+                    sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.RightToCenter;
+                    sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.rightCenterLine.Count;                              
+                }
+                else if( railSide == Side.Left ) {
+                    sections[ actualSwitchIndex ].activeSwitch = SwitchDirection.LeftToCenter;
+                    sections[ actualSwitchIndex ].curvePointsCount = sections[ actualSwitchIndex ].floorPoints.leftCenterLine.Count;                              
                 }
             }
 
