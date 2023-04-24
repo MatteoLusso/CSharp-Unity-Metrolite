@@ -91,7 +91,7 @@ public class TrainController : MonoBehaviour
 
             List<LineSection> sections = lines[ keyLine ];
 
-            actualSwitchIndex = -1;
+            actualSwitchIndex = sections.Count;
             for( int i = indexSection; i < sections.Count; i++ ) {
                 if( sections[ i ].type == Type.Switch ) {
                     actualSwitchIndex = i;
@@ -107,7 +107,7 @@ public class TrainController : MonoBehaviour
 
             List<LineSection> sections = lines[ keyLine ];
 
-            actualSwitchIndex = sections.Count;
+            actualSwitchIndex = -1;
             for( int i = indexSection; i >= 0; i-- ) {
                 if( sections[ i ].type == Type.Switch ) {
                     actualSwitchIndex = i;
@@ -118,7 +118,7 @@ public class TrainController : MonoBehaviour
             Debug.Log( "actualSwitchIndex: " + actualSwitchIndex );
         }
 
-        if( ( Input.GetButtonDown( "RB" ) || Input.GetKeyDown( KeyCode.F ) ) && indexSection != actualSwitchIndex && actualSwitchIndex != -1 ) {
+        if( ( Input.GetButtonDown( "RB" ) || Input.GetKeyDown( KeyCode.F ) ) && indexSection != actualSwitchIndex && actualSwitchIndex > -1 && actualSwitchIndex < lines[ keyLine ].Count ) {
             List<LineSection> sections = lines[ keyLine ];
 
             if( sections[ actualSwitchIndex ].switchType == SwitchType.BiToBi ) {
