@@ -23,6 +23,9 @@ public static class MeshGenerator
 
         public List<Vector3> leftCenterLine { get; set; }
         public List<Vector3> rightCenterLine { get; set; }
+
+        public List<Vector3> leftCenterNewLine { get; set; }
+        public List<Vector3> rightCenterNewLine { get; set; }
     }
 
     public static Vector3[,] ConvertListsToMatrix_2xM( List<Vector3> up, List<Vector3> down )

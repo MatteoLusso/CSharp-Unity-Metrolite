@@ -26,17 +26,13 @@ public class FullLineGenerator : MonoBehaviour
     public float tunnelStraightness = 0.5f;
     public Material railTexture;
     public Vector2 railTextureTilting;
-
     public Material centerTexture;
     public Vector2 centerTextureTilting;
-
     public bool startingBidirectional = true;
-
     public GameObject switchLight;
     public float switchLightDistance;
     public float switchLightHeight;
     public Vector3 switchLightRotation;
-
     public Dictionary<string, List<LineSection>> lineMap = new Dictionary<string, List<LineSection>>();
 
     private enum Direction{
@@ -70,7 +66,6 @@ public class FullLineGenerator : MonoBehaviour
             Vector3 startingPoint = gameObject.transform.position;
             Vector3 startingDir = Vector3.zero; // dipenderà dalla main direction della linea
             if( sections.Count > 0 ) {
-                Debug.Log(  "i: " + i ); 
                 startingDir =  sections[ sections.Count - 1 ].nextStartingDirections[ 0 ]; //Per il momento le starting direction successive possono essere solo 1
                 startingPoint = sections[ sections.Count - 1 ].nextStartingPoints[ 0 ]; //Per il momento gli starting point successivi possono essere solo 1
             }
@@ -161,7 +156,7 @@ public class FullLineGenerator : MonoBehaviour
                 bool previousBidirectional = sections[ i - 1 ].bidirectional;
 
                 if( previousBidirectional ) {
-                    if( Random.Range( 0, 9 ) > 4 ) {
+                    if( Random.Range( 0, 2 ) == 0 ) {
                         section = switchPath.generateBiToBiSwitch( i, sections, startingDir, startingPoint, sectionGameObj );
                     }
                     else{
@@ -169,7 +164,12 @@ public class FullLineGenerator : MonoBehaviour
                     }
                 }
                 else {
-                    section = switchPath.generateMonoToBiSwitch( i, sections, startingDir, startingPoint, sectionGameObj );
+                    if( Random.Range( 0, 2 ) == 0 ) {
+                        section = switchPath.generateMonoToBiSwitch( i, sections, startingDir, startingPoint, sectionGameObj );
+                    }
+                    else{
+                        section = switchPath.generateMonoToNewMonoSwitch( i, sections, startingDir, startingPoint, sectionGameObj );
+                    }
                 }
             }
             else {
@@ -187,7 +187,6 @@ public class FullLineGenerator : MonoBehaviour
                 List<Vector3> baseCurve = BezierCurveCalculator.CalculateBezierCurve( controlPoints, baseBezierCurvePointsNumber );
                 List<Vector3> fixedLenghtCurve = BezierCurveCalculator.RecalcultateCurveWithFixedLenght( baseCurve, baseCurve.Count );
                 List<Vector3> limitedAngleCurve = BezierCurveCalculator.RecalcultateCurveWithLimitedAngle( fixedLenghtCurve, maxAngle, startingDir );
-
                 //Debug.Log( "# punti curva: " + limitedAngleCurve.Count );
                 //Debug.Log( "Lunghezza curva: " + BezierCurveCalculator.CalculateBezierCurveLenght( limitedAngleCurve ) );
 
@@ -239,6 +238,7 @@ public class FullLineGenerator : MonoBehaviour
                     Mesh floorMesh = new Mesh();
 
                     floorVertexPoints = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( limitedAngleCurve, controlPoints, tunnelWidth, tunnelParabolic );
+
                     floorMesh = MeshGenerator.GenerateFloorMesh( limitedAngleCurve, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.centerL, floorVertexPoints.centerR ), railTextureTilting.x, railTextureTilting.y );
 
                     GameObject floorGameObj = new GameObject( "Binari centrali" );
@@ -258,6 +258,7 @@ public class FullLineGenerator : MonoBehaviour
                 section.bezierCurveFixedLenght = fixedLenghtCurve;
                 section.bezierCurveLimitedAngle = limitedAngleCurve;
                 section.floorPoints = floorVertexPoints;
+                Debug.Log( "section.floorPoints.centerLine[ 0 ]: " + section.floorPoints.centerLine[ 0 ] );
                 section.curvePointsCount = limitedAngleCurve.Count;
 
                 int k = 0;
@@ -398,7 +399,7 @@ public class FullLineGenerator : MonoBehaviour
                         for( int i = 0; i < segment.floorPoints.leftLine.Count; i++ ) {
                             
                             if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.Left ) {
+                                if( segment.activeSwitch == SwitchDirection.LeftToLeft ) {
                                     Gizmos.color = Color.green;
                                 }
                                 else {
@@ -406,7 +407,7 @@ public class FullLineGenerator : MonoBehaviour
                                 }
                                 Gizmos.DrawLine( segment.floorPoints.leftLine[ i - 1 ], segment.floorPoints.leftLine[ i ] );
 
-                                if( segment.activeSwitch == SwitchDirection.Right ) {
+                                if( segment.activeSwitch == SwitchDirection.RightToRight ) {
                                     Gizmos.color = Color.green;
                                 }
                                 else {
@@ -456,6 +457,41 @@ public class FullLineGenerator : MonoBehaviour
                                     Gizmos.color = Color.blue;
                                 }
                                 Gizmos.DrawLine( segment.floorPoints.rightCenterLine[ i - 1 ], segment.floorPoints.rightCenterLine[ i ] );
+                            }
+                        }
+                    }
+                    else if( segment.switchType == SwitchType.MonoToNewMono ) {
+                        for( int i = 0; i < segment.floorPoints.centerLine.Count; i++ ) {
+                            if( i > 0 ) {
+                                if( segment.activeSwitch == SwitchDirection.CenterToCenter ) {
+                                    Gizmos.color = Color.green;
+                                }
+                                else {
+                                    Gizmos.color = Color.yellow;
+                                }
+                                Gizmos.DrawLine( segment.floorPoints.centerLine[ i - 1 ], segment.floorPoints.centerLine[ i ] );
+                            }
+                        }
+                        for( int i = 0; i < segment.floorPoints.rightCenterNewLine.Count; i++ ) {
+                            if( i > 0 ) {
+                                if( segment.activeSwitch == SwitchDirection.CenterToNewLineBackward ) {
+                                    Gizmos.color = Color.green;
+                                }
+                                else {
+                                    Gizmos.color = Color.blue;
+                                }
+                                Gizmos.DrawLine( segment.floorPoints.rightCenterNewLine[ i - 1 ], segment.floorPoints.rightCenterNewLine[ i ] );
+                            }
+                        }
+                        for( int i = 0; i < segment.floorPoints.leftCenterNewLine.Count; i++ ) {
+                            if( i > 0 ) {
+                                if( segment.activeSwitch == SwitchDirection.CenterToNewLineForward ) {
+                                    Gizmos.color = Color.green;
+                                }
+                                else {
+                                    Gizmos.color = Color.blue;
+                                }
+                                Gizmos.DrawLine( segment.floorPoints.leftCenterNewLine[ i - 1 ], segment.floorPoints.leftCenterNewLine[ i ] );
                             }
                         }
                     }

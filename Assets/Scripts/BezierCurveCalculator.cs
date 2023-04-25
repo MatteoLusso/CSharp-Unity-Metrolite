@@ -5,6 +5,20 @@ using DLL_MathExt;
 
 public static class BezierCurveCalculator
 {
+    public static List<Vector3> CalculateBezierCurve( List<Vector3> controlsPoints, int curvePointsNumber )
+    {
+        List<Vector3> curve = new List<Vector3>();
+
+        for(int k = 0; k < curvePointsNumber; k++)
+        {
+            float t = k / ( float )( curvePointsNumber - 1 );
+            Vector3 newCurvePoint = CalculateSingleBezierPoint( t, controlsPoints );
+            curve.Add( newCurvePoint );
+        }
+
+        return curve;
+    }
+
     public static Vector3 CalculateNPoint(float t, List<Transform> controlPoints)
     {
 
