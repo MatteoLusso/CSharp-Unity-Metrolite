@@ -63,9 +63,9 @@ public class SwitchPath : ScriptableObject
         GameObject lightL1 = Instantiate( this.switchLight, l1 + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * startingDir.normalized * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
         lightL1.transform.parent = sectionGameObj.transform;
         lightL1.name = "Semaforo L1";
-        switchLights.Add( SwitchDirection.Right, new List<GameObject>{ lightR0, lightR1 } );
+        switchLights.Add( SwitchDirection.RightToRight, new List<GameObject>{ lightR0, lightR1 } );
         switchLights.Add( SwitchDirection.RightToLeft, new List<GameObject>{ lightR0, lightL1 } );
-        switchLights.Add( SwitchDirection.Left, new List<GameObject>{ lightL0, lightL1 } );
+        switchLights.Add( SwitchDirection.LeftToLeft, new List<GameObject>{ lightL0, lightL1 } );
         switchLights.Add( SwitchDirection.LeftToRight, new List<GameObject>{ lightL0, lightR1 } );
         section.switchLights = switchLights;
 
@@ -91,7 +91,7 @@ public class SwitchPath : ScriptableObject
         section.nextStartingPoints =  nextStartingPoints;
         section.floorPoints = switchFloor;
 
-        section.activeSwitch = SwitchDirection.Right;
+        section.activeSwitch = SwitchDirection.RightToRight;
         section.curvePointsCount = switchFloor.rightLine.Count;
         section.floorPoints = switchFloor;
 
@@ -359,6 +359,106 @@ public class SwitchPath : ScriptableObject
 
         section.activeSwitch = SwitchDirection.RightToCenter;
         section.curvePointsCount = switchFloor.rightCenterLine.Count;
+        section.floorPoints = switchFloor;
+
+        return section;
+    }
+
+    public LineSection generateMonoToNewMonoSwitch( int index, List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
+
+        LineSection section = new LineSection();
+        section.type = Type.Switch;
+        section.switchType = SwitchType.MonoToNewMono;
+        section.bidirectional =  false;
+        section.newBidirectional =  false;
+
+        MeshGenerator.Floor switchFloor = new MeshGenerator.Floor();
+        Vector3 switchDir = startingDir.normalized;
+
+         Dictionary<SwitchDirection, List<GameObject>> switchLights = new Dictionary<SwitchDirection, List<GameObject>>();
+        Vector3 c0, cb, c1, nr1, nl1;
+        List<Vector3> nextStartingPoints = new List<Vector3>();
+
+        int variant = Random.Range( 0, 2 );
+        if( variant == 0 ) { // Nuova linea a sinistra
+            c0 = startingPoint;
+            cb = c0 + switchDir * ( this.switchLenght / 2 );
+            c1 = c0 + switchDir * this.switchLenght;
+
+            float alpha = Random.Range( -135.0f, -45.0f );
+
+            nr1 = cb + Quaternion.Euler( 0.0f, 0.0f, alpha ) * switchDir * this.switchLenght; 
+
+            GameObject lightC0 = Instantiate( this.switchLight, c0 + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) - 180.0f, this.switchLightRotation.y, this.switchLightRotation.z ) );
+            lightC0.transform.parent = sectionGameObj.transform;
+            lightC0.name = "Semaforo C0";
+            GameObject lightC1 = Instantiate( this.switchLight, c1 + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
+            lightC1.transform.parent = sectionGameObj.transform;
+            lightC1.name = "Semaforo C1";
+            GameObject lightNR1 = Instantiate( this.switchLight, nr1 + ( Quaternion.Euler( 0.0f, 0.0f, 0.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) + alpha, this.switchLightRotation.y, this.switchLightRotation.z ) );
+            lightNR1.transform.parent = sectionGameObj.transform;
+            lightNR1.name = "Semaforo NR1";
+            switchLights.Add( SwitchDirection.CenterToCenter, new List<GameObject>{ lightC0, lightC1 } );
+            switchLights.Add( SwitchDirection.CenterToNewLineForward, new List<GameObject>{ lightC0, lightNR1 } );
+            switchLights.Add( SwitchDirection.CenterToNewLineBackward, new List<GameObject>{ lightC1, lightNR1 } );
+            section.switchLights = switchLights;
+
+            List<Vector3> leftCenterNewRightLine = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c0, cb, nr1 }, this.curvePointsNumber );
+            List<Vector3> rightCenterNewRightLine = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c1, cb, nr1 }, this.curvePointsNumber );
+
+            switchFloor.leftCenterNewLine = leftCenterNewRightLine;
+            switchFloor.centerLine = new List<Vector3>{ c0, cb, c1 };
+            switchFloor.rightCenterNewLine = rightCenterNewRightLine;
+
+            nextStartingPoints.Add( c1 );
+            nextStartingPoints.Add( nr1 );
+            section.nextStartingPoints = nextStartingPoints;
+        }
+        else if( variant == 1 ) { // Nuova linea a destra
+            c0 = startingPoint;
+            cb = c0 + switchDir * ( this.switchLenght / 2 );
+            c1 = c0 + switchDir * this.switchLenght;
+
+            float alpha = Random.Range( 45.0f, 135.0f );
+
+            nl1 = cb + Quaternion.Euler( 0.0f, 0.0f, alpha ) * switchDir * this.switchLenght; 
+
+            GameObject lightC0 = Instantiate( this.switchLight, c0 + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) - 180.0f, this.switchLightRotation.y, this.switchLightRotation.z ) );
+            lightC0.transform.parent = sectionGameObj.transform;
+            lightC0.name = "Semaforo C0";
+            GameObject lightC1 = Instantiate( this.switchLight, c1 + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
+            lightC1.transform.parent = sectionGameObj.transform;
+            lightC1.name = "Semaforo C1";
+            GameObject lightNL1 = Instantiate( this.switchLight, nl1 + ( Quaternion.Euler( 0.0f, 0.0f, -180.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) + alpha, this.switchLightRotation.y, this.switchLightRotation.z ) );
+            lightNL1.transform.parent = sectionGameObj.transform;
+            lightNL1.name = "Semaforo NL1";
+            switchLights.Add( SwitchDirection.CenterToCenter, new List<GameObject>{ lightC0, lightC1 } );
+            switchLights.Add( SwitchDirection.CenterToNewLineForward, new List<GameObject>{ lightC0, lightNL1 } );
+            switchLights.Add( SwitchDirection.CenterToNewLineBackward, new List<GameObject>{ lightC1, lightNL1 } );
+            section.switchLights = switchLights;
+
+            List<Vector3> leftCenterNewRightLine = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c0, cb, nl1 }, this.curvePointsNumber );
+            List<Vector3> rightCenterNewRightLine = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c1, cb, nl1 }, this.curvePointsNumber );
+
+            switchFloor.leftCenterNewLine = leftCenterNewRightLine;
+            switchFloor.centerLine = new List<Vector3>{ c0, cb, c1 };
+            switchFloor.rightCenterNewLine = rightCenterNewRightLine;
+
+            nextStartingPoints.Add( c1 );
+            nextStartingPoints.Add( nl1 );
+            section.nextStartingPoints = nextStartingPoints;
+        }
+
+        List<Vector3> nextStartingDirections = new List<Vector3>();
+        nextStartingDirections.Add( startingDir );
+        section.nextStartingDirections = nextStartingDirections;
+
+        section.nextStartingDirections = nextStartingDirections; 
+        section.nextStartingPoints =  nextStartingPoints;
+        section.floorPoints = switchFloor;
+
+        section.activeSwitch = SwitchDirection.CenterToCenter;
+        section.curvePointsCount = switchFloor.centerLine.Count;
         section.floorPoints = switchFloor;
 
         return section;

@@ -13,15 +13,20 @@ public enum SwitchType {
     BiToBi,
     BiToMono,
     MonoToBi,
+    MonoToNewMono,
+    BiToNewMono,
 }
 
 public enum SwitchDirection {
-    Right,
-    Left,
+    RightToRight,
+    LeftToLeft,
+    CenterToCenter,
     RightToLeft,
     LeftToRight,
     RightToCenter,
     LeftToCenter,
+    CenterToNewLineForward,
+    CenterToNewLineBackward,
 }
 
 public class LineSection
@@ -29,6 +34,7 @@ public class LineSection
     public Type type { get; set; }
     public SwitchType switchType { get; set; }
     public bool bidirectional { get; set; }
+    public bool newBidirectional { get; set; }
     public int number { get; set; }
     public List<Vector3> controlsPoints {get; set; }
     public List<Vector3> nextStartingDirections { get; set; }
