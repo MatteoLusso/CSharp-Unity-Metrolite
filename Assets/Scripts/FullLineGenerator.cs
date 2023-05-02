@@ -4,6 +4,19 @@ using UnityEngine;
 
 public class FullLineGenerator : MonoBehaviour
 {
+
+
+    public class NewLine{
+        public Vector3 startingPoint { get; set; }
+        public Vector3 startingDir { get; set; }
+        public Direction mainDir { get; set; }
+        public string previousLineName { get; set; }
+        public int previousSectionIndex { get; set; }
+        //public string previousPointIndex { get; set; }
+    }
+
+    private List<NewLine> newLines = new List<NewLine>();
+
     public GameObject train;
     public GameObject mainCamera;
     public float trainHeightFromGround = 1.5f;
@@ -29,13 +42,18 @@ public class FullLineGenerator : MonoBehaviour
     public Material centerTexture;
     public Vector2 centerTextureTilting;
     public bool startingBidirectional = true;
+    public bool secondaryLines = false;
     public GameObject switchLight;
     public float switchLightDistance;
     public float switchLightHeight;
     public Vector3 switchLightRotation;
     public Dictionary<string, List<LineSection>> lineMap = new Dictionary<string, List<LineSection>>();
 
-    private enum Direction{
+    private int lineCounter = 0;
+
+    
+
+    public enum Direction{
         North,
         South,
         East,
@@ -45,10 +63,34 @@ public class FullLineGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        string lineName = "Linea " + "1";
+        GenerateMetro( "Linea 1", null );
+        InstantiateTrain();
+        InstantiateMainCamera();
+
+        if( secondaryLines ) {
+            for( int i = 0; i< newLines.Count; i++ ) {
+                GenerateMetro( "Linea " + ( i + 2 ), newLines[ i ] );
+                Debug.Log( "Linea " + ( i + 2 ) );
+                Debug.Log( "startingPoint : " + newLines[ i ].startingPoint );
+                Debug.Log( "startingDir : " + newLines[ i ].startingDir );
+            }
+        }
+    }
+
+    private void GenerateMetro( string lineName, NewLine newLine ) {
+
         GameObject lineGameObj = new GameObject( lineName );
 
-        Direction lineMainDir = ( Direction )Random.Range( 0, 3 );
+        Direction mainDir = ( Direction )Random.Range( 0, 4 );
+        Vector3 startingPoint = gameObject.transform.position;
+        Vector3 startingDir = Vector3.zero;
+        if( newLine != null ) {
+            startingPoint = newLine.startingPoint;
+            startingDir = newLine.startingDir;
+            mainDir = newLine.mainDir;
+        }
+
+        Debug.Log( "mainDir: " + mainDir );
 
         for( int i = 0; i < sectionsNumber; i++ ) {
 
@@ -63,11 +105,9 @@ public class FullLineGenerator : MonoBehaviour
                 lineMap.Add( lineName, sections );
             }
 
-            Vector3 startingPoint = gameObject.transform.position;
-            Vector3 startingDir = Vector3.zero; // dipenderà dalla main direction della linea
             if( sections.Count > 0 ) {
-                startingDir =  sections[ sections.Count - 1 ].nextStartingDirections[ 0 ]; //Per il momento le starting direction successive possono essere solo 1
-                startingPoint = sections[ sections.Count - 1 ].nextStartingPoints[ 0 ]; //Per il momento gli starting point successivi possono essere solo 1
+                startingDir =  sections[ sections.Count - 1 ].nextStartingDirections[ 0 ];
+                startingPoint = sections[ sections.Count - 1 ].nextStartingPoints[ 0 ];
             }
 
             GameObject sectionGameObj = new GameObject( sectionName );
@@ -164,16 +204,38 @@ public class FullLineGenerator : MonoBehaviour
                     }
                 }
                 else {
-                    if( Random.Range( 0, 2 ) == 0 ) {
+                    if( Random.Range( 0, 2 ) == 0 || lineCounter > 0 ) {
                         section = switchPath.generateMonoToBiSwitch( i, sections, startingDir, startingPoint, sectionGameObj );
                     }
                     else{
+
                         section = switchPath.generateMonoToNewMonoSwitch( i, sections, startingDir, startingPoint, sectionGameObj );
+
+                        NewLine newSwitchLine = new NewLine();
+                        newSwitchLine.startingDir = section.nextStartingDirections[ 1 ];
+                        newSwitchLine.startingPoint = section.nextStartingPoints[ 1 ];
+                        newSwitchLine.previousLineName = lineName;
+                        newSwitchLine.previousSectionIndex = i;
+
+                        float alpha = Vector3.SignedAngle( newSwitchLine.startingDir, Vector3.right, -Vector3.forward );
+                        if( alpha >= -45.0f && alpha < 45.0f ) {
+                            newSwitchLine.mainDir = Direction.East;
+                        }
+                        else if( alpha >= 45.0f && alpha < 135.0f ) {
+                            newSwitchLine.mainDir = Direction.North;
+                        }
+                        else if( alpha >= -135.0f && alpha < -45.0f ) {
+                            newSwitchLine.mainDir = Direction.South;
+                        }
+                        else if( alpha >= 135.0f || alpha < -135.0f ) {
+                            newSwitchLine.mainDir = Direction.West;
+                        }
+
+                        newLines.Add( newSwitchLine );
                     }
                 }
             }
             else {
-
                 section.type = Type.Tunnel;
 
                 if( i == 0 ) {
@@ -183,7 +245,7 @@ public class FullLineGenerator : MonoBehaviour
                     section.bidirectional = sections[ i - 1 ].bidirectional;
                 }
 
-                List<Vector3> controlPoints = GenerateControlPoints( lineMainDir, startingDir, startingPoint, distanceMultiplier, controlPointsNumber, tunnelStraightness );
+                List<Vector3> controlPoints = GenerateControlPoints2( startingDir, startingPoint, distanceMultiplier, controlPointsNumber, tunnelStraightness );
                 List<Vector3> baseCurve = BezierCurveCalculator.CalculateBezierCurve( controlPoints, baseBezierCurvePointsNumber );
                 List<Vector3> fixedLenghtCurve = BezierCurveCalculator.RecalcultateCurveWithFixedLenght( baseCurve, baseCurve.Count );
                 List<Vector3> limitedAngleCurve = BezierCurveCalculator.RecalcultateCurveWithLimitedAngle( fixedLenghtCurve, maxAngle, startingDir );
@@ -287,8 +349,7 @@ public class FullLineGenerator : MonoBehaviour
             sections.Add( section );
         }
 
-        InstantiateTrain();
-        InstantiateMainCamera();
+        lineCounter++;
     }
 
     private void InstantiateTrain() {
@@ -306,29 +367,93 @@ public class FullLineGenerator : MonoBehaviour
         Instantiate( mainCamera, trainPos, Quaternion.identity );
     }
 
+    private List<Vector3> GenerateControlPoints2( Vector3 startingDir, Vector3 startingPoint, int pointsDistanceMultiplier, int pointsNumber, float straightness ) {
+        List<Vector3> controlPoints = new List<Vector3>();
+        controlPoints.Add( startingPoint );
+
+        Direction mainDir = new Direction();
+        startingDir = startingDir.normalized;
+        if( startingDir == Vector3.zero ) {
+            mainDir = ( Direction )Random.Range( 0, 4 );
+
+            switch( mainDir ) {
+                case Direction.East:    controlPoints.Add( startingPoint + ( Vector3.right * pointsDistanceMultiplier ) );
+                                        break;
+                case Direction.North:   controlPoints.Add( startingPoint + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * Vector3.right * pointsDistanceMultiplier ) );
+                                        break;
+                case Direction.South:   controlPoints.Add( startingPoint + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * Vector3.right * pointsDistanceMultiplier ) );
+                                        break;
+                case Direction.West:    controlPoints.Add( startingPoint + ( Quaternion.Euler( 0.0f, 0.0f, 180.0f ) * Vector3.right * pointsDistanceMultiplier ) );
+                                        break;
+            }
+        }
+        else {
+            
+            controlPoints.Add( startingPoint + ( startingDir * pointsDistanceMultiplier ) );
+
+            float alpha = Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward );
+
+            if( alpha >= -45.0f && alpha < 45.0f ) {
+                mainDir = Direction.East;
+            }
+            else if( alpha >= 45.0f && alpha < 135.0f ) {
+                mainDir = Direction.North;
+            }
+            else if( alpha >= -135.0f && alpha < -45.0f ) {
+                mainDir = Direction.South;
+            }
+            else if( alpha >= 135.0f || alpha < -135.0f ) {
+                mainDir = Direction.West;
+            }
+        }
+
+        for( int i = 2; i < pointsNumber; i++ ) {
+
+            float baseAngle = Random.Range( -45.0f + ( 45.0f * straightness ), 45.0f - ( 45.0f * straightness ) );
+            Debug.Log( "baseAngle: " + baseAngle );
+
+            switch( mainDir ) {
+                case Direction.East:    controlPoints.Add( controlPoints[ i - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, baseAngle ) * Vector3.right * pointsDistanceMultiplier ) );
+                                        break;
+                case Direction.North:   controlPoints.Add( controlPoints[ i - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, baseAngle + 90.0f ) * Vector3.right * pointsDistanceMultiplier ) );
+                                        break;
+                case Direction.South:   controlPoints.Add( controlPoints[ i - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, baseAngle - 90.0f ) * Vector3.right * pointsDistanceMultiplier ) );
+                                        break;
+                case Direction.West:    controlPoints.Add( controlPoints[ i - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, baseAngle + 180.0f ) * Vector3.right * pointsDistanceMultiplier ) );
+                                        break;
+            }
+
+            Debug.Log( "controlPoint " + i + ": " + controlPoints[ i ] );
+        }
+        
+        return controlPoints;
+    }
+
     private List<Vector3> GenerateControlPoints( Direction mainDir, Vector3 startingDir, Vector3 startingPoint, int pointsDistanceMultiplier, int pointsNumber, float straightness ) {
         List<Vector3> controlPoints = new List<Vector3>();
         controlPoints.Add( startingPoint );
         Vector3 furthermostPoint;
 
-        Vector2 range = new Vector2( 0.0f, 180.0f );
+        Vector2 range = new Vector2( -90.0f, 90.0f );
         range.x += 90.0f * straightness;
         range.y -= 90.0f * straightness;
         float angle = Random.Range( range.x, range.y );
 
         switch( mainDir ) {
-            case Direction.East:    angle -= 90.0f;
+            case Direction.East:    angle += 0.0f;
                                     break;
 
-            case Direction.West:    angle += 90.0f;
+            case Direction.West:    angle += 180.0f;
                                     break;
 
-            case Direction.North:   angle += 0.0f;
+            case Direction.North:   angle += 90.0f;
                                     break;
 
-            case Direction.South:   angle += 180.0f;    
+            case Direction.South:   angle -= 90.0f;    
                                     break;
         }
+
+        Debug.Log( "mainDir:  " + mainDir + " - angle: " + angle );
 
         if( startingDir != Vector3.zero ) {
             controlPoints.Add( startingPoint + ( startingDir.normalized * pointsDistanceMultiplier ) );
@@ -344,10 +469,10 @@ public class FullLineGenerator : MonoBehaviour
         }
 
         for( int i = 2; i < pointsNumber; i++ ) { 
-            range = new Vector2( 0.0f, 180.0f );
+            range = new Vector2( -90.0f, 90.0f );
             range.x += 90.0f * straightness;
             range.y -= 90.0f * straightness;
-            angle = Random.Range( range.x, range.y ) + 180.0f;
+            angle = Random.Range( range.x, range.y );
 
             Vector3 newDir = Quaternion.Euler( 0.0f, 0.0f, angle ) * Vector3.right;
 
@@ -363,7 +488,7 @@ public class FullLineGenerator : MonoBehaviour
         foreach( string line in lineMap.Keys ) {
             foreach( LineSection segment in lineMap[ line ] ) {
 
-                /*if( segment.type == Type.Tunnel ) {
+                if( segment.type == Type.Tunnel ) {
                     for( int i = 0; i < segment.controlsPoints.Count; i++ ) {
                         
                         Gizmos.color = Color.blue;
@@ -394,7 +519,7 @@ public class FullLineGenerator : MonoBehaviour
                         }
                     }
                 }
-                else*/ if(  segment.type == Type.Switch ) {
+                else if(  segment.type == Type.Switch ) {
                     if( segment.switchType == SwitchType.BiToBi ) {
                         for( int i = 0; i < segment.floorPoints.leftLine.Count; i++ ) {
                             

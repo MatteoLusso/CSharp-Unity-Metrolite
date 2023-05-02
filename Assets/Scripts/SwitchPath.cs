@@ -378,6 +378,7 @@ public class SwitchPath : ScriptableObject
          Dictionary<SwitchDirection, List<GameObject>> switchLights = new Dictionary<SwitchDirection, List<GameObject>>();
         Vector3 c0, cb, c1, nr1, nl1;
         List<Vector3> nextStartingPoints = new List<Vector3>();
+        List<Vector3> nextStartingDirections = new List<Vector3>();
 
         int variant = Random.Range( 0, 2 );
         if( variant == 0 ) { // Nuova linea a sinistra
@@ -413,6 +414,10 @@ public class SwitchPath : ScriptableObject
             nextStartingPoints.Add( c1 );
             nextStartingPoints.Add( nr1 );
             section.nextStartingPoints = nextStartingPoints;
+
+            nextStartingDirections.Add( startingDir );
+            nextStartingDirections.Add( nr1 - cb );
+            section.nextStartingDirections = nextStartingDirections;
         }
         else if( variant == 1 ) { // Nuova linea a destra
             c0 = startingPoint;
@@ -447,11 +452,11 @@ public class SwitchPath : ScriptableObject
             nextStartingPoints.Add( c1 );
             nextStartingPoints.Add( nl1 );
             section.nextStartingPoints = nextStartingPoints;
-        }
 
-        List<Vector3> nextStartingDirections = new List<Vector3>();
-        nextStartingDirections.Add( startingDir );
-        section.nextStartingDirections = nextStartingDirections;
+            nextStartingDirections.Add( startingDir );
+            nextStartingDirections.Add( nl1 - cb );
+            section.nextStartingDirections = nextStartingDirections;
+        }
 
         section.nextStartingDirections = nextStartingDirections; 
         section.nextStartingPoints =  nextStartingPoints;
