@@ -17,6 +17,7 @@ public class FullLineGenerator : MonoBehaviour
 
     private List<NewLine> newLines = new List<NewLine>();
 
+    public float cellSize = 150.0f;
     public GameObject train;
     public GameObject mainCamera;
     public float trainHeightFromGround = 1.5f;
@@ -48,9 +49,27 @@ public class FullLineGenerator : MonoBehaviour
     public float switchLightHeight;
     public Vector3 switchLightRotation;
     public Dictionary<string, List<LineSection>> lineMap = new Dictionary<string, List<LineSection>>();
-
     private int lineCounter = 0;
+    public Cell[ , ] map;
 
+    public enum CellSide {
+        Up,
+        Right,
+        Down,
+        Left,
+    }
+
+    public enum EndedBy {
+        OutOfBounds,
+        OtherLine,
+        Completed,
+    }
+
+    public int mapSize = 50;
+    public float mainDirPercent = 0.7f; 
+    public int linesNumber = 5;
+    public int noGenNearBorders = 10;
+    public int noGenNearLines = 2;
     
 
     public enum Direction{
@@ -63,18 +82,401 @@ public class FullLineGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Generate();
+    }
+
+    public void Generate(){
+        /*InitializeMap();
+        for( int i = 0; i < linesNumber; i++ ) {
+            Direction startMainDir = CalculateNextLineDir();
+
+            Debug.Log( "startMainDir: " + startMainDir );
+            Vector3 startingWorldCoords = CalculateStartingCoords( startMainDir );
+            if( startingWorldCoords != Vector3.zero) {
+                GenerateMetro2( "Linea " + i, startMainDir, startingWorldCoords );
+            }
+        }*/
         GenerateMetro( "Linea 1", null );
         InstantiateTrain();
         InstantiateMainCamera();
 
-        if( secondaryLines ) {
+        /*if( secondaryLines ) {
             for( int i = 0; i< newLines.Count; i++ ) {
                 GenerateMetro( "Linea " + ( i + 2 ), newLines[ i ] );
                 Debug.Log( "Linea " + ( i + 2 ) );
                 Debug.Log( "startingPoint : " + newLines[ i ].startingPoint );
                 Debug.Log( "startingDir : " + newLines[ i ].startingDir );
             }
+        }*/
+    }
+
+    private Vector3 ConvertMatrixCoordsToWorldCoords( Vector2Int matrixCoords ) {
+        return new Vector3( ( matrixCoords.x * cellSize ) + ( cellSize / 2 ), ( matrixCoords.y * cellSize ) + ( cellSize / 2 ), 0.0f );
+    }
+
+    private Vector2Int ConvertWorldCoordsToMatrixCoords( Vector3 worldCoords ) {
+        return new Vector2Int( ( int )( worldCoords.x / cellSize ), ( int )( worldCoords.y / cellSize ) );
+    }
+
+    private Vector3 CalculateStartingCoords( Direction lineDir ) {
+        Vector2Int actualCoords = Vector2Int.zero;
+        Vector2Int startingCoords = Vector2Int.zero;
+
+        int genStartingPointCounter = 0;
+
+            GenStartingPoint:
+
+        if( genStartingPointCounter > 10 ) {
+            return Vector3.zero;
         }
+
+        // In questo caso inizio la generazione dai bordi della mappa, in base alla lineDir
+        HashSet<Cell> proibitedStarts = new HashSet<Cell>();
+        switch( lineDir ) {
+                case Direction.East:    actualCoords = new Vector2Int( 0, Random.Range( noGenNearBorders, mapSize - noGenNearBorders ) );
+                                        for( int i = 0; i < noGenNearLines; i++ ) {
+                                            if( actualCoords.y + i < mapSize ) {        
+                                                proibitedStarts.Add( this.map[ actualCoords.x, actualCoords.y + i ] );
+                                            }
+                                            if( actualCoords.y - i >= 0 ) {
+                                                proibitedStarts.Add( this.map[ actualCoords.x, actualCoords.y - i ] );
+                                            }
+                                        }
+                                        startingCoords = new Vector2Int( actualCoords.x + 1, actualCoords.y );
+                                        break;
+
+                case Direction.North:   actualCoords = new Vector2Int( Random.Range( noGenNearBorders, mapSize - noGenNearBorders ), 0 );
+                                        for( int i = 0; i < noGenNearLines; i++ ) {
+                                            if( actualCoords.x + i < mapSize ) {        
+                                                proibitedStarts.Add( this.map[ actualCoords.x + i, actualCoords.y ] );
+                                            }
+                                            if( actualCoords.x - i >= 0 ) {
+                                                proibitedStarts.Add( this.map[ actualCoords.x - i, actualCoords.y ] );
+                                            }
+                                        }
+                                        startingCoords = new Vector2Int( actualCoords.x, actualCoords.y + 1 );
+                                        break;
+
+                case Direction.South:   actualCoords = new Vector2Int( Random.Range( noGenNearBorders, mapSize - noGenNearBorders ), mapSize - 1 );
+                                        for( int i = 0; i < noGenNearLines; i++ ) {
+                                            if( actualCoords.x + i < mapSize ) {        
+                                                proibitedStarts.Add( this.map[ actualCoords.x + i, actualCoords.y ] );
+                                            }
+                                            if( actualCoords.x - i >= 0 ) {
+                                                proibitedStarts.Add( this.map[ actualCoords.x - i, actualCoords.y ] );
+                                            }
+                                        }
+                                        startingCoords = new Vector2Int( actualCoords.x, actualCoords.y - 1 );
+                                        break;
+
+                case Direction.West:    actualCoords = new Vector2Int( mapSize - 1, Random.Range( noGenNearBorders, mapSize - noGenNearBorders ) );
+                                        for( int i = 0; i < noGenNearLines; i++ ) {
+                                            if( actualCoords.y + i < mapSize ) {        
+                                                proibitedStarts.Add( this.map[ actualCoords.x, actualCoords.y + i ] );
+                                            }
+                                            if( actualCoords.y - i >= 0 ) {
+                                                proibitedStarts.Add( this.map[ actualCoords.x, actualCoords.y - i ] );
+                                            }
+                                        }
+                                        startingCoords = new Vector2Int( actualCoords.x - 1, actualCoords.y );
+                                        break;
+        }
+        if( this.map[ actualCoords.x, actualCoords.y ].content != Cell.Content.Empty || this.map[ actualCoords.x, actualCoords.y ].content == Cell.Content.Proibited ) {
+            genStartingPointCounter++;
+            goto GenStartingPoint;
+        }
+        foreach( Cell proibitedStart in proibitedStarts ) {
+            if( proibitedStart.content == Cell.Content.Empty ) {
+                proibitedStart.content = Cell.Content.Proibited;
+            }
+        }
+
+        return ConvertMatrixCoordsToWorldCoords( startingCoords );
+    }
+
+    private Direction CalculateNextLineDir() {
+
+        int proibitedCellUp = 0, proibitedCellDown = 0, proibitedCellLeft = 0, proibitedCellRight = 0;
+
+        for( int i = 0; i < mapSize; i++ ) {
+            if( map[ 0, i ].content == Cell.Content.Proibited ) {
+                proibitedCellLeft++;
+            }
+
+            if( map[ i, 0 ].content == Cell.Content.Proibited ) {
+                proibitedCellDown++;
+            }
+
+            if( map[ mapSize - 1, i ].content == Cell.Content.Proibited ) {
+                proibitedCellRight++;
+            }
+
+            if( map[ i, mapSize - 1 ].content == Cell.Content.Proibited ) {
+                proibitedCellUp++;
+            }
+        }
+
+        Dictionary<int, Direction> availableDir = new Dictionary<int, Direction>();
+        int min = Mathf.Min( new int[ 4 ]{ proibitedCellUp, proibitedCellDown, proibitedCellLeft, proibitedCellRight } );
+        int k = 0;
+
+        //LineDir dir = LineDir.Random;
+
+        if( proibitedCellUp == min ) {
+            availableDir.Add( k, Direction.South );
+            k++;
+
+            //dir = LineDir.South;
+        }
+        if( proibitedCellLeft == min ) {
+            availableDir.Add( k, Direction.East );
+            k++;
+
+            //dir = LineDir.East;
+        }
+        if( proibitedCellDown == min ) {
+            availableDir.Add( k, Direction.North );
+            k++;
+
+            //dir = LineDir.North;
+        }
+        if( proibitedCellRight == min ) {
+            availableDir.Add( k, Direction.West );
+            k++;
+
+            //dir = LineDir.West;
+        } 
+
+        return availableDir[ Random.Range( 0, k ) ];
+        //return dir;
+    }
+
+    private void InitializeMap() {
+        Cell[ , ] matrix = new Cell[ mapSize, mapSize ];
+            
+        // Inizializzazione celle vuote
+        for( int i = 0; i < mapSize; i++ ) {
+            for( int j = 0; j < mapSize; j++ ) {
+                Cell cell = new Cell();
+
+                cell.content = Cell.Content.Empty;
+                if( i == 0 || i == mapSize - 1 ) {
+                    if( j < noGenNearBorders || j > mapSize - 1 - noGenNearBorders ) {
+                        cell.content = Cell.Content.Proibited;
+                    }
+                }
+                if( j == 0 || j == mapSize - 1) {
+                    if( i < noGenNearBorders || i > mapSize - 1 - noGenNearBorders ) {
+                        cell.content = Cell.Content.Proibited;
+                    }
+                }
+
+                cell.coords = new Vector2Int( i, j );
+                cell.spatialCoords = new Vector3( ( i * cellSize ) + ( cellSize / 2 ), ( j * cellSize ) + ( cellSize / 2 ), 0.0f );
+
+                matrix[ i, j ] = cell;
+            }    
+        }
+
+        this.map = matrix;
+    }
+
+    private void GenerateMetro2( string lineName, Direction mainDir, Vector3 startingPoint ) {
+        
+        GameObject lineGameObj = new GameObject( lineName );
+
+        Vector3 startingDir = Vector3.zero;
+        switch( mainDir ) {
+            case Direction.East:    startingDir = Vector3.right;
+                                    break;
+            case Direction.North:   startingDir = Vector3.up;
+                                    break;
+            case Direction.South:   startingDir = -Vector3.up;
+                                    break;
+            case Direction.West:    startingDir = -Vector3.right;
+                                    break;
+        }
+
+        Debug.Log( "mainDir: " + mainDir );
+
+        for( int i = 0; i < sectionsNumber; i++ ) {
+
+            string sectionName = "Sezione " + i;
+
+            // Genero la lista delle sezioni della linea
+            List<LineSection> sections = new List<LineSection>();
+            if( lineMap.ContainsKey( lineName ) ) {
+                sections = lineMap[ lineName ];
+            }
+            else {
+                lineMap.Add( lineName, sections );
+            }
+
+            if( sections.Count > 0 ) {
+                startingDir = sections[ sections.Count - 1 ].nextStartingDirections[ 0 ];
+                startingPoint = sections[ sections.Count - 1 ].nextStartingPoints[ 0 ];
+            }
+
+            LineSection section = new LineSection();
+            section.type = Type.Tunnel;
+
+            if( i == 0 ) {
+                section.bidirectional = startingBidirectional;
+            }
+            else {
+                section.bidirectional = sections[ i - 1 ].bidirectional;
+            }
+
+            EndedBy endedBy = EndedBy.Completed;
+            Vector2Int otherLineMatrixCoords = Vector2Int.zero;
+
+            List<Vector3> controlPoints = GenerateControlPoints2( startingDir, startingPoint, distanceMultiplier, controlPointsNumber, tunnelStraightness );
+            List<Vector3> controlPointsInsideMap = new List< Vector3>();
+            foreach( Vector3 cp in controlPoints ) {
+                Vector2Int matrixCoords = ConvertWorldCoordsToMatrixCoords( cp );
+                Debug.Log( "matrixCoords: " + matrixCoords ); 
+                if( matrixCoords.x >= 1 && matrixCoords.x < mapSize - 1 && matrixCoords.y >= 1 && matrixCoords.y < mapSize - 1 ) {
+                    //if( ( map[ matrixCoords.x, matrixCoords.y ].content == Cell.Content.Line || map[ matrixCoords.x, matrixCoords.y ].content == Cell.Content.OutsideSwitch ) && map[ matrixCoords.x, matrixCoords.y ].lineName != lineName ) {
+                        //endedBy = EndedBy.OtherLine;
+                        //otherLineMatrixCoords = matrixCoords;
+                        //break;
+                    //}
+                    //else {
+                        controlPointsInsideMap.Add( cp );
+                    //}
+                }
+                else {
+                    endedBy = EndedBy.OutOfBounds;
+                    break;
+                }
+            }
+            if( controlPointsInsideMap.Count > 2 ) {
+                List<Vector3> baseCurve = BezierCurveCalculator.CalculateBezierCurve( controlPointsInsideMap, baseBezierCurvePointsNumber );
+                List<Vector3> fixedLenghtCurve = BezierCurveCalculator.RecalcultateCurveWithFixedLenght( baseCurve, baseCurve.Count );
+                List<Vector3> limitedAngleCurve = BezierCurveCalculator.RecalcultateCurveWithLimitedAngle( fixedLenghtCurve, maxAngle, startingDir );
+                foreach( Vector3 curvePoint in limitedAngleCurve ) {
+                    Debug.Log( "curvePoint: " + curvePoint );
+                    Vector2Int matrixCoords = ConvertWorldCoordsToMatrixCoords( curvePoint );
+                    Debug.Log( "matrixCoords: " + matrixCoords ); 
+                    if( matrixCoords.x >= 1 && matrixCoords.x < mapSize - 1 && matrixCoords.y >= 1 && matrixCoords.y < mapSize - 1 ) {
+                        map[ matrixCoords.x, matrixCoords.y ].content = Cell.Content.Line;
+                        map[ matrixCoords.x, matrixCoords.y ].lineName = lineName;
+                    }
+                }
+
+                section.controlsPoints = controlPointsInsideMap;
+                section.bezierCurveBase = baseCurve;
+                section.bezierCurveFixedLenght = fixedLenghtCurve;
+                section.bezierCurveLimitedAngle = limitedAngleCurve;
+                section.curvePointsCount = limitedAngleCurve.Count;
+
+                List<Vector3> nextStartingDirections = new List<Vector3>();
+                nextStartingDirections.Add( limitedAngleCurve[ limitedAngleCurve.Count - 1 ] - limitedAngleCurve[ limitedAngleCurve.Count - 2 ] );
+                section.nextStartingDirections = nextStartingDirections;
+
+                Debug.Log( "section.nextStartingDirections " + i + " " + section.nextStartingDirections[ 0 ].x + ", " + section.nextStartingDirections[ 0 ].y + ", " + section.nextStartingDirections[ 0 ].z );
+
+                List<Vector3> nextStartingPoints = new List<Vector3>();
+                nextStartingPoints.Add( limitedAngleCurve[ limitedAngleCurve.Count - 1 ] );
+                section.nextStartingPoints = nextStartingPoints;
+
+                sections.Add( section );
+
+                GameObject sectionGameObj = new GameObject( sectionName );
+                sectionGameObj.transform.parent = lineGameObj.transform;
+                sectionGameObj.transform.position = startingPoint;
+            }
+
+            if( endedBy == EndedBy.OutOfBounds ) {
+                Debug.Log( "Stop Line Generation" );
+
+                Vector3 finalDir = sections[ i - 1 ].controlsPoints[ sections[ i - 1 ].controlsPoints.Count - 1 ] - sections[ i - 1 ].controlsPoints[ sections[ i - 1 ].controlsPoints.Count - 2 ];
+
+                float alpha = Vector3.SignedAngle( finalDir, Vector3.right, -Vector3.forward );
+
+                if( alpha >= -45.0f && alpha < 45.0f ) {
+                    mainDir = Direction.East;
+                }
+                else if( alpha >= 45.0f && alpha < 135.0f ) {
+                    mainDir = Direction.North;
+                }
+                else if( alpha >= -135.0f && alpha < -45.0f ) {
+                    mainDir = Direction.South;
+                }
+                else if( alpha >= 135.0f || alpha < -135.0f ) {
+                    mainDir = Direction.West;
+                }
+
+                Vector2Int lastMatrixCoords = ConvertWorldCoordsToMatrixCoords( sections[ sections.Count - 1 ].bezierCurveLimitedAngle[ sections[ sections.Count - 1 ].bezierCurveLimitedAngle.Count - 1 ] );
+
+                switch( mainDir ) {
+                    case Direction.East:    for( int p = 0; p < noGenNearLines; p++ ) {
+                                                if( lastMatrixCoords.y + p < mapSize ) {        
+                                                    map[ mapSize - 1, lastMatrixCoords.y + p ].content = Cell.Content.Proibited;
+                                                }
+                                                if( lastMatrixCoords.y - p >= 0 ) {
+                                                    map[ mapSize - 1, lastMatrixCoords.y - p ].content = Cell.Content.Proibited;
+                                                }
+                                            }
+                                            break;
+
+                    case Direction.North:   for( int p = 0; p < noGenNearLines; p++ ) {
+                                                if( lastMatrixCoords.x + p < mapSize ) {        
+                                                    map[ lastMatrixCoords.x + p, mapSize - 1 ].content = Cell.Content.Proibited;
+                                                }
+                                                if( lastMatrixCoords.x - p >= 0 ) {
+                                                    map[ lastMatrixCoords.x - p, mapSize - 1 ].content = Cell.Content.Proibited;
+                                                }
+                                            }
+                                            break;
+
+                    case Direction.South:   for( int p = 0; p < noGenNearLines; p++ ) {
+                                                if( lastMatrixCoords.x + p < mapSize ) {        
+                                                    map[ lastMatrixCoords.x + p, 0 ].content = Cell.Content.Proibited;
+                                                }
+                                                if( lastMatrixCoords.x - p >= 0 ) {
+                                                    map[ lastMatrixCoords.x - p, 0 ].content = Cell.Content.Proibited;
+                                                }
+                                            }
+                                            break;
+
+                    case Direction.West:    for( int p = 0; p < noGenNearLines; p++ ) {
+                                                if( lastMatrixCoords.y + p < mapSize ) {        
+                                                    map[ 0, lastMatrixCoords.y + p ].content = Cell.Content.Proibited;
+                                                }
+                                                if( lastMatrixCoords.y - p >= 0 ) {
+                                                    map[ 0, lastMatrixCoords.y - p ].content = Cell.Content.Proibited;
+                                                }
+                                            }
+                                            break;
+                }
+
+                break;
+                
+            }
+            /*else if( endedBy == EndedBy.OtherLine ) {
+
+                if( i > 0 ) {
+                    map[ otherLineMatrixCoords.x, otherLineMatrixCoords.y ].content = Cell.Content.OutsideSwitch;
+
+                    Vector2Int lastCellCoords = ConvertWorldCoordsToMatrixCoords( sections[ sections.Count - 1 ].bezierCurveLimitedAngle[ sections[ sections.Count - 1 ].bezierCurveLimitedAngle.Count - 1 ] );
+
+                    if( map[ otherLineMatrixCoords.x, otherLineMatrixCoords.y ].switchtoCell != null ) {
+                        map[ otherLineMatrixCoords.x, otherLineMatrixCoords.y ].switchtoCell.Add( lineName, map[ lastCellCoords.x, lastCellCoords.y ] );
+                    }
+                    else {
+                        Dictionary<string, Cell> firstSwitchToCell = new Dictionary<string, Cell>();
+                        firstSwitchToCell.Add( lineName, map[ lastCellCoords.x, lastCellCoords.y ] );
+                        map[ otherLineMatrixCoords.x, otherLineMatrixCoords.y ].switchtoCell = firstSwitchToCell;
+                    }
+                }
+                       
+
+                break;
+            }*/
+        }
+
+        lineCounter++;
     }
 
     private void GenerateMetro( string lineName, NewLine newLine ) {
@@ -245,7 +647,7 @@ public class FullLineGenerator : MonoBehaviour
                     section.bidirectional = sections[ i - 1 ].bidirectional;
                 }
 
-                List<Vector3> controlPoints = GenerateControlPoints2( startingDir, startingPoint, distanceMultiplier, controlPointsNumber, tunnelStraightness );
+                List<Vector3> controlPoints = GenerateControlPoints( mainDir, startingDir, startingPoint, distanceMultiplier, controlPointsNumber, tunnelStraightness );
                 List<Vector3> baseCurve = BezierCurveCalculator.CalculateBezierCurve( controlPoints, baseBezierCurvePointsNumber );
                 List<Vector3> fixedLenghtCurve = BezierCurveCalculator.RecalcultateCurveWithFixedLenght( baseCurve, baseCurve.Count );
                 List<Vector3> limitedAngleCurve = BezierCurveCalculator.RecalcultateCurveWithLimitedAngle( fixedLenghtCurve, maxAngle, startingDir );
@@ -410,7 +812,6 @@ public class FullLineGenerator : MonoBehaviour
         for( int i = 2; i < pointsNumber; i++ ) {
 
             float baseAngle = Random.Range( -45.0f + ( 45.0f * straightness ), 45.0f - ( 45.0f * straightness ) );
-            Debug.Log( "baseAngle: " + baseAngle );
 
             switch( mainDir ) {
                 case Direction.East:    controlPoints.Add( controlPoints[ i - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, baseAngle ) * Vector3.right * pointsDistanceMultiplier ) );
@@ -422,8 +823,6 @@ public class FullLineGenerator : MonoBehaviour
                 case Direction.West:    controlPoints.Add( controlPoints[ i - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, baseAngle + 180.0f ) * Vector3.right * pointsDistanceMultiplier ) );
                                         break;
             }
-
-            Debug.Log( "controlPoint " + i + ": " + controlPoints[ i ] );
         }
         
         return controlPoints;
@@ -486,6 +885,10 @@ public class FullLineGenerator : MonoBehaviour
     private void OnDrawGizmos()
     {
         foreach( string line in lineMap.Keys ) {
+            
+            Gizmos.color = Color.green;
+            Gizmos.DrawSphere( lineMap[ line ][ 0 ].bezierCurveLimitedAngle[ 0 ], 100.0f );
+
             foreach( LineSection segment in lineMap[ line ] ) {
 
                 if( segment.type == Type.Tunnel ) {
@@ -503,18 +906,19 @@ public class FullLineGenerator : MonoBehaviour
                     for( int i = 0; i < segment.bezierCurveLimitedAngle.Count; i++ ) {
                         
                         if( i > 0 ) {
-                            Gizmos.color = Color.cyan;
-                            Gizmos.DrawLine( segment.bezierCurveFixedLenght[ i - 1 ], segment.bezierCurveFixedLenght[ i ] );
+                            //Gizmos.color = Color.cyan;
+                            //Gizmos.DrawLine( segment.bezierCurveFixedLenght[ i - 1 ], segment.bezierCurveFixedLenght[ i ] );
                         
-                            Gizmos.color = Color.yellow;
+                            //Gizmos.color = Color.yellow; 
+                            Gizmos.color = Color.green;
                             Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i - 1 ], segment.bezierCurveLimitedAngle[ i ] );
 
-                            if( i % ( int )( baseBezierCurvePointsNumber * 0.1f ) == 0 ) {
-                                Gizmos.color = Color.magenta;
-                                Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i ], segment.bezierCurveFixedLenght[ i ] );
-                            }
+                            //if( i % ( int )( baseBezierCurvePointsNumber * 0.1f ) == 0 ) {
+                                //Gizmos.color = Color.magenta;
+                                //Gizmos.DrawLine( segment.bezierCurveLimitedAngle[ i ], segment.bezierCurveFixedLenght[ i ] );
+                            //}
 
-                            Gizmos.color = Color.green;
+                            //Gizmos.color = Color.green;
                             Gizmos.DrawWireSphere( segment.bezierCurveLimitedAngle[ i ], 0.5f );
                         }
                     }
@@ -621,14 +1025,62 @@ public class FullLineGenerator : MonoBehaviour
                         }
                     }
                 }
-                //Vector3 firstDir = segment.floorPoints.centerLine[ 1 ] - segment.floorPoints.centerLine[ 0 ];
-                //Vector3 lastDir = segment.floorPoints.centerLine[ segment.floorPoints.centerLine.Count - 1 ] - segment.bezierCurveLimitedAngle[ segment.floorPoints.centerLine.Count - 2 ];
-            
-                //Gizmos.color = Color.red;
-                //Gizmos.DrawRay( segment.floorPoints.centerLine[ segment.floorPoints.centerLine.Count - 1 ] - Vector3.forward, lastDir );
-                //Gizmos.DrawRay( segment.floorPoints.centerLine[ 0 ] - Vector3.forward, -firstDir );
-                //Gizmos.DrawRay( segment.floorPoints.centerLine[ segment.floorPoints.centerLine.Count - 1 ] - Vector3.forward, Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * lastDir );
-                //Gizmos.DrawRay( segment.floorPoints.centerLine[ segment.floorPoints.centerLine.Count - 1 ] - Vector3.forward, Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * lastDir );
+
+                if( map != null ) {
+
+                    for( int i = 0; i < mapSize; i++ ) {
+                        for( int j = 0; j < mapSize; j++ ) {
+                            Cell cell = this.map[ i, j ];
+                            Vector3 center = new Vector3( cell.spatialCoords.x, cell.spatialCoords.y, 0.0f );
+                            Vector3 a, b, c, d;
+                            a = center + ( Vector3.up * cellSize / 2 ) - ( Vector3.right * cellSize / 2 );
+                            b = a + ( Vector3.right * cellSize );
+                            c = b - ( Vector3.up * cellSize );
+                            d = c - ( Vector3.right * cellSize );
+
+                            Gizmos.color = Color.grey;
+                            Gizmos.DrawLine( a, b );
+                            Gizmos.DrawLine( b, c );
+                            Gizmos.DrawLine( c, d );
+                            Gizmos.DrawLine( d, a );
+
+                            if( cell.previousCell != null ) {
+                                Gizmos.color = Color.cyan;
+                                Gizmos.DrawLine( center, new Vector3( cell.previousCell.spatialCoords.x, cell.previousCell.spatialCoords.y, 0.0f ) );
+                            }
+
+                            /*if( cell.content == Cell.Content.OutsideSwitch ) {
+                                Gizmos.color = Color.blue;
+                                foreach( Cell newLineCell in cell.newLineCells ) {
+                                    Gizmos.DrawLine( center, new Vector3( newLineCell.spatialCoords.x, newLineCell.spatialCoords.y, 0.0f ) );
+                                }
+                            }*/
+
+                            if( cell.content == Cell.Content.Proibited ) {
+                                Gizmos.color = Color.red;
+                                Gizmos.DrawLine( a, c );
+                                Gizmos.DrawLine( b, d );
+                            }
+
+                            //if( cell.content == Cell.Content.Line ) {
+                                //Gizmos.color = Color.yellow;
+                                //Gizmos.DrawLine( a, c );
+                                //Gizmos.DrawLine( b, d );
+                            //}
+
+                            if( cell.content == Cell.Content.OutsideSwitch ) {
+                                Gizmos.color = Color.magenta;
+                                Gizmos.DrawLine( a, c );
+                                Gizmos.DrawLine( b, d );
+                                if( cell.switchtoCell != null ) {
+                                    foreach( string lineName in cell.switchtoCell.Keys ) {
+                                        Gizmos.DrawLine( cell.spatialCoords, cell.switchtoCell[ lineName ].spatialCoords );
+                                    }
+                                }
+                            }
+                        }    
+                    }
+                }
 
 
             }
