@@ -42,10 +42,15 @@ public class LineSection
     public List<Vector3> bezierCurveBase { get; set; }
     public List<Vector3> bezierCurveFixedLenght { get; set; }
     public List<Vector3> bezierCurveLimitedAngle { get; set; }
+    public List<Vector3> distanceControllingPoints { get; set; }
     public MeshGenerator.Floor floorPoints { get; set; }
     public Mesh floorMesh { get; set; }
     public SwitchDirection activeSwitch { get; set; }
     public Dictionary<SwitchDirection, List<GameObject>> switchLights { get; set; }
     public int curvePointsCount { get; set; }
+
+    public MetroGenerator.Direction orientation { get; set; }
+
+    public List<MetroGenerator.LineStart> newLinesStarts { get; set; }
 
 }
