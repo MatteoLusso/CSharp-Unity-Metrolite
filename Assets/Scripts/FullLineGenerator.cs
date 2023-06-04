@@ -593,7 +593,7 @@ public class FullLineGenerator : MonoBehaviour
                 section.curvePointsCount = stationRails.centerLine.Count;
             }
             else if( i % switchDistance == 0 && i > 0 ) {
-                SwitchPath switchPath = SwitchPath.CreateInstance( switchLenght, centerWidth, tunnelWidth, switchLightDistance, switchLightHeight, baseBezierCurvePointsNumber, switchLightRotation, switchLight );
+                SwitchPath switchPath = SwitchPath.CreateInstance( switchLenght, 0, centerWidth, tunnelWidth, switchLightDistance, switchLightHeight, baseBezierCurvePointsNumber, switchLightRotation, switchLight );
 
                 bool previousBidirectional = sections[ i - 1 ].bidirectional;
 
@@ -609,7 +609,7 @@ public class FullLineGenerator : MonoBehaviour
                     if( Random.Range( 0, 2 ) == 0 || lineCounter > 0 ) {
                         section = switchPath.generateMonoToBiSwitch( i, sections, startingDir, startingPoint, sectionGameObj );
                     }
-                    else{
+                    /*else{
 
                         section = switchPath.generateMonoToNewMonoSwitch( i, sections, startingDir, startingPoint, sectionGameObj );
 
@@ -634,7 +634,7 @@ public class FullLineGenerator : MonoBehaviour
                         }
 
                         newLines.Add( newSwitchLine );
-                    }
+                    }*/
                 }
             }
             else {
@@ -1003,24 +1003,24 @@ public class FullLineGenerator : MonoBehaviour
                         }
                         for( int i = 0; i < segment.floorPoints.rightCenterNewLine.Count; i++ ) {
                             if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.CenterToNewLineBackward ) {
+                                /*if( segment.activeSwitch == SwitchDirection.CenterToNewLineBackward ) {
                                     Gizmos.color = Color.green;
                                 }
                                 else {
                                     Gizmos.color = Color.blue;
                                 }
-                                Gizmos.DrawLine( segment.floorPoints.rightCenterNewLine[ i - 1 ], segment.floorPoints.rightCenterNewLine[ i ] );
+                                Gizmos.DrawLine( segment.floorPoints.rightCenterNewLine[ i - 1 ], segment.floorPoints.rightCenterNewLine[ i ] );*/
                             }
                         }
                         for( int i = 0; i < segment.floorPoints.leftCenterNewLine.Count; i++ ) {
                             if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.CenterToNewLineForward ) {
+                                /*if( segment.activeSwitch == SwitchDirection.CenterToNewLineForward ) {
                                     Gizmos.color = Color.green;
                                 }
                                 else {
                                     Gizmos.color = Color.blue;
                                 }
-                                Gizmos.DrawLine( segment.floorPoints.leftCenterNewLine[ i - 1 ], segment.floorPoints.leftCenterNewLine[ i ] );
+                                Gizmos.DrawLine( segment.floorPoints.leftCenterNewLine[ i - 1 ], segment.floorPoints.leftCenterNewLine[ i ] );*/
                             }
                         }
                     }
