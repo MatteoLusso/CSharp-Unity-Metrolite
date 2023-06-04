@@ -14,7 +14,32 @@ public enum SwitchType {
     BiToMono,
     MonoToBi,
     MonoToNewMono,
-    BiToNewMono,
+}
+
+public enum NewLineSide {
+    Left,
+    Right,
+    Both,
+}
+
+public class LineStart{
+    public LineSection fromSection { get; set; }
+    public NewLineSide newLineSide { get; set; }
+    public MetroGenerator.Direction previousOrientation { get; set; }
+    public MetroGenerator.Direction orientation { get; set; }
+    public Vector3 dir { get; set; }
+    public Vector3 pos { get; set; }
+    public bool generated { get; set; }
+    public string lineName { get; set; }
+
+    public LineStart( MetroGenerator.Direction inputOrientation, NewLineSide newLineSide, LineSection fromSection, Vector3 inputPos, Vector3 inputDir ) {
+        this.generated = false;
+        this.orientation = inputOrientation;
+        this.pos = inputPos;
+        this.dir = inputDir;
+        this.newLineSide = newLineSide;
+        this.fromSection = fromSection;
+    }
 }
 
 public enum SwitchDirection {
@@ -25,14 +50,18 @@ public enum SwitchDirection {
     LeftToRight,
     RightToCenter,
     LeftToCenter,
-    CenterToNewLineForward,
-    CenterToNewLineBackward,
+    CenterToNewLineLeftForward,
+    CenterToNewLineLeftBackward,
+    CenterToNewLineRightForward,
+    CenterToNewLineRightBackward,
+
 }
 
 public class LineSection
 {
     public Type type { get; set; }
     public SwitchType switchType { get; set; }
+    public NewLineSide newLineSide { get; set; }
     public bool bidirectional { get; set; }
     public bool newBidirectional { get; set; }
     public int number { get; set; }
@@ -51,6 +80,7 @@ public class LineSection
 
     public MetroGenerator.Direction orientation { get; set; }
 
-    public List<MetroGenerator.LineStart> newLinesStarts { get; set; }
+    public Dictionary<NewLineSide, LineStart> newLinesStarts { get; set; }
+    public int sectionIndex { get; set; }
 
 }
