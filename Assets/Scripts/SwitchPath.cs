@@ -518,7 +518,7 @@ public class SwitchPath : ScriptableObject
                 switchLights.Add( SwitchDirection.CenterToNewLineRightBackward, new List<GameObject>{ lightC1, lightNR1 } );
 
                 List<Vector3> forwardCenterNewRight = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c0, cb, nr1 }, this.curvePointsNumber );
-                List<Vector3> backwardCenterNewRight = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c1, cb, nr1 }, this.curvePointsNumber );
+                List<Vector3> backwardCenterNewRight = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ nr1, cb, c1 }, this.curvePointsNumber );
 
                 switchFloor.centerForwardNewLineRight = forwardCenterNewRight;
                 switchFloor.centerBackwardNewLineRight = backwardCenterNewRight;
@@ -540,7 +540,7 @@ public class SwitchPath : ScriptableObject
                 switchLights.Add( SwitchDirection.CenterToNewLineLeftBackward, new List<GameObject>{ lightC1, lightNL1 } );
 
                 List<Vector3> forwardCenterNewLeft = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c0, cb, nl1 }, this.curvePointsNumber );
-                List<Vector3> backwardCenterNewLeft = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c1, cb, nl1 }, this.curvePointsNumber );
+                List<Vector3> backwardCenterNewLeft = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ nl1, cb, c1 }, this.curvePointsNumber );
 
                 switchFloor.centerForwardNewLineLeft = forwardCenterNewLeft;
                 switchFloor.centerBackwardNewLineLeft = backwardCenterNewLeft;

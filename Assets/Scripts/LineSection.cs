@@ -23,7 +23,6 @@ public enum NewLineSide {
 }
 
 public class LineStart{
-    public LineSection fromSection { get; set; }
     public NewLineSide newLineSide { get; set; }
     public MetroGenerator.Direction previousOrientation { get; set; }
     public MetroGenerator.Direction orientation { get; set; }
@@ -32,13 +31,12 @@ public class LineStart{
     public bool generated { get; set; }
     public string lineName { get; set; }
 
-    public LineStart( MetroGenerator.Direction inputOrientation, NewLineSide newLineSide, LineSection fromSection, Vector3 inputPos, Vector3 inputDir ) {
+    public LineStart( MetroGenerator.Direction inputOrientation, NewLineSide newLineSide, Vector3 inputPos, Vector3 inputDir ) {
         this.generated = false;
         this.orientation = inputOrientation;
         this.pos = inputPos;
         this.dir = inputDir;
         this.newLineSide = newLineSide;
-        this.fromSection = fromSection;
     }
 }
 
@@ -77,9 +75,9 @@ public class LineSection
     public SwitchDirection activeSwitch { get; set; }
     public Dictionary<SwitchDirection, List<GameObject>> switchLights { get; set; }
     public int curvePointsCount { get; set; }
-
+    public LineSection fromSection { get; set; }
     public MetroGenerator.Direction orientation { get; set; }
-
+    public string lineName { get; set; }
     public Dictionary<NewLineSide, LineStart> newLinesStarts { get; set; }
     public int sectionIndex { get; set; }
 
