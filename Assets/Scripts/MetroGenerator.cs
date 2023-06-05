@@ -58,7 +58,7 @@ public class MetroGenerator : MonoBehaviour
 
     public void GenerateMetro() {
 
-        GenerateLine( "Linea " + lineCounter, Direction.None, Direction.Random, sectionsNumber, Vector3.zero, Vector3.zero, newLineFromSwitch );
+        GenerateLine( "Linea " + lineCounter, Direction.None, Direction.Random, sectionsNumber, Vector3.zero, Vector3.zero, newLineFromSwitch, null );
 
         foreach( LineSection section in lines[ "Linea " + ( lineCounter - 1 ) ] ) {
             if( section.newLinesStarts != null && section.newLinesStarts.Count > 0 ) {
@@ -68,7 +68,7 @@ public class MetroGenerator : MonoBehaviour
                         LineStart start = section.newLinesStarts[ sides[ i ] ];
 
                         if( !start.generated ) {
-                            GenerateLine( "Linea " + lineCounter, start.previousOrientation, start.orientation, sectionsNumber/ 2, start.pos, start.dir, false );
+                            GenerateLine( "Linea " + lineCounter, start.previousOrientation, start.orientation, sectionsNumber/ 2, start.pos, start.dir, false, section );
                             start.generated = true;
                             start.lineName = "Linea " + ( lineCounter - 1 );
 
@@ -314,7 +314,7 @@ public class MetroGenerator : MonoBehaviour
         }
     }
 
-    private Vector3 GenerateLine( string lineName, Direction previousLineOrientation, Direction lineOrientation, int lineLength, Vector3 startingPoint, Vector3 startingDir, bool generateNewLines ) {
+    private Vector3 GenerateLine( string lineName, Direction previousLineOrientation, Direction lineOrientation, int lineLength, Vector3 startingPoint, Vector3 startingDir, bool generateNewLines, LineSection fromSection ) {
 
         List<Direction> sectionAllAvailableOrientations = new List<Direction>();
 
@@ -452,6 +452,7 @@ public class MetroGenerator : MonoBehaviour
                 section.controlsPoints = curvePoints;
                 section.bezierCurveLimitedAngle = curvePoints;
                 section.curvePointsCount = 2;
+                
             }
             else {
                 section.type = Type.Tunnel;
@@ -483,6 +484,11 @@ public class MetroGenerator : MonoBehaviour
 
             section.orientation = sectionOrientation;
             section.sectionIndex = i;
+            section.lineName = lineName;
+            if( i == 0 ) {
+                section.fromSection = fromSection;
+            }
+
             sections.Add( section );
 
             foreach( Vector3 curvePoint in section.bezierCurveLimitedAngle ) {
@@ -520,41 +526,41 @@ public class MetroGenerator : MonoBehaviour
                         Dictionary<NewLineSide, LineStart> newLinesStarts = new Dictionary<NewLineSide, LineStart>();
                         switch( finalSection.orientation ) {
                             case Direction.East:    if( leftAvailable ) {
-                                                        LineStart newLineStart = new LineStart( Direction.North, NewLineSide.Left, finalSection, switchLeft, switchLeft - switchCenter);
+                                                        LineStart newLineStart = new LineStart( Direction.North, NewLineSide.Left, switchLeft, switchLeft - switchCenter);
                                                         newLinesStarts.Add( NewLineSide.Left, newLineStart );
                                                     }
                                                     if( rightAvailable ) {
-                                                        LineStart newLineStart = new LineStart( Direction.South, NewLineSide.Right, finalSection, switchRight, switchRight - switchCenter );
+                                                        LineStart newLineStart = new LineStart( Direction.South, NewLineSide.Right, switchRight, switchRight - switchCenter );
                                                         newLinesStarts.Add( NewLineSide.Right, newLineStart );
                                                     }
                                                     break;
 
                             case Direction.West:    if( leftAvailable ) {
-                                                        LineStart newLineStart = new LineStart( Direction.South, NewLineSide.Left, finalSection, switchLeft, switchLeft - switchCenter );
+                                                        LineStart newLineStart = new LineStart( Direction.South, NewLineSide.Left, switchLeft, switchLeft - switchCenter );
                                                         newLinesStarts.Add( NewLineSide.Left, newLineStart );
                                                     }
                                                     if( rightAvailable ) {
-                                                        LineStart newLineStart = new LineStart( Direction.North, NewLineSide.Right, finalSection, switchRight, switchRight - switchCenter );
+                                                        LineStart newLineStart = new LineStart( Direction.North, NewLineSide.Right, switchRight, switchRight - switchCenter );
                                                         newLinesStarts.Add( NewLineSide.Right, newLineStart );
                                                     }
                                                     break;
 
                             case Direction.North:   if( leftAvailable ) {
-                                                        LineStart newLineStart = new LineStart( Direction.West, NewLineSide.Left, finalSection, switchLeft, switchLeft - switchCenter );
+                                                        LineStart newLineStart = new LineStart( Direction.West, NewLineSide.Left, switchLeft, switchLeft - switchCenter );
                                                         newLinesStarts.Add( NewLineSide.Left, newLineStart );
                                                     }
                                                     if( rightAvailable ) {
-                                                        LineStart newLineStart = new LineStart( Direction.East, NewLineSide.Right, finalSection, switchRight, switchRight - switchCenter );
+                                                        LineStart newLineStart = new LineStart( Direction.East, NewLineSide.Right, switchRight, switchRight - switchCenter );
                                                         newLinesStarts.Add( NewLineSide.Right, newLineStart );
                                                     }
                                                     break;
 
                             case Direction.South:   if( leftAvailable ) {
-                                                        LineStart newLineStart = new LineStart( Direction.East, NewLineSide.Left, finalSection, switchLeft, switchLeft - switchCenter );
+                                                        LineStart newLineStart = new LineStart( Direction.East, NewLineSide.Left, switchLeft, switchLeft - switchCenter );
                                                         newLinesStarts.Add( NewLineSide.Left, newLineStart );
                                                     }
                                                     if( rightAvailable ) {
-                                                        LineStart newLineStart = new LineStart( Direction.West, NewLineSide.Right, finalSection, switchRight, switchRight - switchCenter );
+                                                        LineStart newLineStart = new LineStart( Direction.West, NewLineSide.Right, switchRight, switchRight - switchCenter );
                                                         newLinesStarts.Add( NewLineSide.Right, newLineStart );
                                                     }   
                                                     break;
@@ -908,7 +914,7 @@ public class MetroGenerator : MonoBehaviour
                                         Gizmos.color = Color.green;
                                     }
                                     else {
-                                        Gizmos.color = Color.blue;
+                                        Gizmos.color = Color.red;
                                     }
                                     Gizmos.DrawLine( segment.floorPoints.centerBackwardNewLineLeft[ i - 1 ], segment.floorPoints.centerBackwardNewLineLeft[ i ] );
                                 }
@@ -921,7 +927,7 @@ public class MetroGenerator : MonoBehaviour
                                         Gizmos.color = Color.green;
                                     }
                                     else {
-                                        Gizmos.color = Color.blue;
+                                        Gizmos.color = Color.red;
                                     }
                                     Gizmos.DrawLine( segment.floorPoints.centerBackwardNewLineRight[ i - 1 ], segment.floorPoints.centerBackwardNewLineRight[ i ] );
                                 }
