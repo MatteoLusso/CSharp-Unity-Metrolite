@@ -117,7 +117,18 @@ public class MetroGenerator : MonoBehaviour
                 LineSection section = this.lines[ lineName ][ i ];
 
                 if( i == 0 ) {
-                    section.bidirectional = startingBidirectional;
+
+                    Debug.Log( "Nome linea: " + lineName + " - fromSection.switchType: " + ( section.fromSection != null ? section.fromSection.switchType.ToString() : "null" ) );
+
+                    if( section.fromSection != null && section.fromSection.switchType == SwitchType.MonoToNewMono ) {
+                        section.bidirectional = false;
+                    }
+                    else if( section.fromSection != null && section.fromSection.switchType == SwitchType.BiToNewBi ) {
+                        section.bidirectional = true;
+                    }
+                    else {
+                        section.bidirectional = startingBidirectional;
+                    }
                 }
                 else {
                     section.bidirectional = this.lines[ lineName ][ i - 1 ].bidirectional;
@@ -266,13 +277,13 @@ public class MetroGenerator : MonoBehaviour
 
                                         LineSection switchSection = new LineSection();
 
+                                        Debug.Log( "previousBidirectional: " + previousBidirectional );
+
                                         if( previousBidirectional ) {
-                                            /*if( section.newLinesStarts.Count > 0 ) {
-                                                //foreach( LineStart start in section.newLinesStarts ) {
-                                                    //
-                                                //}
+                                            if( section.newLinesStarts != null && section.newLinesStarts.Count > 0 ) {
+                                                switchSection = switchPath.generateBiToNewBiSwitch( section, this.lines[ lineName ][ i - 1 ].nextStartingDirections[ 0 ], this.lines[ lineName ][ i - 1 ].nextStartingPoints[ 0 ], sectionGameObj );
                                             }
-                                            else {*/
+                                            else {
 
                                                 if( Random.Range( 0, 2 ) == 0 ) {
                                                     switchSection = switchPath.generateBiToBiSwitch( i, this.lines[ lineName ], this.lines[ lineName ][ i - 1 ].nextStartingDirections[ 0 ], this.lines[ lineName ][ i - 1 ].nextStartingPoints[ 0 ], sectionGameObj );
@@ -280,14 +291,11 @@ public class MetroGenerator : MonoBehaviour
                                                 else{
                                                     switchSection = switchPath.generateBiToMonoSwitch( i, this.lines[ lineName ], this.lines[ lineName ][ i - 1 ].nextStartingDirections[ 0 ], this.lines[ lineName ][ i - 1 ].nextStartingPoints[ 0 ], sectionGameObj );
                                                 }
-                                            //}
+                                            }
                                         }
                                         else {
                                             if( section.newLinesStarts != null && section.newLinesStarts.Count > 0 ) {
-                                                foreach( NewLineSide nls in section.newLinesStarts.Keys ) {
-                                                    Debug.Log( "nls: " + nls + " indice: " + i );
-                                                }
-                                                switchSection = switchPath.generateSwitchMonoNewLine( section, this.lines[ lineName ][ i - 1 ].nextStartingDirections[ 0 ], this.lines[ lineName ][ i - 1 ].nextStartingPoints[ 0 ], sectionGameObj );
+                                                switchSection = switchPath.generateMonoToNewMonoSwitch( section, this.lines[ lineName ][ i - 1 ].nextStartingDirections[ 0 ], this.lines[ lineName ][ i - 1 ].nextStartingPoints[ 0 ], sectionGameObj );
                                             }
                                             else {
 
@@ -868,7 +876,8 @@ public class MetroGenerator : MonoBehaviour
                             }
                         }
                     }
-                    else if( segment.switchType == SwitchType.MonoToNewMono ) {
+
+                    if( segment.switchType == SwitchType.MonoToNewMono ) {
                         for( int i = 0; i < segment.floorPoints.centerLine.Count; i++ ) {
                             if( i > 0 ) {
                                 if( segment.activeSwitch == SwitchDirection.CenterToCenter ) {
@@ -880,56 +889,131 @@ public class MetroGenerator : MonoBehaviour
                                 Gizmos.DrawLine( segment.floorPoints.centerLine[ i - 1 ], segment.floorPoints.centerLine[ i ] );
                             }
                         }
-
-                        if( segment.floorPoints.centerForwardNewLineLeft != null ) {
-                            for( int i = 0; i < segment.floorPoints.centerForwardNewLineLeft.Count; i++ ) {
+                        if( segment.floorPoints.centerEntranceLeft != null ) {
+                            for( int i = 0; i < segment.floorPoints.centerEntranceLeft.Count; i++ ) {
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.CenterToNewLineLeftForward ) {
+                                    if( segment.activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
                                         Gizmos.color = Color.blue;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.centerForwardNewLineLeft[ i - 1 ], segment.floorPoints.centerForwardNewLineLeft[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.centerEntranceLeft[ i - 1 ], segment.floorPoints.centerEntranceLeft[ i ] );
                                 }
                             }
                         }
-                        if( segment.floorPoints.centerForwardNewLineRight != null ) {
-                            for( int i = 0; i < segment.floorPoints.centerForwardNewLineRight.Count; i++ ) {
+                        if( segment.floorPoints.centerEntranceRight != null ) {
+                            for( int i = 0; i < segment.floorPoints.centerEntranceRight.Count; i++ ) {
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.CenterToNewLineRightForward ) {
+                                    if( segment.activeSwitch == SwitchDirection.CenterToEntranceRight ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
                                         Gizmos.color = Color.blue;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.centerForwardNewLineRight[ i - 1 ], segment.floorPoints.centerForwardNewLineRight[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.centerEntranceRight[ i - 1 ], segment.floorPoints.centerEntranceRight[ i ] );
                                 }
                             }
                         }
-                        if( segment.floorPoints.centerBackwardNewLineLeft != null ) {
-                            for( int i = 0; i < segment.floorPoints.centerBackwardNewLineLeft.Count; i++ ) {
+                        if( segment.floorPoints.centerExitLeft != null ) {
+                            for( int i = 0; i < segment.floorPoints.centerExitLeft.Count; i++ ) {
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.CenterToNewLineLeftBackward ) {
+                                    if( segment.activeSwitch == SwitchDirection.CenterToExitLeft ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
                                         Gizmos.color = Color.red;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.centerBackwardNewLineLeft[ i - 1 ], segment.floorPoints.centerBackwardNewLineLeft[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.centerExitLeft[ i - 1 ], segment.floorPoints.centerExitLeft[ i ] );
                                 }
                             }
                         }
-                        if( segment.floorPoints.centerBackwardNewLineRight != null ) {
-                            for( int i = 0; i < segment.floorPoints.centerBackwardNewLineRight.Count; i++ ) {
+                        if( segment.floorPoints.centerExitRight != null ) {
+                            for( int i = 0; i < segment.floorPoints.centerExitRight.Count; i++ ) {
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.CenterToNewLineRightBackward ) {
+                                    if( segment.activeSwitch == SwitchDirection.CenterToExitRight ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
                                         Gizmos.color = Color.red;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.centerBackwardNewLineRight[ i - 1 ], segment.floorPoints.centerBackwardNewLineRight[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.centerExitRight[ i - 1 ], segment.floorPoints.centerExitRight[ i ] );
+                                }
+                            }
+                        }
+                    }
+                    else if( segment.switchType == SwitchType.BiToNewBi ) {
+                        for( int i = 0; i < segment.floorPoints.leftLine.Count; i++ ) {
+                            if( i > 0 ) {
+                                if( segment.activeSwitch == SwitchDirection.LeftToLeft ) {
+                                    Gizmos.color = Color.green;
+                                }
+                                else {
+                                    Gizmos.color = Color.yellow;
+                                }
+                                Gizmos.DrawLine( segment.floorPoints.leftLine[ i - 1 ], segment.floorPoints.leftLine[ i ] );
+                            }
+                        }
+                        for( int i = 0; i < segment.floorPoints.rightLine.Count; i++ ) {
+                            if( i > 0 ) {
+                                if( segment.activeSwitch == SwitchDirection.RightToRight ) {
+                                    Gizmos.color = Color.green;
+                                }
+                                else {
+                                    Gizmos.color = Color.yellow;
+                                }
+                                Gizmos.DrawLine( segment.floorPoints.rightLine[ i - 1 ], segment.floorPoints.rightLine[ i ] );
+                            }
+                        }
+                        if( segment.floorPoints.leftEntranceLeft != null ) {
+                            for( int i = 0; i < segment.floorPoints.leftEntranceLeft.Count; i++ ) {
+                                if( i > 0 ) {
+                                    if( segment.activeSwitch == SwitchDirection.LeftToEntranceLeft ) {
+                                        Gizmos.color = Color.green;
+                                    }
+                                    else {
+                                        Gizmos.color = Color.blue;
+                                    }
+                                    Gizmos.DrawLine( segment.floorPoints.leftEntranceLeft[ i - 1 ], segment.floorPoints.leftEntranceLeft[ i ] );
+                                }
+                            }
+                        }
+                        if( segment.floorPoints.rightEntranceRight != null ) {
+                            for( int i = 0; i < segment.floorPoints.rightEntranceRight.Count; i++ ) {
+                                if( i > 0 ) {
+                                    if( segment.activeSwitch == SwitchDirection.RightToEntranceRight ) {
+                                        Gizmos.color = Color.green;
+                                    }
+                                    else {
+                                        Gizmos.color = Color.blue;
+                                    }
+                                    Gizmos.DrawLine( segment.floorPoints.rightEntranceRight[ i - 1 ], segment.floorPoints.rightEntranceRight[ i ] );
+                                }
+                            }
+                        }
+                        if( segment.floorPoints.leftExitLeft != null ) {
+                            for( int i = 0; i < segment.floorPoints.leftExitLeft.Count; i++ ) {
+                                if( i > 0 ) {
+                                    if( segment.activeSwitch == SwitchDirection.LeftToExitLeft ) {
+                                        Gizmos.color = Color.green;
+                                    }
+                                    else {
+                                        Gizmos.color = Color.red;
+                                    }
+                                    Gizmos.DrawLine( segment.floorPoints.leftExitLeft[ i - 1 ], segment.floorPoints.leftExitLeft[ i ] );
+                                }
+                            }
+                        }
+                        if( segment.floorPoints.rightExitRight != null ) {
+                            for( int i = 0; i < segment.floorPoints.rightExitRight.Count; i++ ) {
+                                if( i > 0 ) {
+                                    if( segment.activeSwitch == SwitchDirection.RightToExitRight ) {
+                                        Gizmos.color = Color.green;
+                                    }
+                                    else {
+                                        Gizmos.color = Color.red;
+                                    }
+                                    Gizmos.DrawLine( segment.floorPoints.rightExitRight[ i - 1 ], segment.floorPoints.rightExitRight[ i ] );
                                 }
                             }
                         }

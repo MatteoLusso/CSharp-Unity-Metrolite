@@ -27,10 +27,15 @@ public static class MeshGenerator
         public List<Vector3> leftCenterNewLine { get; set; }
         public List<Vector3> rightCenterNewLine { get; set; }
 
-        public List<Vector3> centerForwardNewLineRight { get; set; }
-        public List<Vector3> centerBackwardNewLineRight { get; set; }
-        public List<Vector3> centerForwardNewLineLeft { get; set; }
-        public List<Vector3> centerBackwardNewLineLeft { get; set; }
+        public List<Vector3> centerEntranceRight { get; set; }
+        public List<Vector3> centerExitRight { get; set; }
+        public List<Vector3> centerEntranceLeft { get; set; }
+        public List<Vector3> centerExitLeft { get; set; }
+
+        public List<Vector3> rightEntranceRight { get; set; }
+        public List<Vector3> rightExitRight { get; set; }
+        public List<Vector3> leftEntranceLeft { get; set; }
+        public List<Vector3> leftExitLeft { get; set; }
 
 
     }

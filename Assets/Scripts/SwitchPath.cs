@@ -98,6 +98,8 @@ public class SwitchPath : ScriptableObject
         section.curvePointsCount = switchFloor.rightLine.Count;
         section.floorPoints = switchFloor;
 
+        TrainController.UpdateSwitchLight( section );
+
         return section;
     }
 
@@ -225,6 +227,8 @@ public class SwitchPath : ScriptableObject
         section.activeSwitch = SwitchDirection.RightToCenter;
         section.curvePointsCount = switchFloor.rightCenterLine.Count;
         section.floorPoints = switchFloor;
+
+        TrainController.UpdateSwitchLight( section );
 
         return section;
     }
@@ -362,6 +366,8 @@ public class SwitchPath : ScriptableObject
         section.curvePointsCount = switchFloor.rightCenterLine.Count;
         section.floorPoints = switchFloor;
 
+        TrainController.UpdateSwitchLight( section );
+
         return section;
     }
 
@@ -470,7 +476,7 @@ public class SwitchPath : ScriptableObject
         return section;
     }*/
 
-    public LineSection generateSwitchMonoNewLine( LineSection switchSection, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
+    public LineSection generateMonoToNewMonoSwitch( LineSection switchSection, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
 
         LineSection section = new LineSection();
         section.type = Type.Switch;
@@ -514,14 +520,14 @@ public class SwitchPath : ScriptableObject
                 lightNR1.transform.parent = sectionGameObj.transform;
                 lightNR1.name = "Semaforo NR1";
                 switchLights.Add( SwitchDirection.CenterToCenter, new List<GameObject>{ lightC0, lightC1 } );
-                switchLights.Add( SwitchDirection.CenterToNewLineRightForward, new List<GameObject>{ lightC0, lightNR1 } );
-                switchLights.Add( SwitchDirection.CenterToNewLineRightBackward, new List<GameObject>{ lightC1, lightNR1 } );
+                switchLights.Add( SwitchDirection.CenterToEntranceRight, new List<GameObject>{ lightC0, lightNR1 } );
+                switchLights.Add( SwitchDirection.CenterToExitRight, new List<GameObject>{ lightC1, lightNR1 } );
 
                 List<Vector3> forwardCenterNewRight = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c0, cb, nr1 }, this.curvePointsNumber );
                 List<Vector3> backwardCenterNewRight = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ nr1, cb, c1 }, this.curvePointsNumber );
 
-                switchFloor.centerForwardNewLineRight = forwardCenterNewRight;
-                switchFloor.centerBackwardNewLineRight = backwardCenterNewRight;
+                switchFloor.centerEntranceRight = forwardCenterNewRight;
+                switchFloor.centerExitRight = backwardCenterNewRight;
 
                 nextStartingPoints.Add( nr1 );
 
@@ -536,14 +542,14 @@ public class SwitchPath : ScriptableObject
                 lightNL1.transform.parent = sectionGameObj.transform;
                 lightNL1.name = "Semaforo NL1";
                 switchLights.Add( SwitchDirection.CenterToCenter, new List<GameObject>{ lightC0, lightC1 } );
-                switchLights.Add( SwitchDirection.CenterToNewLineLeftForward, new List<GameObject>{ lightC0, lightNL1 } );
-                switchLights.Add( SwitchDirection.CenterToNewLineLeftBackward, new List<GameObject>{ lightC1, lightNL1 } );
+                switchLights.Add( SwitchDirection.CenterToEntranceLeft, new List<GameObject>{ lightC0, lightNL1 } );
+                switchLights.Add( SwitchDirection.CenterToExitLeft, new List<GameObject>{ lightC1, lightNL1 } );
 
                 List<Vector3> forwardCenterNewLeft = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ c0, cb, nl1 }, this.curvePointsNumber );
                 List<Vector3> backwardCenterNewLeft = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ nl1, cb, c1 }, this.curvePointsNumber );
 
-                switchFloor.centerForwardNewLineLeft = forwardCenterNewLeft;
-                switchFloor.centerBackwardNewLineLeft = backwardCenterNewLeft;
+                switchFloor.centerEntranceLeft = forwardCenterNewLeft;
+                switchFloor.centerExitLeft = backwardCenterNewLeft;
 
                 nextStartingPoints.Add( nl1 );
 
@@ -560,6 +566,126 @@ public class SwitchPath : ScriptableObject
         section.activeSwitch = SwitchDirection.CenterToCenter;
         section.curvePointsCount = switchFloor.centerLine.Count;
         section.floorPoints = switchFloor;
+
+        TrainController.UpdateSwitchLight( section );
+
+        return section;
+    }
+
+    public LineSection generateBiToNewBiSwitch( LineSection switchSection, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
+
+        Debug.Log( "generateBiToNewBiSwitch eseguito" );
+
+        LineSection section = new LineSection();
+        section.type = Type.Switch;
+        section.switchType = SwitchType.BiToNewBi;
+        section.bidirectional =  true;
+        section.newBidirectional =  true;
+
+        MeshGenerator.Floor switchFloor = new MeshGenerator.Floor();
+        Vector3 switchDir = startingDir.normalized;
+
+        Dictionary<SwitchDirection, List<GameObject>> switchLights = new Dictionary<SwitchDirection, List<GameObject>>();
+        Vector3 c0, c1, r0, rb0, nr0, l0, lb0, nl0, r1, rb1, nr1, l1, lb1, nl1;
+        float dw = ( this.centerWidth / 2 ) + ( this.tunnelWidth / 2 );
+        float dl = ( this.switchLenght - this.tunnelWidth - this.centerWidth ) / 2;
+        List<Vector3> nextStartingPoints = new List<Vector3>();
+        List<Vector3> nextStartingDirections = new List<Vector3>();
+
+        c0 = startingPoint;
+
+        r0 = c0 + Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir * dw;
+        rb0 = r0 + ( switchDir * dl );
+        rb1 = r0 + ( switchDir * ( this.switchLenght - dl ) );
+        r1 = r0 + ( switchDir * this.switchLenght );
+
+        l0 = c0 + Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir * dw;
+        lb0 = l0 + ( switchDir * dl );
+        lb1 = l0 + ( switchDir * ( this.switchLenght - dl ) );
+        l1 = l0 + ( switchDir * this.switchLenght );
+
+        c1 = c0 + ( switchDir * this.switchLenght );
+
+        nextStartingPoints.Add( c1 );
+        nextStartingDirections.Add( startingDir );
+
+        switchFloor.leftLine = new List<Vector3>{ l0, lb0, lb1, l1 };
+        switchFloor.centerLine = new List<Vector3>{ c0, c1 };
+        switchFloor.rightLine = new List<Vector3>{ r0, rb0, rb1, r1 };
+
+        foreach( NewLineSide newSide in switchSection.newLinesStarts.Keys ) {
+
+            if( newSide == NewLineSide.Right ) { // Nuova linea a Destra
+                
+                Vector3 ncr = switchSection.newLinesStarts[ newSide ].pos; 
+                nr0 = ncr - switchDir * ( ( tunnelWidth / 2 ) + ( centerWidth / 2 ) );
+                nr1 = ncr + switchDir * ( ( tunnelWidth / 2 ) + ( centerWidth / 2 ) );
+
+                GameObject lightR0 = Instantiate( this.switchLight, r0 + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) - 180.0f, this.switchLightRotation.y, this.switchLightRotation.z ) );
+                lightR0.transform.parent = sectionGameObj.transform;
+                lightR0.name = "Semaforo R0";
+                GameObject lightR1 = Instantiate( this.switchLight, r1 + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
+                lightR1.transform.parent = sectionGameObj.transform;
+                lightR1.name = "Semaforo R1";
+                GameObject lightNR0 = Instantiate( this.switchLight, nr0 + ( Quaternion.Euler( 0.0f, 0.0f, 0.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) + Vector3.SignedAngle( switchSection.newLinesStarts[ newSide ].dir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
+                lightNR0.transform.parent = sectionGameObj.transform;
+                lightNR0.name = "Semaforo NR0";
+                GameObject lightNR1 = Instantiate( this.switchLight, nr1 + ( Quaternion.Euler( 0.0f, 0.0f, 0.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) + Vector3.SignedAngle( switchSection.newLinesStarts[ newSide ].dir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
+                lightNR1.transform.parent = sectionGameObj.transform;
+                lightNR1.name = "Semaforo NR1";
+
+                switchLights.Add( SwitchDirection.RightToRight, new List<GameObject>{ lightR0, lightR1 } );
+                switchLights.Add( SwitchDirection.RightToEntranceRight, new List<GameObject>{ lightR0, lightNR0 } );
+                switchLights.Add( SwitchDirection.RightToExitRight, new List<GameObject>{ lightNR1, lightR1 } );
+
+                switchFloor.rightEntranceRight = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ r0, rb0, nr0 }, this.curvePointsNumber );
+                switchFloor.rightExitRight = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ nr1, rb1, r1 }, this.curvePointsNumber );
+
+                nextStartingPoints.Add( ncr );
+                nextStartingDirections.Add( nr0 - rb0 );
+            }
+            else if( newSide == NewLineSide.Left ) { // Nuova linea a Sinistra
+
+                Vector3 ncl = switchSection.newLinesStarts[ newSide ].pos; 
+                nl0 = ncl - switchDir * ( ( tunnelWidth / 2 ) + ( centerWidth / 2 ) );
+                nl1 = ncl + switchDir * ( ( tunnelWidth / 2 ) + ( centerWidth / 2 ) );
+
+                GameObject lightL0 = Instantiate( this.switchLight, l0 + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) - 180.0f, this.switchLightRotation.y, this.switchLightRotation.z ) );
+                lightL0.transform.parent = sectionGameObj.transform;
+                lightL0.name = "Semaforo L0";
+                GameObject lightL1 = Instantiate( this.switchLight, l1 + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
+                lightL1.transform.parent = sectionGameObj.transform;
+                lightL1.name = "Semaforo L1";
+                GameObject lightNL0 = Instantiate( this.switchLight, nl0 + ( Quaternion.Euler( 0.0f, 0.0f, 0.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) + Vector3.SignedAngle( switchSection.newLinesStarts[ newSide ].dir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
+                lightNL0.transform.parent = sectionGameObj.transform;
+                lightNL0.name = "Semaforo NL0";
+                GameObject lightNL1 = Instantiate( this.switchLight, nl1 + ( Quaternion.Euler( 0.0f, 0.0f, 0.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) + Vector3.SignedAngle( switchSection.newLinesStarts[ newSide ].dir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
+                lightNL1.transform.parent = sectionGameObj.transform;
+                lightNL1.name = "Semaforo NL1";
+
+                switchLights.Add( SwitchDirection.LeftToLeft, new List<GameObject>{ lightL0, lightL1 } );
+                switchLights.Add( SwitchDirection.LeftToEntranceLeft, new List<GameObject>{ lightL0, lightNL0 } );
+                switchLights.Add( SwitchDirection.LeftToExitLeft, new List<GameObject>{ lightNL1, lightL1 } );
+
+                switchFloor.leftEntranceLeft = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ l0, lb0, nl0 }, this.curvePointsNumber );
+                switchFloor.leftExitLeft = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ nl1, lb1, l1 }, this.curvePointsNumber );
+
+                nextStartingPoints.Add( ncl );
+                nextStartingDirections.Add( nl0 - lb0 );
+            }
+        }
+
+        section.switchLights = switchLights;
+
+        section.nextStartingDirections = nextStartingDirections; 
+        section.nextStartingPoints = nextStartingPoints;
+        section.floorPoints = switchFloor;
+
+        section.activeSwitch = SwitchDirection.RightToRight;
+        section.curvePointsCount = switchFloor.rightLine.Count;
+        section.floorPoints = switchFloor;
+
+        TrainController.UpdateSwitchLight( section );
 
         return section;
     }
