@@ -14,6 +14,7 @@ public enum SwitchType {
     BiToMono,
     MonoToBi,
     MonoToNewMono,
+    BiToNewBi,
 }
 
 public enum NewLineSide {
@@ -48,10 +49,15 @@ public enum SwitchDirection {
     LeftToRight,
     RightToCenter,
     LeftToCenter,
-    CenterToNewLineLeftForward,
-    CenterToNewLineLeftBackward,
-    CenterToNewLineRightForward,
-    CenterToNewLineRightBackward,
+    CenterToEntranceLeft,
+    CenterToEntranceRight,
+    CenterToExitLeft,
+    CenterToExitRight,
+
+    LeftToEntranceLeft,
+    RightToEntranceRight,
+    LeftToExitLeft,
+    RightToExitRight,
 
 }
 
@@ -73,6 +79,7 @@ public class LineSection
     public MeshGenerator.Floor floorPoints { get; set; }
     public Mesh floorMesh { get; set; }
     public SwitchDirection activeSwitch { get; set; }
+    public bool ignoreSwitch { get; set; }
     public Dictionary<SwitchDirection, List<GameObject>> switchLights { get; set; }
     public int curvePointsCount { get; set; }
     public LineSection fromSection { get; set; }
