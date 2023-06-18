@@ -17,6 +17,13 @@ public enum SwitchType {
     BiToNewBi,
 }
 
+public enum StationType {
+    CentralPlatform,
+    LeftSidePlatform,
+    RightSidePlatform,
+    BothSidesPlatform,
+}
+
 public enum NewLineSide {
     Left,
     Right,
@@ -65,6 +72,7 @@ public class LineSection
 {
     public Type type { get; set; }
     public SwitchType switchType { get; set; }
+    public StationType stationType { get; set; }
     public NewLineSide newLineSide { get; set; }
     public bool bidirectional { get; set; }
     public bool newBidirectional { get; set; }
