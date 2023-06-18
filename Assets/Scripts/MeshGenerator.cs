@@ -21,8 +21,13 @@ public static class MeshGenerator
         public List<Vector3> leftRightLine { get; set; }
         public List<Vector3> rightLeftLine { get; set; }
 
-        public List<Vector3> leftCenterLine { get; set; }
+        public List<Vector3> rightCenterL { get; set; }
         public List<Vector3> rightCenterLine { get; set; }
+        public List<Vector3> rightCenterR { get; set; }
+
+        public List<Vector3> leftCenterL { get; set; }
+        public List<Vector3> leftCenterLine { get; set; }
+        public List<Vector3> leftCenterR { get; set; }
 
         public List<Vector3> leftCenterNewLine { get; set; }
         public List<Vector3> rightCenterNewLine { get; set; }
@@ -40,11 +45,11 @@ public static class MeshGenerator
 
     }
 
-    public static Vector3[,] ConvertListsToMatrix_2xM( List<Vector3> up, List<Vector3> down )
+    public static Vector3[ , ] ConvertListsToMatrix_2xM( List<Vector3> up, List<Vector3> down )
     {
         if( up.Count == down.Count )
         {
-            Vector3[ , ] VertexMatrix = new Vector3[ up.Count, down.Count ];
+            Vector3[ , ] vertexMatrix = new Vector3[ up.Count, down.Count ];
 
             for( int row = 0; row < 2; row++ )
             {
@@ -52,16 +57,16 @@ public static class MeshGenerator
                {
                     if( row == 0 )
                     {
-                        VertexMatrix[ row, col ] = up[ col ];
+                        vertexMatrix[ row, col ] = up[ col ];
                     }
                     else
                     {
-                        VertexMatrix[ row, col ] = down[ col ];
+                        vertexMatrix[ row, col ] = down[ col ];
                     }
                } 
             }
 
-            return VertexMatrix;
+            return vertexMatrix;
 
         }
         else
@@ -70,8 +75,11 @@ public static class MeshGenerator
         }
     }
 
-    public static Floor CalculateBidirectionalFloorMeshVertex( List<Vector3> curve, List<Vector3> controlPoints, float centerWidth, float sideWidth, bool floorParabolic )
+    public static Floor CalculateBidirectionalWithBothSidesPlatformFloorMeshVertex( LineSection section, float centerWidth, float sideWidth/*, bool floorParabolic,*/ )
     {
+        List<Vector3> curve = section.bezierCurveLimitedAngle;
+        List<Vector3> controlPoints = section.controlsPoints;
+        
         List<Vector3> leftR = new List<Vector3>();
         List<Vector3> leftLine = new List<Vector3>();
         List<Vector3> leftL = new List<Vector3>();
@@ -83,16 +91,16 @@ public static class MeshGenerator
         List<Vector3> rightLine = new List<Vector3>();
         List<Vector3> rightL = new List<Vector3>();
 
-        float zHeightPrev = 0.0f;
+        /*float zHeightPrev = 0.0f;
         float zHeightNext = 0.0f;
 
         if( floorParabolic )
         {
             zHeightPrev = curve[ 0 ].z;
             zHeightNext = curve[ 1 ].z;
-        }
+        }*/
 
-        Vector3 dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized;
+        Vector3 dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f/*zHeightPrev*/ ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, 0.0f/*zHeightNext*/ ) ).normalized;
 
         leftL.Add( curve[ 0 ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
         leftLine.Add( curve[ 0 ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
@@ -105,13 +113,13 @@ public static class MeshGenerator
 
         for( int i = 1; i < curve.Count - 1; i++ )
         {
-            if( floorParabolic )
+            /*if( floorParabolic )
             {
                 zHeightPrev = curve[ i - 1 ].z;
                 zHeightNext = curve[ i + 1 ].z;
-            }
+            }*/
 
-            dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized;
+            dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, 0.0f/*zHeightPrev*/ ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, 0.0f/*zHeightNext*/ ) ).normalized;
 
             leftL.Add( curve[ i ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
             leftLine.Add( curve[ i ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
@@ -123,13 +131,13 @@ public static class MeshGenerator
             rightR.Add( curve[ i ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
         }
 
-        if( floorParabolic )
+        /*if( floorParabolic )
         {
             zHeightPrev = curve[ curve.Count - 2 ].z;
             zHeightNext = curve[ curve.Count - 1 ].z;
-        }
+        }*/
 
-        dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized;
+        dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, 0.0f/*zHeightPrev*/ ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, 0.0f/*zHeightNext*/ ) ).normalized;
         
         leftL.Add( curve[ curve.Count - 1 ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
         leftLine.Add( curve[ curve.Count - 1 ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
@@ -150,6 +158,139 @@ public static class MeshGenerator
         singleFloor.centerR = centerR;
 
         singleFloor.rightL = centerR;
+        singleFloor.rightLine = rightLine;
+        singleFloor.rightR = rightR;
+
+        return singleFloor;
+    }
+
+    public static Floor CalculateBidirectionalWithCentralPlatformFloorMeshVertex( LineSection section, float centerWidth, float sideWidth, float stationLenght, float stationExtensionLenght, float stationExtensionHeight, int stationExtensionCurvePoints )
+    {
+        List<Vector3> curve = section.bezierCurveLimitedAngle;
+        
+        List<Vector3> leftR = new List<Vector3>();
+        List<Vector3> leftLine = new List<Vector3>();
+        List<Vector3> leftL = new List<Vector3>();
+
+        List<Vector3> centerR = new List<Vector3>();
+        List<Vector3> centerL = new List<Vector3>();
+
+        List<Vector3> rightR = new List<Vector3>();
+        List<Vector3> rightLine = new List<Vector3>();
+        List<Vector3> rightL = new List<Vector3>();
+
+
+        Vector3 dir = ( new Vector3( curve[ 1 ].x, curve[ 1 ].y, 0.0f ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f ) ).normalized;
+        Vector3 orthogonalDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dir;
+
+        // Calcolo punti controllo
+        Vector3 lb0, lb1, lb2, lb3, rb0, rb1, rb2, rb3;
+
+        rb0 = curve[ 0 ] - ( orthogonalDir  * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) );
+        rb1 = rb0 + ( dir * ( stationExtensionLenght / 2 ) );
+        rb2 = rb1 - ( orthogonalDir * ( stationExtensionHeight / 2 ) );
+        rb3 = rb2 + ( dir * ( stationExtensionLenght / 2 ) );
+
+        lb0 = curve[ 0 ] + ( orthogonalDir  * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) );
+        lb1 = lb0 + ( dir * ( stationExtensionLenght / 2 ) );
+        lb2 = lb1 + ( orthogonalDir * ( stationExtensionHeight / 2 ) );
+        lb3 = lb2 + ( dir * ( stationExtensionLenght / 2 ) );
+
+        Debug.DrawLine( rb0, rb1, Color.red, Mathf.Infinity );
+        Debug.DrawLine( rb1, rb2, Color.red, Mathf.Infinity );
+        Debug.DrawLine( rb2, rb3, Color.red, Mathf.Infinity );
+
+        Debug.DrawLine( lb0, lb1, Color.red, Mathf.Infinity );
+        Debug.DrawLine( lb1, lb2, Color.red, Mathf.Infinity );
+        Debug.DrawLine( lb2, lb3, Color.red, Mathf.Infinity );
+
+        leftL.Add( lb0 + ( orthogonalDir * ( sideWidth / 2 ) ) );
+        leftLine.AddRange( BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ lb0, lb1, lb2, lb3 }, stationExtensionCurvePoints ) );
+        leftR.Add( lb0 - ( orthogonalDir * ( sideWidth / 2 ) ) );
+        
+        rightL.Add( rb0 + ( orthogonalDir * ( sideWidth / 2 ) ) );
+        rightLine.AddRange( BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ rb0, rb1, rb2, rb3 }, stationExtensionCurvePoints ) );
+        rightR.Add( rb0 - ( orthogonalDir * ( sideWidth / 2 ) ) );
+
+        for( int i = 1; i < stationExtensionCurvePoints - 1; i++ ) {
+
+            Vector3 orthogonalDirLeft = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( leftLine[ i - 1 ].x, leftLine[ i - 1 ].y, 0.0f ) - new Vector3( leftLine[ i + 1 ].x, leftLine[ i + 1 ].y, 0.0f ) ).normalized;
+            leftL.Add( leftLine[ i ] - ( orthogonalDirLeft * ( sideWidth / 2 ) ) );
+            leftR.Add( leftLine[ i ] + ( orthogonalDirLeft * ( sideWidth / 2 ) ) );
+
+            Vector3 orthogonalDirRight = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( rightLine[ i - 1 ].x, rightLine[ i - 1 ].y, 0.0f ) - new Vector3( rightLine[ i + 1 ].x, rightLine[ i + 1 ].y, 0.0f ) ).normalized;
+            rightL.Add( rightLine[ i ] - ( orthogonalDirRight * ( sideWidth / 2 ) ) );
+            rightR.Add( rightLine[ i ] + ( orthogonalDirRight * ( sideWidth / 2 ) ) );
+        }
+
+        leftL.Add( leftLine[ ^1 ] + ( orthogonalDir * ( sideWidth / 2 ) ) );
+        leftR.Add( leftLine[ ^1 ] - ( orthogonalDir * ( sideWidth / 2 ) ) );
+        
+        rightL.Add( rightLine[ ^1 ] + ( orthogonalDir * ( sideWidth / 2 ) ) );
+        rightR.Add( rightLine[ ^1 ] - ( orthogonalDir * ( sideWidth / 2 ) ) );
+
+        // Calcolo punti controllo finali
+        Vector3 lb0Inv, lb1Inv, lb2Inv, lb3Inv, rb0Inv, rb1Inv, rb2Inv, rb3Inv;
+
+        lb0Inv = leftLine[ ^1 ] + ( dir * stationLenght );
+        rb0Inv = rightLine[ ^1 ] + ( dir * stationLenght );
+
+        lb1Inv = lb0Inv  + ( dir * ( stationExtensionLenght / 2 ) );
+        lb2Inv = lb1Inv - ( orthogonalDir * ( stationExtensionHeight / 2 ) );
+        lb3Inv = lb2Inv + ( dir * ( stationExtensionLenght / 2 ) );
+
+        rb1Inv = rb0Inv + ( dir * ( stationExtensionLenght / 2 ) );
+        rb2Inv = rb1Inv + ( orthogonalDir * ( stationExtensionHeight / 2 ) );
+        rb3Inv = rb2Inv + ( dir * ( stationExtensionLenght / 2 ) );
+
+        Debug.DrawLine( rb0Inv, rb1Inv, Color.red, Mathf.Infinity );
+        Debug.DrawLine( rb1Inv, rb2Inv, Color.red, Mathf.Infinity );
+        Debug.DrawLine( rb2Inv, rb3Inv, Color.red, Mathf.Infinity );
+
+        Debug.DrawLine( lb0Inv, lb1Inv, Color.red, Mathf.Infinity );
+        Debug.DrawLine( lb1Inv, lb2Inv, Color.red, Mathf.Infinity );
+        Debug.DrawLine( lb2Inv, lb3Inv, Color.red, Mathf.Infinity );
+
+        leftLine.AddRange( BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ lb0Inv, lb1Inv, lb2Inv, lb3Inv }, stationExtensionCurvePoints ) );
+        rightLine.AddRange( BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ rb0Inv, rb1Inv, rb2Inv, rb3Inv }, stationExtensionCurvePoints ) );
+
+        for( int i = stationExtensionCurvePoints; i < ( 2 * stationExtensionCurvePoints ) - 1; i++ ) {
+            Vector3 orthogonalDirLeft = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( leftLine[ i - 1 ].x, leftLine[ i - 1 ].y, 0.0f ) - new Vector3( leftLine[ i + 1 ].x, leftLine[ i + 1 ].y, 0.0f ) ).normalized;
+            leftL.Add( leftLine[ i ] - ( orthogonalDirLeft * ( sideWidth / 2 ) ) );
+            leftR.Add( leftLine[ i ] + ( orthogonalDirLeft * ( sideWidth / 2 ) ) );
+
+            Vector3 orthogonalDirRight = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( rightLine[ i - 1 ].x, rightLine[ i - 1 ].y, 0.0f ) - new Vector3( rightLine[ i + 1 ].x, rightLine[ i + 1 ].y, 0.0f ) ).normalized;
+            rightL.Add( rightLine[ i ] - ( orthogonalDirRight * ( sideWidth / 2 ) ) );
+            rightR.Add( rightLine[ i ] + ( orthogonalDirRight * ( sideWidth / 2 ) ) );
+        }
+
+        leftL.Add( leftLine[ ^1 ] + ( orthogonalDir * ( sideWidth / 2 ) ) );
+        leftR.Add( leftLine[ ^1 ] - ( orthogonalDir * ( sideWidth / 2 ) ) );
+        
+        rightL.Add( rightLine[ ^1 ] + ( orthogonalDir * ( sideWidth / 2 ) ) );
+        rightR.Add( rightLine[ ^1 ] - ( orthogonalDir * ( sideWidth / 2 ) ) );
+
+        /*for( int j = 0; j < ( 2 * stationExtensionCurvePoints ); j++ ) {
+            Debug.DrawLine( rightL[ j - 1 ], rightL[ j ], Color.cyan, Mathf.Infinity );
+            Debug.DrawLine( rightR[ j - 1 ], rightR[ j ], Color.cyan, Mathf.Infinity );
+
+            Debug.DrawLine( leftL[ j - 1 ], leftL[ j ], Color.green, Mathf.Infinity );
+            Debug.DrawLine( leftR[ j - 1 ], leftR[ j ], Color.green, Mathf.Infinity );
+
+            Debug.DrawLine( leftLine[ j - 1 ], leftLine[ j ], Color.green, Mathf.Infinity );
+            Debug.DrawLine( rightLine[ j - 1 ], rightLine[ j ], Color.cyan, Mathf.Infinity );
+        }*/
+
+        Floor singleFloor = new Floor();
+        singleFloor.leftL = leftL;
+        singleFloor.leftLine = leftLine;
+        singleFloor.leftR = leftR;
+
+        singleFloor.centerL = leftR;
+        singleFloor.centerLine = curve;
+        singleFloor.centerR = rightL;
+
+        singleFloor.rightL = rightL;
         singleFloor.rightLine = rightLine;
         singleFloor.rightR = rightR;
 
@@ -211,13 +352,10 @@ public static class MeshGenerator
 
     public static Mesh GenerateFloorMesh( List<Vector3> curve, Vector3[ , ] vertMatrix, float textureHorLenght, float textureVertLenght )
     {
-        //float curveLenght = BezierCurveCalculator.CalculateCurveLenght( curve );
-        //float deltaLCurve = curveLenght / curve.Count;
-
         Mesh floorMesh = new Mesh();
 
         Vector3[] vertices = new Vector3[ curve.Count * 2 ];
-        int[] edges = new int[( curve.Count - 1) * 6 ];
+        int[] edges = new int[( curve.Count - 1 ) * 6 ];
         Vector2[] uvs = new Vector2[ vertices.Length ];
         float meshPercent = 0.0f;
         for( int i = 0; i < curve.Count; i++ )
@@ -232,9 +370,9 @@ public static class MeshGenerator
             // sulla curva indipendentemente dalla lunghezza della stessa.
             
             if( i > 0 ) {
-                meshPercent += ( float )( ( curve[ i ] - curve[ i - 1 ]).magnitude / textureHorLenght );
+                meshPercent += ( float )( ( curve[ i ] - curve[ i - 1 ] ).magnitude / textureHorLenght );
             }
-            //float meshPercent = i * ( float )( deltaLCurve / deltaLText );
+
             uvs[ ( i * 2 ) ] = new Vector2( meshPercent, 0 );
             uvs[ ( i * 2 ) + 1 ] = new Vector2( meshPercent, textureVertLenght );
 

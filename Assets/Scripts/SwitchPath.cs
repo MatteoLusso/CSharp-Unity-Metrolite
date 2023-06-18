@@ -145,6 +145,8 @@ public class SwitchPath : ScriptableObject
             List<Vector3> rightCenterLine = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ r0, rb, cb, c1 }, this.curvePointsNumber );
             List<Vector3> leftCenterLine = BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ l0, lb, cb, c1 }, this.curvePointsNumber );
 
+            
+
             switchFloor.rightCenterLine = rightCenterLine;
             switchFloor.centerLine = new List<Vector3>{ c0, cb, c1 };
             switchFloor.leftCenterLine = leftCenterLine;
@@ -502,6 +504,7 @@ public class SwitchPath : ScriptableObject
         GameObject lightC1 = Instantiate( this.switchLight, c1 + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
         lightC1.transform.parent = sectionGameObj.transform;
         lightC1.name = "Semaforo C1";
+        switchLights.Add( SwitchDirection.CenterToCenter, new List<GameObject>{ lightC0, lightC1 } );
 
         nextStartingPoints.Add( c1 );
         nextStartingDirections.Add( startingDir );
@@ -519,7 +522,6 @@ public class SwitchPath : ScriptableObject
                 GameObject lightNR1 = Instantiate( this.switchLight, nr1 + ( Quaternion.Euler( 0.0f, 0.0f, 0.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) + Vector3.SignedAngle( switchSection.newLinesStarts[ newSide ].dir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
                 lightNR1.transform.parent = sectionGameObj.transform;
                 lightNR1.name = "Semaforo NR1";
-                switchLights.Add( SwitchDirection.CenterToCenter, new List<GameObject>{ lightC0, lightC1 } );
                 switchLights.Add( SwitchDirection.CenterToEntranceRight, new List<GameObject>{ lightC0, lightNR1 } );
                 switchLights.Add( SwitchDirection.CenterToExitRight, new List<GameObject>{ lightC1, lightNR1 } );
 
@@ -535,13 +537,11 @@ public class SwitchPath : ScriptableObject
             }
             else if( newSide == NewLineSide.Left ) { // Nuova linea a Sinistra
 
-
                 nl1 = switchSection.newLinesStarts[ newSide ].pos;
 
                 GameObject lightNL1 = Instantiate( this.switchLight, nl1 + ( Quaternion.Euler( 0.0f, 0.0f, -180.0f ) * switchDir * this.switchLightDistance ) - Vector3.forward * this.switchLightHeight, Quaternion.Euler( this.switchLightRotation.x + Vector3.SignedAngle( startingDir, Vector3.right, -Vector3.forward ) + Vector3.SignedAngle( switchSection.newLinesStarts[ newSide ].dir, Vector3.right, -Vector3.forward ), this.switchLightRotation.y, this.switchLightRotation.z ) );
                 lightNL1.transform.parent = sectionGameObj.transform;
                 lightNL1.name = "Semaforo NL1";
-                switchLights.Add( SwitchDirection.CenterToCenter, new List<GameObject>{ lightC0, lightC1 } );
                 switchLights.Add( SwitchDirection.CenterToEntranceLeft, new List<GameObject>{ lightC0, lightNL1 } );
                 switchLights.Add( SwitchDirection.CenterToExitLeft, new List<GameObject>{ lightC1, lightNL1 } );
 
@@ -573,8 +573,6 @@ public class SwitchPath : ScriptableObject
     }
 
     public LineSection generateBiToNewBiSwitch( LineSection switchSection, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
-
-        Debug.Log( "generateBiToNewBiSwitch eseguito" );
 
         LineSection section = new LineSection();
         section.type = Type.Switch;
@@ -681,7 +679,12 @@ public class SwitchPath : ScriptableObject
         section.nextStartingPoints = nextStartingPoints;
         section.floorPoints = switchFloor;
 
-        section.activeSwitch = SwitchDirection.RightToRight;
+        if( switchSection.newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+            section.activeSwitch = SwitchDirection.RightToRight;
+        }
+        else if( switchSection.newLinesStarts.ContainsKey( NewLineSide.Left ) ) {
+            section.activeSwitch = SwitchDirection.LeftToLeft;
+        }
         section.curvePointsCount = switchFloor.rightLine.Count;
         section.floorPoints = switchFloor;
 
