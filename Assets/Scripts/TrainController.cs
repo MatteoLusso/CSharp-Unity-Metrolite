@@ -24,6 +24,7 @@ public class TrainController : MonoBehaviour
     public float acceleration = 50.0f;
     public float deceleration = 75.0f;
     public float drag = 5.0f;
+    public float gimbalLockProtectionDegs = 1.0f;
     public bool debugSpeed = false;
 
     public float deadZoneTriggerRight = 0.1f;
@@ -144,6 +145,7 @@ public class TrainController : MonoBehaviour
                          "Next Switch Type: " + switchType + "\n" +
                          "Next Switch Direction: " + switchDir + "\n" +
                          "\n" +
+                         "Speed: " + speed + "\n" +
                          "Direction: " + actualMovement + "\n" +
                          "Side: " + railSide + "\n" +
                          "Inverse: " + inverseLine + "\n";
@@ -154,13 +156,13 @@ public class TrainController : MonoBehaviour
         string lineName = keyLine;
         List<LineSection> sections = lines[ lineName ];
 
-        if( ( ( actualMovement == Direction.Forward && !inverseLine ) || ( actualMovement == Direction.Backward && inverseLine ) ) && actualSwitchIndex < indexSection ) {
+        if( ( ( actualMovement == Direction.Forward && !inverseLine ) || ( actualMovement == Direction.Backward && inverseLine ) ) && actualSwitchIndex <= indexSection ) {
 
             //Debug.Log( "Calcolo switch Successivo" );
 
             actualSwitchIndex = sections.Count;
             for( int i = indexSection; i < sections.Count; i++ ) {
-                if( sections[ i ].type == Type.Switch ) {
+                if( sections[ i ].type == Type.Switch && i != indexSection ) {
                     actualSwitchIndex = i;
                     break;
                 }
@@ -168,21 +170,21 @@ public class TrainController : MonoBehaviour
 
             //Debug.Log( "actualSwitchIndex: " + actualSwitchIndex );
         }
-        else if( ( ( actualMovement == Direction.Forward && inverseLine ) || ( actualMovement == Direction.Backward && !inverseLine ) ) && actualSwitchIndex > indexSection ) {
+        else if( ( ( actualMovement == Direction.Forward && inverseLine ) || ( actualMovement == Direction.Backward && !inverseLine ) ) && actualSwitchIndex >= indexSection ) {
 
             //Debug.Log( "Calcolo switch Precedente" );
 
             actualSwitchIndex = -1;
             for( int i = indexSection; i >= 0; i-- ) {
                 
-                if( i == 0  && sections[ i ].fromSection != null ) {
+                if( i == 0 && sections[ i ].fromSection != null ) {
                     actualSwitchIndex = sections[ i ].fromSection.sectionIndex;
                     lineName = sections[ i ].fromSection.lineName;
 
                     //Debug.Log( "Switch Linea Precedente " + lineName + " " + actualSwitchIndex );
                     break;
                 }
-                else if( sections[ i ].type == Type.Switch ) {
+                else if( sections[ i ].type == Type.Switch && i != indexSection ) {
                     actualSwitchIndex = i;
                     //Debug.Log( "Switch Linea Attuale " + lineName + " " + actualSwitchIndex );
                     break;
@@ -205,24 +207,24 @@ public class TrainController : MonoBehaviour
                     if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceLeft || sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToExitLeft ) {
 
                         switch( sections[ actualSwitchIndex ].activeSwitch ) {
-                            case SwitchDirection.CenterToEntranceLeft:    selectedDir = SwitchDirection.CenterToExitLeft;
-                                                                                sectionCount = sections[ actualSwitchIndex ].floorPoints.centerExitLeft.Count;
-                                                                                break;
-                            default:                                            selectedDir = SwitchDirection.CenterToEntranceLeft;
-                                                                                sectionCount = sections[ actualSwitchIndex ].floorPoints.centerEntranceLeft.Count;
-                                                                                break;
+                            case SwitchDirection.CenterToEntranceLeft:  selectedDir = SwitchDirection.CenterToExitLeft;
+                                                                        sectionCount = sections[ actualSwitchIndex ].floorPoints.centerExitLeft.Count;
+                                                                        break;
+                            default:                                    selectedDir = SwitchDirection.CenterToEntranceLeft;
+                                                                        sectionCount = sections[ actualSwitchIndex ].floorPoints.centerEntranceLeft.Count;
+                                                                        break;
                         }
 
                     }
                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceRight || sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToExitRight ) {
 
                         switch( sections[ actualSwitchIndex ].activeSwitch ) {
-                            case SwitchDirection.CenterToEntranceRight:   selectedDir = SwitchDirection.CenterToExitRight;
-                                                                                sectionCount = sections[ actualSwitchIndex ].floorPoints.centerExitRight.Count;
-                                                                                break;
-                            default:                                            selectedDir = SwitchDirection.CenterToEntranceRight;
-                                                                                sectionCount = sections[ actualSwitchIndex ].floorPoints.centerEntranceRight.Count;
-                                                                                break;
+                            case SwitchDirection.CenterToEntranceRight: selectedDir = SwitchDirection.CenterToExitRight;
+                                                                        sectionCount = sections[ actualSwitchIndex ].floorPoints.centerExitRight.Count;
+                                                                        break;
+                            default:                                    selectedDir = SwitchDirection.CenterToEntranceRight;
+                                                                        sectionCount = sections[ actualSwitchIndex ].floorPoints.centerEntranceRight.Count;
+                                                                        break;
                         }
 
                     }
@@ -853,13 +855,27 @@ public class TrainController : MonoBehaviour
                             Vector3 startPos = this.transform.position;
                             float segmentDist = ( nextPoint - startPos ).magnitude;
                             float sumDist = 0.0f;
+
+                            Quaternion rot = Quaternion.FromToRotation( startDir, nextDir );
+
+                            //Quaternion startRot = Quaternion.LookRotation( startDir, Vector3.forward );
+                            //Quaternion nextRot = Quaternion.LookRotation( nextDir, Vector3.forward );
+                            
                             while( sumDist < segmentDist ) {
                                 Debug.DrawLine( this.transform.position, nextPoint, Color.red, Time.deltaTime );
                                 Debug.DrawLine( this.transform.position, nextOrientationPoint, Color.magenta, Time.deltaTime );
 
                                 // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
-                                this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist ); 
+                                this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist );
+                                //this.transform.right = Quaternion.Slerp( startRot, nextRot, sumDist / dist ) * startDir; 
+
+                                // Protezione blocco cardanico
+                                Quaternion previousRot = this.transform.localRotation;
                                 this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
+                                if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
+                                    this.transform.localRotation = previousRot;
+                                    Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
+                                }
 
                                 sumDist += Time.deltaTime * Mathf.Abs( speed );
 
@@ -1200,7 +1216,14 @@ public class TrainController : MonoBehaviour
 
                                 // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
                                 this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
+
+                                // Protezione blocco cardanico
+                                Quaternion previousRot = this.transform.localRotation;
                                 this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
+                                if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
+                                    this.transform.localRotation = previousRot;
+                                    Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
+                                }
 
                                 sumDist += Time.deltaTime * Mathf.Abs( speed );
 
@@ -1635,7 +1658,13 @@ public class TrainController : MonoBehaviour
 
                                     // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
                                     this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
+                                    // Protezione blocco cardanico
+                                    Quaternion previousRot = this.transform.localRotation;
                                     this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
+                                    if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
+                                        this.transform.localRotation = previousRot;
+                                        Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
+                                    }
 
                                     sumDist += Time.deltaTime * Mathf.Abs( speed );
 
@@ -2046,7 +2075,13 @@ public class TrainController : MonoBehaviour
 
                                     // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
                                     this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist ); 
+                                    // Protezione blocco cardanico
+                                    Quaternion previousRot = this.transform.localRotation;
                                     this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
+                                    if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
+                                        this.transform.localRotation = previousRot;
+                                        Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
+                                    }
 
                                     sumDist += Time.deltaTime * Mathf.Abs( speed );
 
