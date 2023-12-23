@@ -41,6 +41,21 @@ public static class MeshGenerator
         public List<Vector3> rightExitRight { get; set; }
         public List<Vector3> leftEntranceLeft { get; set; }
         public List<Vector3> leftExitLeft { get; set; }
+    }
+
+    public class PlatformSide {
+
+        public List<Vector3> rightDown { get; set; }
+        public List<Vector3> rightUp { get; set; }
+
+        public List<Vector3> leftDown { get; set; }
+        public List<Vector3> leftUp { get; set; }
+
+        public List<Vector3> rightFloorLeft { get; set; }
+        public List<Vector3> rightFloorRight { get; set; }
+
+        public List<Vector3> leftFloorLeft { get; set; }
+        public List<Vector3> leftFloorRight { get; set; }
 
 
     }
@@ -348,6 +363,75 @@ public static class MeshGenerator
         singleFloor.centerR = rightPoints;
 
         return singleFloor;
+    }
+
+    public static PlatformSide CalculateMonodirectionalPlatformSidesMeshesVertex( List<Vector3> curve, List<Vector3> controlPoints, float floorWidth, bool floorParabolic, float sideHeight, float sideWidth )
+    {
+        PlatformSide platformSide = new PlatformSide();
+        platformSide.leftDown = new List<Vector3>();
+        platformSide.rightDown = new List<Vector3>();
+        platformSide.leftUp = new List<Vector3>();
+        platformSide.rightUp = new List<Vector3>();
+        platformSide.leftFloorLeft = new List<Vector3>();
+        platformSide.leftFloorRight = new List<Vector3>();
+        platformSide.rightFloorLeft = new List<Vector3>();
+        platformSide.rightFloorRight = new List<Vector3>();
+
+        float zHeightPrev = 0.0f;
+        float zHeightNext = 0.0f;
+
+        if( floorParabolic )
+        {
+            zHeightPrev = curve[ 0 ].z;
+            zHeightNext = curve[ 1 ].z;
+        }
+
+        List<Vector3> dirs = new List<Vector3>();
+        Vector3 dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * ( floorWidth / 2 );
+        dirs.Add( dir.normalized );
+
+        platformSide.leftDown.Add( curve[ 0 ] - dir );
+        platformSide.rightDown.Add(curve[ 0 ] + dir );
+
+        for( int i = 1; i < curve.Count - 1; i++ )
+        {
+            if( floorParabolic )
+            {
+                zHeightPrev = curve[ i - 1 ].z;
+                zHeightNext = curve[ i + 1 ].z;
+            }
+
+            dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * ( floorWidth / 2 );
+            dirs.Add( dir.normalized );
+
+            platformSide.leftDown.Add( curve[ i ] - dir );
+            platformSide.rightDown.Add(curve[ i ] + dir );
+        }
+
+        if( floorParabolic )
+        {
+            zHeightPrev = curve[ curve.Count - 2 ].z;
+            zHeightNext = curve[ curve.Count - 1 ].z;
+        }
+
+        dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * ( floorWidth / 2 );
+        dirs.Add( dir.normalized );
+
+        platformSide.leftDown.Add( curve[ curve.Count - 1 ] - dir );
+        platformSide.rightDown.Add( curve[ curve.Count - 1 ] + dir );
+
+        for( int i = 0; i < platformSide.leftDown.Count; i++ ) {
+
+            platformSide.leftUp.Add( new Vector3( platformSide.leftDown[ i ].x, platformSide.leftDown[ i ].y, platformSide.leftDown[ i ].z - sideHeight ) ); 
+            platformSide.leftFloorRight.Add( platformSide.leftUp[ i ] );
+            platformSide.leftFloorLeft.Add( platformSide.leftUp[ i ] - dirs[ i ] * sideWidth );
+
+            platformSide.rightUp.Add( new Vector3( platformSide.rightDown[ i ].x, platformSide.rightDown[ i ].y, platformSide.rightDown[ i ].z - sideHeight ) );
+            platformSide.rightFloorLeft.Add( platformSide.rightUp[ i ] );
+            platformSide.rightFloorRight.Add( platformSide.rightUp[ i ] + dirs[ i ] * sideWidth );
+        }
+
+        return platformSide;
     }
 
     public static Mesh GenerateFloorMesh( List<Vector3> curve, Vector3[ , ] vertMatrix, float textureHorLenght, float textureVertLenght )

@@ -65,7 +65,6 @@ public enum SwitchDirection {
     RightToEntranceRight,
     LeftToExitLeft,
     RightToExitRight,
-
 }
 
 public class LineSection
@@ -76,6 +75,7 @@ public class LineSection
     public NewLineSide newLineSide { get; set; }
     public bool bidirectional { get; set; }
     public bool newBidirectional { get; set; }
+    public Vector3 centerCoords { get; set; }
     public int number { get; set; }
     public List<Vector3> controlsPoints {get; set; }
     public List<Vector3> nextStartingDirections { get; set; }
@@ -86,6 +86,9 @@ public class LineSection
     public List<Vector3> distanceControllingPoints { get; set; }
     public MeshGenerator.Floor floorPoints { get; set; }
     public Mesh floorMesh { get; set; }
+    public MeshGenerator.PlatformSide platformSidesPoints { get; set; }
+    public Mesh platformMeshLeft { get; set; }
+    public Mesh platformMeshRight { get; set; }
     public SwitchDirection activeSwitch { get; set; }
     public bool ignoreSwitch { get; set; }
     public Dictionary<SwitchDirection, List<GameObject>> switchLights { get; set; }
@@ -95,5 +98,6 @@ public class LineSection
     public string lineName { get; set; }
     public Dictionary<NewLineSide, LineStart> newLinesStarts { get; set; }
     public int sectionIndex { get; set; }
-
+    public string sectionName { get; set; }
+    public GameObject indicatorObj { get; set; }
 }
