@@ -14,6 +14,9 @@ public class CameraController : MonoBehaviour
     public float horizontalAxisDeadZone = 0.1f;
     public float horizontalButtonRotationSpeed = 1.0f;
 
+    public float orthographicMinSize = 100;
+    public float orthographicMaxSize = 250;
+
 
     public Vector3 offset;
 
@@ -23,9 +26,17 @@ public class CameraController : MonoBehaviour
     float smoothDelta = 0.0f;
     Vector3 prevPos = Vector3.zero;
 
+    void Start() {
+        Camera thisCamera = this.GetComponent<Camera>();
+        if( thisCamera.orthographic ) {
+            
+            thisCamera.orthographicSize = orthographicMinSize;
+        }
+    }
+
     void LateUpdate() {
 
-        if(Input.GetKey( KeyCode.Escape ) )
+        if(Input.GetKey( KeyCode.Escape ) || Input.GetButton( "A" ) )
         {
             Application.Quit();
         }
@@ -56,6 +67,13 @@ public class CameraController : MonoBehaviour
             this.transform.LookAt( train.transform, -Vector3.forward );
 
             prevPos = newPos;
+
+            Camera thisCamera = this.GetComponent<Camera>();
+            if( thisCamera.orthographic ) {
+                
+                TrainController trainController = train.GetComponent<TrainController>();
+                thisCamera.orthographicSize = orthographicMinSize + ( ( orthographicMaxSize - orthographicMinSize ) * ( trainController.speed / trainController.maxSpeed ) );
+            }
         }
 
     }
