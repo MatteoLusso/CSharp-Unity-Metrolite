@@ -77,6 +77,7 @@ public class LineSection
     public bool newBidirectional { get; set; }
     public Vector3 centerCoords { get; set; }
     public int number { get; set; }
+    public GameObject sectionObj { get; set; }
     public List<Vector3> controlsPoints {get; set; }
     public List<Vector3> nextStartingDirections { get; set; }
     public List<Vector3> nextStartingPoints { get; set; }
