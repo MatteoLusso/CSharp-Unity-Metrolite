@@ -25,6 +25,9 @@ public class MetroGenerator : MonoBehaviour
     public int stationExtensionCurvePoints = 10;
     public float switchLenght = 25.0f;
     public GameObject pillar;
+    public GameObject banister;
+    public Vector3 banisterRotationCorrection = Vector3.zero;
+    public float banisterDistance = 8.5f;
     public int baseBezierCurvePointsNumber = 50;
     public bool tunnelParabolic = false;
     public float tunnelWidth = 5.0f;
@@ -115,6 +118,7 @@ public class MetroGenerator : MonoBehaviour
         }
 
         GenerateMeshes();
+        AddProps();
         InstantiateTrain();
     }
 
@@ -187,54 +191,199 @@ public class MetroGenerator : MonoBehaviour
     private void GenerateSidePlatformMesh( LineSection section, GameObject sectionGameObj ) {
         MeshGenerator.PlatformSide platformSidesVertexPoints = new MeshGenerator.PlatformSide();
 
-            Mesh platformSideLeftMesh = new Mesh();
-            Mesh platformSideRightMesh = new Mesh();
-            Mesh platformFloorLeftMesh = new Mesh();
-            Mesh platformFloorRightMesh = new Mesh();
+        Mesh platformSideLeftMesh = new Mesh();
+        Mesh platformSideRightMesh = new Mesh();
+        Mesh platformFloorLeftMesh = new Mesh();
+        Mesh platformFloorRightMesh = new Mesh();
 
-            float sectionWidth = section.bidirectional ? ( ( tunnelWidth * 2 ) + centerWidth ) : tunnelWidth;
+        float sectionWidth = section.bidirectional ? ( ( tunnelWidth * 2 ) + centerWidth ) : tunnelWidth;
 
-            platformSidesVertexPoints = MeshGenerator.CalculateMonodirectionalPlatformSidesMeshesVertex( section.bezierCurveLimitedAngle, section.controlsPoints, sectionWidth, tunnelParabolic, platformHeight, platformWidth );
+        platformSidesVertexPoints = MeshGenerator.CalculateMonodirectionalPlatformSidesMeshesVertex( section.bezierCurveLimitedAngle, section.controlsPoints, sectionWidth, tunnelParabolic, platformHeight, platformWidth );
 
-            platformSideLeftMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.leftUp, platformSidesVertexPoints.leftDown ), platformSideTextureTilting.x, platformSideTextureTilting.y );
-            platformSideRightMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.rightDown, platformSidesVertexPoints.rightUp ), platformSideTextureTilting.x, platformSideTextureTilting.y );
-            platformFloorLeftMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.leftFloorLeft, platformSidesVertexPoints.leftFloorRight ), platformFloorTextureTilting.x, platformFloorTextureTilting.y );
-            platformFloorRightMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.rightFloorLeft, platformSidesVertexPoints.rightFloorRight ), platformFloorTextureTilting.x, platformFloorTextureTilting.y );
+        platformSideLeftMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.leftUp, platformSidesVertexPoints.leftDown ), platformSideTextureTilting.x, platformSideTextureTilting.y );
+        platformSideRightMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.rightDown, platformSidesVertexPoints.rightUp ), platformSideTextureTilting.x, platformSideTextureTilting.y );
+        platformFloorLeftMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.leftFloorLeft, platformSidesVertexPoints.leftFloorRight ), platformFloorTextureTilting.x, platformFloorTextureTilting.y );
+        platformFloorRightMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.rightFloorLeft, platformSidesVertexPoints.rightFloorRight ), platformFloorTextureTilting.x, platformFloorTextureTilting.y );
 
-            GameObject platformSideLeftGameObj = new GameObject( "Piattaforma sinistra (lato)" );
-            platformSideLeftGameObj.transform.parent = sectionGameObj.transform;
-            platformSideLeftGameObj.transform.position = Vector3.zero;
-            platformSideLeftGameObj.AddComponent<MeshFilter>();
-            platformSideLeftGameObj.AddComponent<MeshRenderer>();
-            platformSideLeftGameObj.GetComponent<MeshFilter>().sharedMesh = platformSideLeftMesh;
-            platformSideLeftGameObj.GetComponent<MeshRenderer>().material = platformSideTexture;
+        GameObject platformSideLeftGameObj = new GameObject( "Piattaforma sinistra (lato)" );
+        platformSideLeftGameObj.transform.parent = sectionGameObj.transform;
+        platformSideLeftGameObj.transform.position = Vector3.zero;
+        platformSideLeftGameObj.AddComponent<MeshFilter>();
+        platformSideLeftGameObj.AddComponent<MeshRenderer>();
+        platformSideLeftGameObj.GetComponent<MeshFilter>().sharedMesh = platformSideLeftMesh;
+        platformSideLeftGameObj.GetComponent<MeshRenderer>().material = platformSideTexture;
 
-            GameObject platformSideRightGameObj = new GameObject( "Piattaforma destra (lato)" );
-            platformSideRightGameObj.transform.parent = sectionGameObj.transform;
-            platformSideRightGameObj.transform.position = Vector3.zero;
-            platformSideRightGameObj.AddComponent<MeshFilter>();
-            platformSideRightGameObj.AddComponent<MeshRenderer>();
-            platformSideRightGameObj.GetComponent<MeshFilter>().sharedMesh = platformSideRightMesh;
-            platformSideRightGameObj.GetComponent<MeshRenderer>().material = platformSideTexture;
+        GameObject platformSideRightGameObj = new GameObject( "Piattaforma destra (lato)" );
+        platformSideRightGameObj.transform.parent = sectionGameObj.transform;
+        platformSideRightGameObj.transform.position = Vector3.zero;
+        platformSideRightGameObj.AddComponent<MeshFilter>();
+        platformSideRightGameObj.AddComponent<MeshRenderer>();
+        platformSideRightGameObj.GetComponent<MeshFilter>().sharedMesh = platformSideRightMesh;
+        platformSideRightGameObj.GetComponent<MeshRenderer>().material = platformSideTexture;
 
-            GameObject platformFloorLeftGameObj = new GameObject( "Piattaforma sinistra (pavimento)" );
-            platformFloorLeftGameObj.transform.parent = sectionGameObj.transform;
-            platformFloorLeftGameObj.transform.position = Vector3.zero;
-            platformFloorLeftGameObj.AddComponent<MeshFilter>();
-            platformFloorLeftGameObj.AddComponent<MeshRenderer>();
-            platformFloorLeftGameObj.GetComponent<MeshFilter>().sharedMesh = platformFloorLeftMesh;
-            platformFloorLeftGameObj.GetComponent<MeshRenderer>().material = platformFloorTexture;
+        GameObject platformFloorLeftGameObj = new GameObject( "Piattaforma sinistra (pavimento)" );
+        platformFloorLeftGameObj.transform.parent = sectionGameObj.transform;
+        platformFloorLeftGameObj.transform.position = Vector3.zero;
+        platformFloorLeftGameObj.AddComponent<MeshFilter>();
+        platformFloorLeftGameObj.AddComponent<MeshRenderer>();
+        platformFloorLeftGameObj.GetComponent<MeshFilter>().sharedMesh = platformFloorLeftMesh;
+        platformFloorLeftGameObj.GetComponent<MeshRenderer>().material = platformFloorTexture;
 
-            GameObject platformFloorRightGameObj = new GameObject( "Piattaforma destra (pavimento)" );
-            platformFloorRightGameObj.transform.parent = sectionGameObj.transform;
-            platformFloorRightGameObj.transform.position = Vector3.zero;
-            platformFloorRightGameObj.AddComponent<MeshFilter>();
-            platformFloorRightGameObj.AddComponent<MeshRenderer>();
-            platformFloorRightGameObj.GetComponent<MeshFilter>().sharedMesh = platformFloorRightMesh;
-            platformFloorRightGameObj.GetComponent<MeshRenderer>().material = platformFloorTexture;
+        GameObject platformFloorRightGameObj = new GameObject( "Piattaforma destra (pavimento)" );
+        platformFloorRightGameObj.transform.parent = sectionGameObj.transform;
+        platformFloorRightGameObj.transform.position = Vector3.zero;
+        platformFloorRightGameObj.AddComponent<MeshFilter>();
+        platformFloorRightGameObj.AddComponent<MeshRenderer>();
+        platformFloorRightGameObj.GetComponent<MeshFilter>().sharedMesh = platformFloorRightMesh;
+        platformFloorRightGameObj.GetComponent<MeshRenderer>().material = platformFloorTexture;
 
         // Update dettagli LineSection 
         section.platformSidesPoints = platformSidesVertexPoints;
+    }
+
+    private void AddProps() {
+        foreach( string lineName in this.lines.Keys ) {
+            
+            GameObject lineGameObj = new GameObject( lineName );
+            Vector2 banisterOffsets = Vector2.zero; 
+            for( int i = 0; i < this.lines[ lineName ].Count; i++ ) { 
+                
+                LineSection section = this.lines[ lineName ][ i ];
+
+                banisterOffsets = AddSidePlatformBanisters( section, banisterOffsets, this.banisterDistance, this.banisterRotationCorrection );
+            }
+        }
+    }
+
+
+    private Vector2 AddSidePlatformBanisters( LineSection section, Vector2 previousOffsets, float distance, Vector3 rotationCorrection ) {
+
+        float meshOffsetLeft = previousOffsets[ 0 ];
+        float meshOffsetRight = previousOffsets[ 1 ];
+
+        if( section.type == Type.Tunnel ) {
+
+            GameObject banistersLeftParent = new GameObject( "Ringhiere (piattaforma sinistra)" );
+            banistersLeftParent.transform.parent = section.sectionObj.transform;
+
+            GameObject banistersRightParent = new GameObject( "Ringhiere (piattaforma destra)" );
+            banistersRightParent.transform.parent = section.sectionObj.transform;
+            int cLeft = 0, cRight = 0;
+
+            for( int i = 1; i < section.platformSidesPoints.leftFloorRight.Count; i++ ) {
+                Vector3 p0Left = section.platformSidesPoints.leftFloorRight[ i - 1 ];
+                Vector3 p1Left =  section.platformSidesPoints.leftFloorRight[ i ];
+
+                Vector3 p0Right = section.platformSidesPoints.rightFloorLeft[ i - 1 ];
+                Vector3 p1Right =  section.platformSidesPoints.rightFloorLeft[ i ];
+
+                float meshLenghtLeft = ( p1Left - p0Left ).magnitude;
+                float meshLenghtRight = ( p1Right - p0Right ).magnitude;
+                
+                Vector3 meshDirLeft = ( p1Left - p0Left ).normalized;
+                Vector3 meshDirRight = ( p1Right - p0Right ).normalized;
+
+                Vector3 bpLeft = p0Left + ( meshDirLeft * meshOffsetLeft );
+                Vector3 bpRight = p0Right + ( meshDirRight * meshOffsetRight );
+
+                // Lato sinistro
+                // Caso 1: La distanza fra gli elementi è minore della distanza fra due punti (in lunghezza) della mesh della piattaforma
+                if( distance < meshLenghtLeft ) {
+
+                    float remaingDistanceLeft = ( p1Left - bpLeft ).magnitude;
+
+                    while( remaingDistanceLeft > distance ) {
+
+                        GameObject banisterLeft = GameObject.Instantiate( banister, bpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirLeft, Vector3.forward ) ) );
+                        banisterLeft.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        banisterLeft.isStatic = true;
+                        banisterLeft.name = "Ringhiera " + cLeft; 
+                        banisterLeft.transform.parent = banistersLeftParent.transform;
+
+                        bpLeft += ( meshDirLeft * distance );
+                        remaingDistanceLeft = ( p1Left - bpLeft ).magnitude;
+                        cLeft++;
+                    }
+
+                    GameObject lastBanisterLeft = GameObject.Instantiate( banister, bpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirLeft, Vector3.forward ) ) );
+                    lastBanisterLeft.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                    lastBanisterLeft.isStatic = true;
+                    lastBanisterLeft.name = "Ringhiera" + cLeft;
+                    lastBanisterLeft.transform.parent = banistersLeftParent.transform;
+
+                    meshOffsetLeft = distance - remaingDistanceLeft;
+                }
+                // Caso 2: La distanza fra gli elementi è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma
+                else {
+                    // Variante A: L'offset precedente è inferiore alla distanza fra due punti (in lunghezza) della mesh della piattaforma. Quindi genero il GameObject all'offset rimanente sommo la 
+                //                 differenza fra la distanza fra gli elementi e la distanza fra due punti (in lunghezza) della mesh della piattaforma.
+                    if( meshOffsetLeft < meshLenghtLeft ) {
+                        GameObject banisterLeft = GameObject.Instantiate( banister, bpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirLeft, Vector3.forward ) ) );
+                        banisterLeft.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        banisterLeft.isStatic = true;
+                        banisterLeft.name = "Ringhiera " + cLeft; 
+                        banisterLeft.transform.parent = banistersLeftParent.transform;
+
+                        meshOffsetLeft += distance - meshLenghtLeft;
+                    }
+                    // Variante B: Non genero nulla e sottraggo all'offset la distanza fra due punti (in lunghezza) della mesh della piattaforma.
+                    else {
+                        meshOffsetLeft -= meshLenghtLeft;
+                    }
+                }
+
+                // Lato destro
+                // Caso 1: La distanza fra gli elementi è minore della distanza fra due punti (in lunghezza) della mesh della piattaforma
+                if( distance < meshLenghtRight ) {
+
+                    float remaingDistanceRight = ( p1Right - bpRight ).magnitude;
+
+                    while( remaingDistanceRight > distance ) {
+
+                        GameObject banisterRight = GameObject.Instantiate( banister, bpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirRight, Vector3.forward ) ) );
+                        banisterRight.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        banisterRight.isStatic = true;
+                        banisterRight.name = "Ringhiera " + cRight; 
+                        banisterRight.transform.parent = banistersRightParent.transform;
+
+                        bpRight += ( meshDirRight * distance );
+                        remaingDistanceRight = ( p1Right - bpRight ).magnitude;
+                        cRight++;
+                    }
+
+                    GameObject lastBanisterRight = GameObject.Instantiate( banister, bpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirRight, Vector3.forward ) ) );
+                    lastBanisterRight.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                    lastBanisterRight.isStatic = true;
+                    lastBanisterRight.name = "Ringhiera" + cRight;
+                    lastBanisterRight.transform.parent = banistersRightParent.transform;
+
+                    meshOffsetRight = distance - remaingDistanceRight;
+                }
+                // Caso 2: La distanza fra gli elementi è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma
+                else {
+                    // Variante A: L'offset precedente è inferiore alla distanza fra due punti (in lunghezza) della mesh della piattaforma. Quindi genero il GameObject all'offset rimanente sommo la 
+                //                 differenza fra la distanza fra gli elementi e la distanza fra due punti (in lunghezza) della mesh della piattaforma.
+                    if( meshOffsetRight < meshLenghtRight ) {
+                        GameObject banisterRight = GameObject.Instantiate( banister, bpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirRight, Vector3.forward ) ) );
+                        banisterRight.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        banisterRight.isStatic = true;
+                        banisterRight.name = "Ringhiera " + cRight; 
+                        banisterRight.transform.parent = banistersRightParent.transform;
+
+                        meshOffsetRight += distance - meshLenghtRight;
+                    }
+                    // Variante B: Non genero nulla e sottraggo all'offset la distanza fra due punti (in lunghezza) della mesh della piattaforma.
+                    else {
+                        meshOffsetRight -= meshLenghtRight;
+                    }
+                }
+            }
+        }
+        else {
+            return Vector2.zero;
+        }
+
+        return new Vector2( meshOffsetLeft, meshOffsetRight );
     }
 
 
@@ -271,6 +420,8 @@ public class MetroGenerator : MonoBehaviour
                 GameObject sectionGameObj = new GameObject( sectionName );
                 sectionGameObj.transform.parent = lineGameObj.transform;
                 sectionGameObj.transform.position = section.bezierCurveLimitedAngle[ 0 ];
+
+                section.sectionObj = sectionGameObj;
 
                 switch( section.type ) {
                     case Type.Tunnel:   GenerateFloorMesh( section, sectionGameObj );
@@ -735,12 +886,12 @@ public class MetroGenerator : MonoBehaviour
             if( i % lineTurnDistance == 0 && sections.Count != 0 ) {
 
                 List<LineSection> actualSections = new List<LineSection>();
-                Debug.Log( ">>>>>>>>>>> Proibited Areas: " + lineName );
-                Debug.Log( ">>>>>>>>>>> Line Turn Distance: " + lineTurnDistance );
+                //Debug.Log( ">>>>>>>>>>> Proibited Areas: " + lineName );
+                //Debug.Log( ">>>>>>>>>>> Line Turn Distance: " + lineTurnDistance );
                 for( int k = i - sectionsBeforeTurnCounter; k < i; k++ ) {
                     actualSections.Add( sections[ k ] );
 
-                    Debug.Log( ">>>>>>>>>>> indice sezioni: " + k );
+                    //Debug.Log( ">>>>>>>>>>> indice sezioni: " + k );
                 }
                 //Debug.Log( "actualSections[0]: " + actualSections[ 0 ] );
                 if( this.proibitedAreas.ContainsKey( lineName ) ){ 

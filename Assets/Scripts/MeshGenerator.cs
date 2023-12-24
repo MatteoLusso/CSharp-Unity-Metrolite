@@ -57,7 +57,6 @@ public static class MeshGenerator
         public List<Vector3> leftFloorLeft { get; set; }
         public List<Vector3> leftFloorRight { get; set; }
 
-
     }
 
     public static Vector3[ , ] ConvertListsToMatrix_2xM( List<Vector3> up, List<Vector3> down )
