@@ -120,6 +120,7 @@ public class TrainController : MonoBehaviour
         HandleMovement();
         HandleBrakingNoise();
         HandleSwitch();
+        HandleSwitchesIndicators();
 
         if( showDebugInfo ) {
             ShowDebugInfo();
@@ -151,12 +152,123 @@ public class TrainController : MonoBehaviour
                          "Inverse: " + inverseLine + "\n";
     }
     
+    private void HandleSwitchesIndicators() {
+        string lineName = keyLine;
+        List<LineSection> sections = lines[ lineName ];
+
+        DynamicIcons[] dynamicIconsCmps = ( DynamicIcons[] )GameObject.FindObjectsOfType( typeof( DynamicIcons ) );
+        foreach( DynamicIcons dynamicIconsCmp in dynamicIconsCmps )
+        {
+            dynamicIconsCmp.TARGET_MaxVisibleDistance = 0.0f;
+        }
+
+        if( actualSwitchIndex < sections.Count && actualSwitchIndex > -1 && actualSwitchIndex != indexSection ) {
+
+            string iconName = "Wrong_Way";
+
+            // Costruiamo i nomi delle icone
+
+            //Debug.Log( ">>> Icona scambio: " + sections[ actualSwitchIndex ].switchType.ToString() + '_' + sections[ actualSwitchIndex ].activeSwitch.ToString() + '_' + railSide.ToString() );
+            
+
+            if( mainDir == Direction.Forward || ( mainDir == Direction.Backward && inverseLine ) ) {
+                
+                // Distinguo lo scambio selezionato
+
+                /*switch( sections[ actualSwitchIndex ].switchType ) { 
+
+                    case SwitchType.BiToBi:     switch( railSide ) {
+
+                                                    case Side.Right:    switch( sections[ actualSwitchIndex ].activeSwitch ) {
+
+                                                                            case SwitchDirection.RightToRight:  iconName = "Bi_To_Bi_Right";  
+                                                                                                                break;
+                                                                        } 
+
+                                                                        break; 
+                                                }
+
+                                                break;
+                }*/
+
+
+
+                switch( railSide ) {
+
+                    case Side.Right:   
+                                        if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToRight ) {
+                                            iconName = "Bi_To_Bi_Right";
+                                        }
+                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToLeft ) {
+                                            iconName = "Bi_To_Bi_Right_To_Left";
+                                        }
+                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToCenter ) {
+                                            iconName = "Bi_To_Mono_Right_To_Center";
+                                        }
+
+                                        break;
+
+                    case Side.Left:     if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToLeft ) {
+                                            iconName = "Bi_To_Bi_Left";
+                                        }
+                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToRight ) {
+                                            iconName = "Bi_To_Bi_Left_To_Right";
+                                        }
+                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToCenter ) {
+                                            iconName = "Bi_To_Mono_Left_To_Center";
+                                        }
+
+                                        break;
+
+                    case Side.Center:   if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToCenter ) {
+                                            iconName = "Mono_To_Bi_Center_To_Left";
+                                        }
+                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToCenter ) {
+                                            iconName = "Mono_To_Bi_Center_To_Right";
+                                        }
+                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToCenter ) {
+                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Right ) {
+                                                iconName = "Center_To_Center_New_Right";
+                                            }
+                                            else if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Left ) {
+                                                iconName = "Center_To_Center_New_Left";
+                                            }
+                                        }
+                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
+                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Right ) {
+                                                iconName = "Center_To_Entrance_Right";
+                                            }
+                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Both ) {
+                                                // TODO
+                                            }
+                                        }
+                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
+                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Left ) {
+                                                iconName = "Center_To_Entrance_Left";
+                                            }
+                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Both ) {
+                                                // TODO
+                                            }
+                                        }
+
+                                        break;
+                }
+            }
+
+            //sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Active = true;
+            sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().TARGET_MaxVisibleDistance = 2500.0f;
+            sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Color = iconName == "Wrong_Way" ? Color.red : Color.green;
+            sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Rotation = iconName == "Wrong_Way" ? false : true;
+            sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Texture2D = Resources.Load( "Indicatori/Texture2D/" + iconName ) as Texture2D;
+        }
+    }
+
     private void HandleSwitch() {
 
         string lineName = keyLine;
         List<LineSection> sections = lines[ lineName ];
 
-        if( ( ( actualMovement == Direction.Forward && !inverseLine ) || ( actualMovement == Direction.Backward && inverseLine ) ) && actualSwitchIndex <= indexSection ) {
+        if( ( ( actualMovement == Direction.Forward && !inverseLine ) || ( actualMovement == Direction.Backward && inverseLine ) ) && actualSwitchIndex < indexSection ) {
 
             //Debug.Log( "Calcolo switch Successivo" );
 
@@ -170,7 +282,7 @@ public class TrainController : MonoBehaviour
 
             //Debug.Log( "actualSwitchIndex: " + actualSwitchIndex );
         }
-        else if( ( ( actualMovement == Direction.Forward && inverseLine ) || ( actualMovement == Direction.Backward && !inverseLine ) ) && actualSwitchIndex >= indexSection ) {
+        else if( ( ( actualMovement == Direction.Forward && inverseLine ) || ( actualMovement == Direction.Backward && !inverseLine ) ) && actualSwitchIndex > indexSection ) {
 
             //Debug.Log( "Calcolo switch Precedente" );
 
@@ -194,7 +306,7 @@ public class TrainController : MonoBehaviour
             //Debug.Log( "actualSwitchIndex: " + actualSwitchIndex );
         }
 
-        if( Input.GetButtonDown( "RB" ) || Input.GetKeyDown( KeyCode.F ) ) {
+        if( actualSwitchIndex != indexSection && ( Input.GetButtonDown( "RB" ) || Input.GetKeyDown( KeyCode.F ) ) ) {
 
             sections = lines[ lineName ];
 
@@ -808,18 +920,29 @@ public class TrainController : MonoBehaviour
                                     if( i + 1 < sections.Count && sections[ i ].type != Type.Switch && sections[ i + 1 ].type != Type.Switch ) {
                                         indexDiff = j + indexDiff - ( points.Count - 1 );
 
+                                        LineSection nextSection = sections[ i + 1 ];
+                                        List<Vector3> navigationPoints = new List<Vector3>();
+
                                         //if( sections[ i + 1 ].type == Type.Tunnel ) {
                                             if( sections[ i + 1 ].bidirectional ) {
                                                 if( railSide == Side.Left ) {
-                                                    nextOrientationPoint = sections[ i + 1 ].floorPoints.leftLine[ indexDiff ]  + ( Vector3.forward * heightCorrection );
+                                                    navigationPoints = nextSection.floorPoints.leftLine;
                                                 }
                                                 else if( railSide == Side.Right ) {
-                                                    nextOrientationPoint = sections[ i + 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                                    navigationPoints = nextSection.floorPoints.rightLine;
                                                 }
                                             }
                                             else {
-                                                nextOrientationPoint = sections[ i + 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                                navigationPoints = nextSection.floorPoints.centerLine;
                                             }
+
+                                            if( indexDiff >= navigationPoints.Count ) {
+                                                nextOrientationPoint = navigationPoints[ navigationPoints.Count - 1 ] + ( Vector3.forward * heightCorrection );
+                                            }
+                                            else {
+                                                nextOrientationPoint = navigationPoints[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                            }
+
                                         //}
                                         //else {
                                             //nextOrientationPoint = sections[ i + 1 ].bezierCurveLimitedAngle[ indexDiff ];
@@ -1160,6 +1283,9 @@ public class TrainController : MonoBehaviour
                                     if( i - 1 >= 0 && sections[ i ].type != Type.Switch && sections[ i - 1 ].type != Type.Switch ) {
                                         //indexDiff = ( sections[ i - 1 ].bezierCurveLimitedAngle.Count - 1 ) + ( j - indexDiff );
 
+                                        LineSection previousSection = sections[ i - 1 ];
+                                        List<Vector3> navigationPoints = new List<Vector3>();
+
                                         //if( sections[ i - 1 ].type == Type.Tunnel ) {
                                             if( sections[ i - 1 ].bidirectional ) {
                                                 if( railSide == Side.Left ) {
@@ -1175,6 +1301,25 @@ public class TrainController : MonoBehaviour
                                             else {
                                                 indexDiff = ( sections[ i - 1 ].floorPoints.centerLine.Count - 1 ) + ( j - indexDiff );
                                                 previousOrientationPoint = sections[ i - 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                            }
+
+                                            if( sections[ i + 1 ].bidirectional ) {
+                                                if( railSide == Side.Left ) {
+                                                    navigationPoints = previousSection.floorPoints.leftLine;
+                                                }
+                                                else if( railSide == Side.Right ) {
+                                                    navigationPoints = previousSection.floorPoints.rightLine;
+                                                }
+                                            }
+                                            else {
+                                                navigationPoints = previousSection.floorPoints.centerLine;
+                                            }
+
+                                            if( indexDiff >= navigationPoints.Count ) {
+                                                previousOrientationPoint = navigationPoints[ 0 ] + ( Vector3.forward * heightCorrection );
+                                            }
+                                            else {
+                                                previousOrientationPoint = navigationPoints[ indexDiff ] + ( Vector3.forward * heightCorrection );
                                             }
                                         //}
                                         //else {
