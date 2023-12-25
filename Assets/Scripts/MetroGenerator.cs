@@ -1,10 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 public class MetroGenerator : MonoBehaviour
 {
-    public float cellSize = 150.0f;
+    public int seed = 0;
+    public bool randomSeed = false;
     public GameObject train;
     public GameObject mainCamera;
     public float trainHeightFromGround = 1.5f;
@@ -12,7 +14,6 @@ public class MetroGenerator : MonoBehaviour
     public int distanceMultiplier = 25;
     public int sectionsNumber = 1;
     public float maxAngle = 2.5f;
-
     public int stationsDistanceMin = 4;
     public int stationsDistanceMax = 8;
     private int stationsDistance;
@@ -27,7 +28,10 @@ public class MetroGenerator : MonoBehaviour
     public GameObject pillar;
     public GameObject banister;
     public Vector3 banisterRotationCorrection = Vector3.zero;
-    public float banisterDistance = 8.5f;
+    public Vector3 banisterPositionCorrectionLeft = Vector3.zero;
+    public Vector3 banisterPositionCorrectionRight = Vector3.zero;
+    public float banisterMinDistance = 8.5f;
+    public float banisterMaxDistance = 25.0f;
     public int baseBezierCurvePointsNumber = 50;
     public bool tunnelParabolic = false;
     public float tunnelWidth = 5.0f;
@@ -79,6 +83,9 @@ public class MetroGenerator : MonoBehaviour
     }
 
     public void GenerateMetro() {
+        
+        this.seed = this.randomSeed ? ( int )Random.Range( 0, 999999 ) : this.seed;
+        Random.InitState( seed ); 
 
         GenerateLine( "Linea " + lineCounter, Direction.None, Direction.Random, sectionsNumber, Vector3.zero, Vector3.zero, newLineFromSwitch, null );
 
@@ -250,13 +257,15 @@ public class MetroGenerator : MonoBehaviour
                 
                 LineSection section = this.lines[ lineName ][ i ];
 
-                banisterOffsets = AddSidePlatformBanisters( section, banisterOffsets, this.banisterDistance, this.banisterRotationCorrection );
+                banisterOffsets = AddSidePlatformBanisters( section, banisterOffsets, this.banisterMinDistance, this.banisterMaxDistance, this.banisterRotationCorrection, this.banisterPositionCorrectionLeft, this.banisterPositionCorrectionRight );
             }
         }
     }
 
 
-    private Vector2 AddSidePlatformBanisters( LineSection section, Vector2 previousOffsets, float distance, Vector3 rotationCorrection ) {
+    private Vector2 AddSidePlatformBanisters( LineSection section, Vector2 previousOffsets, float minDistance, float maxDistance, Vector3 rotationCorrection, Vector3 positionCorrectionLeft, Vector3 positionCorrectionRight ) {
+
+        float distance = Random.Range( minDistance, maxDistance );
 
         float meshOffsetLeft = previousOffsets[ 0 ];
         float meshOffsetRight = previousOffsets[ 1 ];
@@ -287,95 +296,110 @@ public class MetroGenerator : MonoBehaviour
                 Vector3 bpRight = p0Right + ( meshDirRight * meshOffsetRight );
 
                 // Lato sinistro
-                // Caso 1: La distanza fra gli elementi è minore della distanza fra due punti (in lunghezza) della mesh della piattaforma
-                if( distance < meshLenghtLeft ) {
+                if( meshOffsetLeft < meshLenghtLeft ) {
+                    if( distance < meshLenghtLeft ) { 
+                        
+                        // Caso 1: La distanza fra gli elementi è minore della distanza fra due punti (in lunghezza) della mesh della piattaforma
+                        float remaingDistanceLeft = ( p1Left - bpLeft ).magnitude;
 
-                    float remaingDistanceLeft = ( p1Left - bpLeft ).magnitude;
+                        while( remaingDistanceLeft > distance ) {
 
-                    while( remaingDistanceLeft > distance ) {
+                            GameObject banisterLeft = GameObject.Instantiate( banister, bpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirLeft, Vector3.forward ) ) );
+                            banisterLeft.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                            banisterLeft.transform.Translate( positionCorrectionLeft, Space.Self );
+                            banisterLeft.isStatic = true;
+                            banisterLeft.name = "Ringhiera " + cLeft; 
+                            banisterLeft.transform.parent = banistersLeftParent.transform;
 
-                        GameObject banisterLeft = GameObject.Instantiate( banister, bpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirLeft, Vector3.forward ) ) );
-                        banisterLeft.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
-                        banisterLeft.isStatic = true;
-                        banisterLeft.name = "Ringhiera " + cLeft; 
-                        banisterLeft.transform.parent = banistersLeftParent.transform;
+                            bpLeft += ( meshDirLeft * distance );
+                            remaingDistanceLeft = ( p1Left - bpLeft ).magnitude;
+                            cLeft++;
+                        }
 
-                        bpLeft += ( meshDirLeft * distance );
-                        remaingDistanceLeft = ( p1Left - bpLeft ).magnitude;
-                        cLeft++;
+                        GameObject lastBanisterLeft = GameObject.Instantiate( banister, bpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirLeft, Vector3.forward ) ) );
+                        lastBanisterLeft.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        lastBanisterLeft.transform.Translate( positionCorrectionLeft, Space.Self );
+                        lastBanisterLeft.isStatic = true;
+                        lastBanisterLeft.name = "Ringhiera" + cLeft;
+                        lastBanisterLeft.transform.parent = banistersLeftParent.transform;
+
+                        meshOffsetLeft = distance - remaingDistanceLeft;
                     }
+                    else {
 
-                    GameObject lastBanisterLeft = GameObject.Instantiate( banister, bpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirLeft, Vector3.forward ) ) );
-                    lastBanisterLeft.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
-                    lastBanisterLeft.isStatic = true;
-                    lastBanisterLeft.name = "Ringhiera" + cLeft;
-                    lastBanisterLeft.transform.parent = banistersLeftParent.transform;
-
-                    meshOffsetLeft = distance - remaingDistanceLeft;
-                }
-                // Caso 2: La distanza fra gli elementi è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma
-                else {
-                    // Variante A: L'offset precedente è inferiore alla distanza fra due punti (in lunghezza) della mesh della piattaforma. Quindi genero il GameObject all'offset rimanente sommo la 
-                //                 differenza fra la distanza fra gli elementi e la distanza fra due punti (in lunghezza) della mesh della piattaforma.
-                    if( meshOffsetLeft < meshLenghtLeft ) {
+                        // Caso 2: La distanza fra gli elementi è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma. 
+                        // L'offset precedente è inferiore alla distanza fra due punti (in lunghezza) della mesh della piattaforma. Quindi genero il GameObject all'offset rimanente sommo la 
+                        // differenza fra la distanza fra gli elementi e la distanza fra due punti (in lunghezza) della mesh della piattaforma.
                         GameObject banisterLeft = GameObject.Instantiate( banister, bpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirLeft, Vector3.forward ) ) );
                         banisterLeft.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        banisterLeft.transform.Translate( positionCorrectionLeft, Space.Self );
                         banisterLeft.isStatic = true;
                         banisterLeft.name = "Ringhiera " + cLeft; 
                         banisterLeft.transform.parent = banistersLeftParent.transform;
 
                         meshOffsetLeft += distance - meshLenghtLeft;
                     }
-                    // Variante B: Non genero nulla e sottraggo all'offset la distanza fra due punti (in lunghezza) della mesh della piattaforma.
-                    else {
-                        meshOffsetLeft -= meshLenghtLeft;
-                    }
+                }
+                else {
+
+                    // Caso 3: La distanza fra gli elementi è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma. 
+                    // L'offset precedente è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma.
+                    // Non genero nulla e sottraggo all'offset la distanza fra due punti (in lunghezza) della mesh della piattaforma.
+                    meshOffsetLeft -= meshLenghtLeft;
                 }
 
                 // Lato destro
-                // Caso 1: La distanza fra gli elementi è minore della distanza fra due punti (in lunghezza) della mesh della piattaforma
-                if( distance < meshLenghtRight ) {
+                if( meshOffsetRight < meshLenghtRight ) {
 
-                    float remaingDistanceRight = ( p1Right - bpRight ).magnitude;
+                    if( distance < meshLenghtRight ) {
 
-                    while( remaingDistanceRight > distance ) {
+                        // Caso 1: La distanza fra gli elementi è minore della distanza fra due punti (in lunghezza) della mesh della piattaforma
+                        float remaingDistanceRight = ( p1Right - bpRight ).magnitude;
 
-                        GameObject banisterRight = GameObject.Instantiate( banister, bpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirRight, Vector3.forward ) ) );
-                        banisterRight.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
-                        banisterRight.isStatic = true;
-                        banisterRight.name = "Ringhiera " + cRight; 
-                        banisterRight.transform.parent = banistersRightParent.transform;
+                        while( remaingDistanceRight > distance ) {
 
-                        bpRight += ( meshDirRight * distance );
-                        remaingDistanceRight = ( p1Right - bpRight ).magnitude;
-                        cRight++;
+                            GameObject banisterRight = GameObject.Instantiate( banister, bpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirRight, Vector3.forward ) ) );
+                            banisterRight.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                            banisterRight.transform.Translate( positionCorrectionRight, Space.Self );
+                            banisterRight.isStatic = true;
+                            banisterRight.name = "Ringhiera " + cRight; 
+                            banisterRight.transform.parent = banistersRightParent.transform;
+
+                            bpRight += ( meshDirRight * distance );
+                            remaingDistanceRight = ( p1Right - bpRight ).magnitude;
+                            cRight++;
+                        }
+
+                        GameObject lastBanisterRight = GameObject.Instantiate( banister, bpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirRight, Vector3.forward ) ) );
+                        lastBanisterRight.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        lastBanisterRight.transform.Translate( positionCorrectionRight, Space.Self );
+                        lastBanisterRight.isStatic = true;
+                        lastBanisterRight.name = "Ringhiera" + cRight;
+                        lastBanisterRight.transform.parent = banistersRightParent.transform;
+
+                        meshOffsetRight = distance - remaingDistanceRight;
                     }
+                    else{
 
-                    GameObject lastBanisterRight = GameObject.Instantiate( banister, bpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirRight, Vector3.forward ) ) );
-                    lastBanisterRight.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
-                    lastBanisterRight.isStatic = true;
-                    lastBanisterRight.name = "Ringhiera" + cRight;
-                    lastBanisterRight.transform.parent = banistersRightParent.transform;
-
-                    meshOffsetRight = distance - remaingDistanceRight;
-                }
-                // Caso 2: La distanza fra gli elementi è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma
-                else {
-                    // Variante A: L'offset precedente è inferiore alla distanza fra due punti (in lunghezza) della mesh della piattaforma. Quindi genero il GameObject all'offset rimanente sommo la 
-                //                 differenza fra la distanza fra gli elementi e la distanza fra due punti (in lunghezza) della mesh della piattaforma.
-                    if( meshOffsetRight < meshLenghtRight ) {
+                        // Caso 2: La distanza fra gli elementi è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma. 
+                        // L'offset precedente è inferiore alla distanza fra due punti (in lunghezza) della mesh della piattaforma. Quindi genero il GameObject all'offset rimanente sommo la 
+                        // differenza fra la distanza fra gli elementi e la distanza fra due punti (in lunghezza) della mesh della piattaforma.
                         GameObject banisterRight = GameObject.Instantiate( banister, bpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, meshDirRight, Vector3.forward ) ) );
                         banisterRight.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        banisterRight.transform.Translate( positionCorrectionRight, Space.Self );
                         banisterRight.isStatic = true;
                         banisterRight.name = "Ringhiera " + cRight; 
                         banisterRight.transform.parent = banistersRightParent.transform;
 
                         meshOffsetRight += distance - meshLenghtRight;
                     }
-                    // Variante B: Non genero nulla e sottraggo all'offset la distanza fra due punti (in lunghezza) della mesh della piattaforma.
-                    else {
-                        meshOffsetRight -= meshLenghtRight;
-                    }
+                }
+                else {
+
+                    // Caso 3: La distanza fra gli elementi è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma. 
+                    // L'offset precedente è maggiore della distanza fra due punti (in lunghezza) della mesh della piattaforma.
+                    // Non genero nulla e sottraggo all'offset la distanza fra due punti (in lunghezza) della mesh della piattaforma.
+                    meshOffsetRight -= meshLenghtRight;
                 }
             }
         }
