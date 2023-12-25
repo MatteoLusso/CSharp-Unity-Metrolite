@@ -72,7 +72,7 @@ public class CameraController : MonoBehaviour
             if( thisCamera.orthographic ) {
                 
                 TrainController trainController = train.GetComponent<TrainController>();
-                thisCamera.orthographicSize = orthographicMinSize + ( ( orthographicMaxSize - orthographicMinSize ) * ( trainController.speed / trainController.maxSpeed ) );
+                thisCamera.orthographicSize = orthographicMinSize + ( ( orthographicMaxSize - orthographicMinSize ) * ( Mathf.Abs( trainController.speed ) / trainController.maxSpeed ) );
             }
         }
 
