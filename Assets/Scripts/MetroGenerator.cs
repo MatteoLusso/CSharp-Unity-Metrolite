@@ -26,6 +26,15 @@ public class MetroGenerator : MonoBehaviour
     public int stationExtensionCurvePoints = 10;
     public float switchLenght = 25.0f;
     public GameObject pillar;
+    public Vector3 pillarRotationCorrection = Vector3.zero;
+    public Vector3 pillarPositionCorrection = Vector3.zero;
+    public float pillarMinDistance = 5.0f;
+    public float pillarMaxDistance = 10.0f;
+    public GameObject fan;
+    public Vector3 fanRotationCorrection = Vector3.zero;
+    public Vector3 fanPositionCorrection = Vector3.zero;
+    public float fanMinDistance = 100.0f;
+    public float fanMaxDistance = 250.0f;
     public GameObject banister;
     public Vector3 banisterRotationCorrection = Vector3.zero;
     public Vector3 banisterPositionCorrectionLeft = Vector3.zero;
@@ -38,6 +47,8 @@ public class MetroGenerator : MonoBehaviour
     public float centerWidth = 5.0f;
     public float platformHeight = 0.5f;
     public float platformWidth = 3.5f;
+    public List<Vector3> tunnelWallShape;
+    public float tunnelWallHeight = 0.5f;
     public float tunnelStraightness = 0.5f;
     public Material tunnelRailTexture;
     public Vector2 tunnelRailTextureTilting;
@@ -45,6 +56,8 @@ public class MetroGenerator : MonoBehaviour
     public Vector2 platformSideTextureTilting;
     public Material platformFloorTexture;
     public Vector2 platformFloorTextureTilting;
+    public Material tunnelWallTexture;
+    public Vector2 tunnelWallTextureTilting;
     public Material switchRailTexture;
     public Vector2 switchRailTextureTilting;
     public Material switchGroundTexture;
@@ -156,11 +169,11 @@ public class MetroGenerator : MonoBehaviour
             centerFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerFloorMesh;
             centerFloorGameObj.GetComponent<MeshRenderer>().material = centerTexture;
 
-            for( int p = 0; p < floorVertexPoints.centerLine.Count; p += 2 ) {
+            /*for( int p = 0; p < floorVertexPoints.centerLine.Count; p += 2 ) {
                 GameObject pillarGameObj = Instantiate( pillar, floorVertexPoints.centerLine[ p ] + new Vector3( 0.0f, 0.0f, -pillar.transform.localScale.y / 2 ), Quaternion.Euler( 0.0f, -90.0f, 90.0f ) );
                 pillarGameObj.transform.parent = sectionGameObj.transform;
                 pillarGameObj.name = "Pilastro";
-            }
+            }*/
 
             rightFloorMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.rightL, floorVertexPoints.rightR ), tunnelRailTextureTilting.x, tunnelRailTextureTilting.y );
             GameObject rightFloorGameObj = new GameObject( "Binari destra" );
@@ -205,7 +218,7 @@ public class MetroGenerator : MonoBehaviour
 
         float sectionWidth = section.bidirectional ? ( ( tunnelWidth * 2 ) + centerWidth ) : tunnelWidth;
 
-        platformSidesVertexPoints = MeshGenerator.CalculateMonodirectionalPlatformSidesMeshesVertex( section.bezierCurveLimitedAngle, section.controlsPoints, sectionWidth, tunnelParabolic, platformHeight, platformWidth );
+        platformSidesVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( section.bezierCurveLimitedAngle, section.controlsPoints, sectionWidth, tunnelParabolic, platformHeight, platformWidth );
 
         platformSideLeftMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.leftUp, platformSidesVertexPoints.leftDown ), platformSideTextureTilting.x, platformSideTextureTilting.y );
         platformSideRightMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( platformSidesVertexPoints.rightDown, platformSidesVertexPoints.rightUp ), platformSideTextureTilting.x, platformSideTextureTilting.y );
@@ -248,20 +261,137 @@ public class MetroGenerator : MonoBehaviour
         section.platformSidesPoints = platformSidesVertexPoints;
     }
 
+    private void GenerateWallMesh( LineSection section, GameObject sectionGameObj ) {
+        //MeshGenerator.Wall wallsVertexPoints = new MeshGenerator.Wall();
+        MeshGenerator.SpecularBaseLine wallBaseLines = new MeshGenerator.SpecularBaseLine();
+
+        Mesh wallLeftMesh = new Mesh();
+        Mesh wallRightMesh = new Mesh();
+
+        float baseWidth = section.bidirectional ? ( this.tunnelWidth + ( this.centerWidth / 2 ) + this.platformWidth ) : ( ( this.tunnelWidth / 2 ) + this.platformWidth );
+
+        //wallsVertexPoints = MeshGenerator.CalculateWallsBaseLines( section.bezierCurveLimitedAngle, section.controlsPoints, baseWidth, this.tunnelParabolic, this.platformHeight );
+        float angleFromCenter = Mathf.Atan( this.platformHeight / baseWidth ) * Mathf.Rad2Deg;
+        float distanceFromCenter = Mathf.Sqrt( Mathf.Pow( this.platformHeight, 2 ) + Mathf.Pow( baseWidth, 2 ) );
+
+        wallBaseLines = MeshGenerator.CalculateBaseLinesFromCurve( section.bezierCurveLimitedAngle, section.controlsPoints, distanceFromCenter, angleFromCenter );
+
+        //wallLeftMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( wallsVertexPoints.leftUp, wallsVertexPoints.leftDown ), tunnelWallTextureTilting.x, tunnelWallTextureTilting.y );
+        wallLeftMesh = MeshGenerator.GenerateExtrudedMesh( this.tunnelWallShape, wallBaseLines.left, true, tunnelWallTextureTilting.x, tunnelWallTextureTilting.y, 0.0f );
+        //wallRightMesh = MeshGenerator.GenerateFloorMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( wallsVertexPoints.rightDown, wallsVertexPoints.rightUp ), tunnelWallTextureTilting.x, tunnelWallTextureTilting.y );
+        wallRightMesh = MeshGenerator.GenerateExtrudedMesh( this.tunnelWallShape, wallBaseLines.right, false, tunnelWallTextureTilting.x, tunnelWallTextureTilting.y, 180.0f );
+
+        GameObject wallLeftGameObj = new GameObject( "Muro sinistro" );
+        wallLeftGameObj.transform.parent = sectionGameObj.transform;
+        wallLeftGameObj.transform.position = Vector3.zero;
+        wallLeftGameObj.AddComponent<MeshFilter>();
+        wallLeftGameObj.AddComponent<MeshRenderer>();
+        wallLeftGameObj.GetComponent<MeshFilter>().sharedMesh = wallLeftMesh;
+        wallLeftGameObj.GetComponent<MeshRenderer>().material = tunnelWallTexture;
+
+        GameObject wallRightGameObj = new GameObject( "Muro destro" );
+        wallRightGameObj.transform.parent = sectionGameObj.transform;
+        wallRightGameObj.transform.position = Vector3.zero;
+        wallRightGameObj.AddComponent<MeshFilter>();
+        wallRightGameObj.AddComponent<MeshRenderer>();
+        wallRightGameObj.GetComponent<MeshFilter>().sharedMesh = wallRightMesh;
+        wallRightGameObj.GetComponent<MeshRenderer>().material = tunnelWallTexture;
+
+        // Update dettagli LineSection 
+        //section.platformSidesPoints = platformSidesVertexPoints;
+    }
+
     private void AddProps() {
         foreach( string lineName in this.lines.Keys ) {
             
             GameObject lineGameObj = new GameObject( lineName );
-            Vector2 banisterOffsets = Vector2.zero; 
+            Vector2 banisterOffsets = Vector2.zero;
+            float pillarOffset = 0.0f;
+            float fanOffset = 0.0f;
             for( int i = 0; i < this.lines[ lineName ].Count; i++ ) { 
                 
                 LineSection section = this.lines[ lineName ][ i ];
-
                 banisterOffsets = AddSidePlatformBanisters( section, banisterOffsets, this.banisterMinDistance, this.banisterMaxDistance, this.banisterRotationCorrection, this.banisterPositionCorrectionLeft, this.banisterPositionCorrectionRight );
+                pillarOffset = AddPillars( section, pillarOffset, this.pillarMinDistance, this.pillarMaxDistance, this.pillarRotationCorrection, this.pillarPositionCorrection );
+                fanOffset = AddCeilingFans( section, fanOffset, this.fanMinDistance, this.fanMaxDistance, ( this.centerWidth + this.tunnelWidth ) / 2 , this.fanRotationCorrection, this.fanPositionCorrection );
             }
         }
     }
 
+    private float AddPillars( LineSection section, float previousOffset, float minDistance, float maxDistance, Vector3 rotationCorrection, Vector3 positionCorrection ) {
+
+        float distance = Random.Range( minDistance, maxDistance );
+
+        float offset = previousOffset;
+
+        if( section.type == Type.Tunnel && section.bidirectional ) {
+
+            GameObject pillarsParent = new GameObject( "Pilatri centrali" );
+            pillarsParent.transform.parent = section.sectionObj.transform;
+
+            int c = 0;
+
+            for( int i = 1; i < section.bezierCurveLimitedAngle.Count; i++ ) {
+                Vector3 m0 = section.bezierCurveLimitedAngle[ i - 1 ];
+                Vector3 m1 =  section.bezierCurveLimitedAngle[ i ];
+
+                float lenght = ( m1 - m0 ).magnitude;
+                Vector3 dir = ( m1 - m0 ).normalized;
+
+                Vector3 pp = m0 + ( dir * offset );
+
+                if( offset < lenght ) {
+                    if( distance < ( lenght - offset ) ) { 
+                        
+                        float remaingDistance = ( m1 - pp ).magnitude;
+
+                        while( remaingDistance > distance ) {
+
+                            GameObject pillar = GameObject.Instantiate( this.pillar, pp, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                            pillar.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                            pillar.transform.Translate( positionCorrection, Space.Self );
+                            pillar.isStatic = true;
+                            pillar.name = "Pilastro " + c; 
+                            pillar.transform.parent = pillarsParent.transform;
+
+                            pp += ( dir * distance );
+                            remaingDistance = ( m1 - pp ).magnitude;
+                            c++;
+                        }
+
+                        GameObject lastPillar = GameObject.Instantiate( this.pillar, pp, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                        lastPillar.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        lastPillar.transform.Translate( positionCorrection, Space.Self );
+                        lastPillar.isStatic = true;
+                        lastPillar.name = "Pilastro" + c;
+                        lastPillar.transform.parent = pillarsParent.transform;
+
+                        offset = distance - remaingDistance;
+                    }
+                    else {
+
+                        GameObject pillar = GameObject.Instantiate( this.pillar, pp, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                        pillar.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                        pillar.transform.Translate( positionCorrection, Space.Self );
+                        pillar.isStatic = true;
+                        pillar.name = "Pilastro " + c; 
+                        pillar.transform.parent = pillarsParent.transform;
+
+                        offset += distance - lenght;
+                    }
+                }
+                else {
+
+                    offset -= lenght;
+                }
+            }
+        }
+        else {
+            return 0.0f;
+        }
+
+        return offset;
+    }
 
     private Vector2 AddSidePlatformBanisters( LineSection section, Vector2 previousOffsets, float minDistance, float maxDistance, Vector3 rotationCorrection, Vector3 positionCorrectionLeft, Vector3 positionCorrectionRight ) {
 
@@ -297,7 +427,7 @@ public class MetroGenerator : MonoBehaviour
 
                 // Lato sinistro
                 if( meshOffsetLeft < meshLenghtLeft ) {
-                    if( distance < meshLenghtLeft ) { 
+                    if( distance < ( meshLenghtLeft - meshOffsetLeft ) ) { 
                         
                         // Caso 1: La distanza fra gli elementi è minore della distanza fra due punti (in lunghezza) della mesh della piattaforma
                         float remaingDistanceLeft = ( p1Left - bpLeft ).magnitude;
@@ -351,7 +481,7 @@ public class MetroGenerator : MonoBehaviour
                 // Lato destro
                 if( meshOffsetRight < meshLenghtRight ) {
 
-                    if( distance < meshLenghtRight ) {
+                    if( distance < ( meshLenghtRight - meshOffsetRight ) ) {
 
                         // Caso 1: La distanza fra gli elementi è minore della distanza fra due punti (in lunghezza) della mesh della piattaforma
                         float remaingDistanceRight = ( p1Right - bpRight ).magnitude;
@@ -410,6 +540,162 @@ public class MetroGenerator : MonoBehaviour
         return new Vector2( meshOffsetLeft, meshOffsetRight );
     }
 
+    private float AddCeilingFans( LineSection section, float previousOffset, float minDistance, float maxDistance, float distanceFromCenter, Vector3 rotationCorrection, Vector3 positionCorrection ) {
+
+        float distance = Random.Range( minDistance, maxDistance );
+
+        float offset = previousOffset;
+
+        if( section.type == Type.Tunnel ) {
+
+            GameObject fansParent = new GameObject( "Ventole" );
+            fansParent.transform.parent = section.sectionObj.transform;
+
+            int c = 0;
+
+            for( int i = 1; i < section.bezierCurveLimitedAngle.Count; i++ ) {
+                Vector3 m0 = section.bezierCurveLimitedAngle[ i - 1 ];
+                Vector3 m1 =  section.bezierCurveLimitedAngle[ i ];
+
+                float lenght = ( m1 - m0 ).magnitude;
+                Vector3 dir = ( m1 - m0 ).normalized;
+
+                Vector3 fp = m0 + ( dir * offset );
+                fp = new Vector3( fp.x, fp.y, fp.z - tunnelWallHeight );
+
+                int position = 2;
+
+                if( offset < lenght ) {
+                    if( distance < ( lenght - offset ) ) { 
+                        
+                        float remaingDistance = ( m1 - fp ).magnitude;
+
+                        while( remaingDistance > distance ) {
+
+                            if( section.bidirectional ) {
+                                
+                                position = Random.Range( 0, 3 ); // 0 = Only Left, 1 = Only Right, 2 = Both Sides
+                                if( position == 0 || position == 2 ) {
+                                    Vector3 fpLeft = fp + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dir ) * distanceFromCenter;
+
+                                    GameObject fan = GameObject.Instantiate( this.fan, fpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                                    fan.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                                    fan.transform.Translate( positionCorrection, Space.Self );
+                                    fan.isStatic = true;
+                                    fan.name = "Ventola (sinistra) " + c; 
+                                    fan.transform.parent = fansParent.transform;
+
+                                    Debug.DrawLine( m0, fpLeft, Color.red, 999 );
+                                }
+                                if( position == 1 || position == 2 ) {
+                                    Vector3 fpRight = fp + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * dir ) * distanceFromCenter;
+
+                                    GameObject fan = GameObject.Instantiate( this.fan, fpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                                    fan.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                                    fan.transform.Translate( positionCorrection, Space.Self );
+                                    fan.isStatic = true;
+                                    fan.name = "Ventola (destra) " + c; 
+                                    fan.transform.parent = fansParent.transform;
+
+                                    Debug.DrawLine( m0, fpRight, Color.green, 999 );
+                                }
+                            }
+                            else {
+                                GameObject fan = GameObject.Instantiate( this.fan, fp, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                                fan.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                                fan.transform.Translate( positionCorrection, Space.Self );
+                                fan.isStatic = true;
+                                fan.name = "Ventola (centrale) " + c; 
+                                fan.transform.parent = fansParent.transform;
+                            }
+
+                            fp += ( dir * distance );
+                            remaingDistance = ( m1 - fp ).magnitude;
+                            c++;
+                        }
+
+                        if( section.bidirectional ) {
+                            position = Random.Range( 0, 3 ); // 0 = Only Left, 1 = Only Right, 2 = Both Sides
+                            if( position == 0 || position == 2 ) {
+                                Vector3 fpLeft = fp + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dir ) * distanceFromCenter;
+
+                                GameObject lastFan = GameObject.Instantiate( this.fan, fpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                                lastFan.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                                lastFan.transform.Translate( positionCorrection, Space.Self );
+                                lastFan.isStatic = true;
+                                lastFan.name = "Ventola (sinistra) " + c; 
+                                lastFan.transform.parent = fansParent.transform;
+                            }
+                            if( position == 1 || position == 2 ) {
+                                Vector3 fpRight = fp + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * dir ) * distanceFromCenter;
+
+                                GameObject lastFan = GameObject.Instantiate( this.fan, fpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                                lastFan.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                                lastFan.transform.Translate( positionCorrection, Space.Self );
+                                lastFan.isStatic = true;
+                                lastFan.name = "Ventola (destra) " + c; 
+                                lastFan.transform.parent = fansParent.transform;
+                            }
+                        }
+                        else {
+                            GameObject fan = GameObject.Instantiate( this.fan, fp, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                            fan.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                            fan.transform.Translate( positionCorrection, Space.Self );
+                            fan.isStatic = true;
+                            fan.name = "Ventola (centrale) " + c; 
+                            fan.transform.parent = fansParent.transform;
+                        }
+                    }
+                    else {
+                        
+                        if( section.bidirectional ) {
+                            position = Random.Range( 0, 3 ); // 0 = Only Left, 1 = Only Right, 2 = Both Sides
+                            if( position == 0 || position == 2 ) {
+                                Vector3 fpLeft = fp + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dir ) * distanceFromCenter;
+
+                                GameObject lastFan = GameObject.Instantiate( this.fan, fpLeft, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                                lastFan.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                                lastFan.transform.Translate( positionCorrection, Space.Self );
+                                lastFan.isStatic = true;
+                                lastFan.name = "Ventola (sinistra) " + c; 
+                                lastFan.transform.parent = fansParent.transform;
+                            }
+                            if( position == 1 || position == 2 ) {
+                                Vector3 fpRight = fp + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * dir ) * distanceFromCenter;
+
+                                GameObject fan = GameObject.Instantiate( this.fan, fpRight, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                                fan.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                                fan.transform.Translate( positionCorrection, Space.Self );
+                                fan.isStatic = true;
+                                fan.name = "Ventola (destra) " + c; 
+                                fan.transform.parent = fansParent.transform;
+                            }
+                        }
+                        else {
+                            GameObject fan = GameObject.Instantiate( this.fan, fp, Quaternion.Euler( 0.0f, 0.0f, Vector3.SignedAngle( Vector3.right, dir, Vector3.forward ) ) );
+                            fan.transform.localRotation *= Quaternion.Euler( rotationCorrection.x, rotationCorrection.y, rotationCorrection.z );
+                            fan.transform.Translate( positionCorrection, Space.Self );
+                            fan.isStatic = true;
+                            fan.name = "Ventola (centrale) " + c; 
+                            fan.transform.parent = fansParent.transform;
+                        }
+
+                        offset += distance - lenght;
+                    }
+                }
+                else {
+
+                    offset -= lenght;
+                }
+            }
+        }
+        else {
+            return 0.0f;
+        }
+
+        return offset;
+    }
+
 
     private void GenerateMeshes() {
 
@@ -450,6 +736,7 @@ public class MetroGenerator : MonoBehaviour
                 switch( section.type ) {
                     case Type.Tunnel:   GenerateFloorMesh( section, sectionGameObj );
                                         GenerateSidePlatformMesh( section, sectionGameObj );
+                                        GenerateWallMesh( section, sectionGameObj );
 
                                         break;
 
@@ -485,11 +772,11 @@ public class MetroGenerator : MonoBehaviour
                                                 centerFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerFloorMesh;
                                                 centerFloorGameObj.GetComponent<MeshRenderer>().material = centerTexture;
 
-                                                for( int p = 0; p < stationRails.centerLine.Count; p += 2 ) {
+                                                /*for( int p = 0; p < stationRails.centerLine.Count; p += 2 ) {
                                                     GameObject pillarGameObj = Instantiate( pillar, stationRails.centerLine[ p ] + new Vector3( 0.0f, 0.0f, -pillar.transform.localScale.y / 2 ), Quaternion.Euler( 0.0f, -90.0f, 90.0f ) );
                                                     pillarGameObj.transform.parent = sectionGameObj.transform;
                                                     pillarGameObj.name = "Pilastro";
-                                                }
+                                                }*/
 
                                                 rightFloorMesh = MeshGenerator.GenerateFloorMesh( stationsPoints, MeshGenerator.ConvertListsToMatrix_2xM( stationRails.rightL, stationRails.rightR ), tunnelRailTextureTilting.x, tunnelRailTextureTilting.y );
                                                 GameObject rightFloorGameObj = new GameObject( "Binari destra" );

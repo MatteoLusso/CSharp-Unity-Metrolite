@@ -59,6 +59,22 @@ public static class MeshGenerator
 
     }
 
+    public class Wall {
+
+    public List<Vector3> rightDown { get; set; }
+    public List<Vector3> rightUp { get; set; }
+
+    public List<Vector3> leftDown { get; set; }
+    public List<Vector3> leftUp { get; set; }
+
+    }
+
+    public class SpecularBaseLine {
+        public List<Vector3> left { get; set; }
+        public List<Vector3> right { get; set; }
+
+    }
+
     public static Vector3[ , ] ConvertListsToMatrix_2xM( List<Vector3> up, List<Vector3> down )
     {
         if( up.Count == down.Count )
@@ -364,7 +380,185 @@ public static class MeshGenerator
         return singleFloor;
     }
 
-    public static PlatformSide CalculateMonodirectionalPlatformSidesMeshesVertex( List<Vector3> curve, List<Vector3> controlPoints, float floorWidth, bool floorParabolic, float sideHeight, float sideWidth )
+    public static SpecularBaseLine CalculateBaseLinesFromCurve( List<Vector3> curve, List<Vector3> controlPoints, float distance, float angle ) {
+
+        SpecularBaseLine lines = new SpecularBaseLine();
+        lines.left = new List<Vector3>();
+        lines.right = new List<Vector3>();
+
+        Vector3 curveDir = ( controlPoints[ 1 ] - curve[ 0 ] ).normalized;
+        Vector3 leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * curveDir.normalized * distance;
+        Vector3 rightDir = -leftDir;
+
+        leftDir = Quaternion.AngleAxis( -angle, curveDir ) * leftDir;
+        rightDir = Quaternion.AngleAxis( angle, curveDir ) * rightDir;
+
+        lines.left.Add( curve[ 0 ] + leftDir );
+        lines.right.Add( curve[ 0 ] + rightDir );
+
+        for( int i = 1; i < curve.Count - 1; i++ )
+        {
+
+            curveDir = ( curve[ i ] - curve[ i - 1 ] ).normalized;
+            leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * curveDir.normalized * distance;
+            rightDir = -leftDir;
+
+            leftDir = Quaternion.AngleAxis( -angle, curveDir ) * leftDir;
+            rightDir = Quaternion.AngleAxis( angle, curveDir ) * rightDir;
+
+            lines.left.Add( curve[ i ] + leftDir );
+            lines.right.Add( curve[ i ] + rightDir );
+
+            Debug.DrawLine( curve[ i ], lines.left[ i ], Color.green, 999 );
+            Debug.DrawLine( curve[ i ], lines.right[ i ], Color.red, 999 );
+        }
+
+        curveDir = ( curve[ curve.Count - 1 ] - curve[ curve.Count - 2 ] ).normalized;
+        leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * curveDir.normalized * distance;
+        rightDir = -leftDir;
+
+        leftDir = Quaternion.AngleAxis( -angle, curveDir ) * leftDir;
+        rightDir = Quaternion.AngleAxis( angle, curveDir ) * rightDir;
+
+        lines.left.Add( curve[ curve.Count - 1 ] + leftDir );
+        lines.right.Add( curve[ curve.Count - 1 ] + rightDir );
+
+        return lines;
+    }
+
+    public static Wall CalculateWallsBaseLines( List<Vector3> curve, List<Vector3> controlPoints, float baseWidth, bool floorParabolic, float sideHeight )
+    {
+        Wall walls = new Wall();
+        walls.leftDown = new List<Vector3>();
+        walls.rightDown = new List<Vector3>();
+
+        float zHeightPrev = 0.0f;
+        float zHeightNext = 0.0f;
+
+        if( floorParabolic )
+        {
+            zHeightPrev = curve[ 0 ].z;
+            zHeightNext = curve[ 1 ].z;
+        }
+
+        float alpha = Mathf.Atan( sideHeight / baseWidth ) * Mathf.Rad2Deg;
+        float dirLength = Mathf.Sqrt( Mathf.Pow( sideHeight, 2 ) + Mathf.Pow( baseWidth, 2 ) );
+
+        Vector3 curveDir = ( curve[ 1 ] - curve[ 0 ] ).normalized;
+        Vector3 leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * dirLength;
+        leftDir = Quaternion.AngleAxis( alpha, curveDir ) * leftDir;
+        Vector3 rightDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * dirLength;
+        rightDir = Quaternion.AngleAxis( -alpha, curveDir ) * rightDir;
+
+        walls.leftDown.Add( curve[ 0 ] + leftDir );
+        walls.rightDown.Add( curve[ 0 ] - rightDir );
+
+        for( int i = 1; i < curve.Count - 1; i++ )
+        {
+            if( floorParabolic )
+            {
+                zHeightPrev = curve[ i - 1 ].z;
+                zHeightNext = curve[ i + 1 ].z;
+            }
+
+            curveDir = ( curve[ i ] - curve[ i - 1 ] ).normalized;
+
+            Debug.DrawRay( curve[ 0 ], curveDir * 10, Color.cyan, 999 );
+
+            leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * dirLength;
+            leftDir = Quaternion.AngleAxis( alpha, curveDir ) * leftDir;
+            rightDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * dirLength;
+            rightDir = Quaternion.AngleAxis( -alpha, curveDir ) * rightDir;
+
+            Debug.DrawRay( curve[ i ], leftDir, Color.green, 999 );
+            Debug.DrawRay( curve[ i ], -rightDir, Color.red, 999 );
+
+            walls.leftDown.Add( curve[ i ] + leftDir );
+            walls.rightDown.Add( curve[ i ] - rightDir );
+        }
+
+        if( floorParabolic )
+        {
+            zHeightPrev = curve[ curve.Count - 2 ].z;
+            zHeightNext = curve[ curve.Count - 1 ].z;
+        }
+
+        curveDir = ( curve[ curve.Count - 1 ] - curve[ curve.Count - 2 ] ).normalized;
+
+        leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * dirLength;
+        leftDir = Quaternion.AngleAxis( alpha, curveDir ) * leftDir;
+        rightDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * dirLength;
+        rightDir = Quaternion.AngleAxis( -alpha, curveDir ) * rightDir;
+
+        walls.leftDown.Add( curve[ curve.Count - 1 ] + leftDir );
+        walls.rightDown.Add( curve[ curve.Count - 1 ] - rightDir );
+
+        return walls;
+    }
+
+    public static Wall CalculateWallsMeshesVertex( List<Vector3> curve, List<Vector3> controlPoints, float baseWidth, bool floorParabolic, float sideHeight, float wallHeight )
+    {
+        Wall walls = new Wall();
+        walls.leftDown = new List<Vector3>();
+        walls.rightDown = new List<Vector3>();
+        walls.leftUp = new List<Vector3>();
+        walls.rightUp = new List<Vector3>();
+
+        float zHeightPrev = 0.0f;
+        float zHeightNext = 0.0f;
+
+        if( floorParabolic )
+        {
+            zHeightPrev = curve[ 0 ].z;
+            zHeightNext = curve[ 1 ].z;
+        }
+
+        float alpha = Mathf.Atan( sideHeight / baseWidth ) * Mathf.Rad2Deg;
+        float dirLength = Mathf.Sqrt( Mathf.Pow( sideHeight, 2 ) + Mathf.Pow( baseWidth, 2 ) );
+
+        Vector3 leftDir = Quaternion.Euler( alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * dirLength;
+        Vector3 rightDir = Quaternion.Euler( -alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * dirLength;
+
+        walls.leftDown.Add( curve[ 0 ] - leftDir );
+        walls.leftUp.Add( new Vector3( walls.leftDown[ 0 ].x, walls.leftDown[ 0 ].y, walls.leftDown[ 0 ].z - wallHeight ) );
+        walls.rightDown.Add( curve[ 0 ] + rightDir );
+        walls.rightUp.Add( new Vector3( walls.rightDown[ 0 ].x, walls.rightDown[ 0 ].y, walls.rightDown[ 0 ].z - wallHeight ) );
+
+        for( int i = 1; i < curve.Count - 1; i++ )
+        {
+            if( floorParabolic )
+            {
+                zHeightPrev = curve[ i - 1 ].z;
+                zHeightNext = curve[ i + 1 ].z;
+            }
+
+            leftDir = Quaternion.Euler( alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * dirLength;
+            rightDir = Quaternion.Euler( -alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * dirLength;
+
+            walls.leftDown.Add( curve[ i ] - leftDir );
+            walls.leftUp.Add( new Vector3( walls.leftDown[ i ].x, walls.leftDown[ i ].y, walls.leftDown[ i ].z - wallHeight ) );
+            walls.rightDown.Add( curve[ i ] + rightDir );
+            walls.rightUp.Add( new Vector3( walls.rightDown[ i ].x, walls.rightDown[ i ].y, walls.rightDown[ i ].z - wallHeight ) );
+        }
+
+        if( floorParabolic )
+        {
+            zHeightPrev = curve[ curve.Count - 2 ].z;
+            zHeightNext = curve[ curve.Count - 1 ].z;
+        }
+
+        leftDir = Quaternion.Euler( alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * dirLength;
+        rightDir = Quaternion.Euler( -alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * dirLength;
+
+        walls.leftDown.Add( curve[ curve.Count - 1 ] - leftDir );
+        walls.leftUp.Add( new Vector3( walls.leftDown[ curve.Count - 1 ].x, walls.leftDown[ curve.Count - 1 ].y, walls.leftDown[ curve.Count - 1 ].z - wallHeight ) );
+        walls.rightDown.Add( curve[ curve.Count - 1 ] + rightDir );
+        walls.rightUp.Add( new Vector3( walls.rightDown[ curve.Count - 1 ].x, walls.rightDown[ curve.Count - 1 ].y, walls.rightDown[ curve.Count - 1 ].z - wallHeight ) );
+
+        return walls;
+    }
+
+    public static PlatformSide CalculatePlatformSidesMeshesVertex( List<Vector3> curve, List<Vector3> controlPoints, float floorWidth, bool floorParabolic, float sideHeight, float sideWidth )
     {
         PlatformSide platformSide = new PlatformSide();
         platformSide.leftDown = new List<Vector3>();
@@ -431,6 +625,95 @@ public static class MeshGenerator
         }
 
         return platformSide;
+    }
+
+    public static Mesh GenerateExtrudedMesh( List<Vector3> profileVertices, List<Vector3> baseVertices, bool clockwiseRotation, float textureHorLenght, float textureVertLenght, float verticalRotationCorrection ) {
+        Mesh extrudedMesh = new Mesh();
+        extrudedMesh.name = "Procedural Mesh";
+
+        int h = profileVertices.Count;
+
+        int[] triangles = new int[ ( h - 1 ) * ( baseVertices.Count - 1 ) * 6 ];
+        Vector3[] vertices = new Vector3[ profileVertices.Count * baseVertices.Count ];
+        Vector2[] uv = new Vector2[ profileVertices.Count * baseVertices.Count ];
+        Vector3[] normals = new Vector3[ profileVertices.Count * baseVertices.Count ];
+
+        // Array di supporto con le distanze dei punti del profilo e della base calcolate rispetto allo zero (serve per gestire l'UV mapping ripetuto)
+        List<float> distancesHor = new List<float>();
+        distancesHor.Add( 0.0f );
+        List<float> distancesVert = new List<float>();
+        distancesVert.Add( 0.0f );
+
+        List<Vector3> profileDirs = new List<Vector3>();
+        List<Vector3> baseDirs = new List<Vector3>();
+        for( int i = 1; i < h; i++ ) {
+
+            Vector3 profileDir = profileVertices[ i ] - profileVertices[ i - 1 ];
+            profileDirs.Add( profileDir );
+
+            distancesVert.Add( distancesVert[ i - 1 ] + profileDir.magnitude );
+        }
+        for( int i = 1; i < baseVertices.Count; i++ ) { 
+
+            Vector3 baseDir = baseVertices[ i ] - baseVertices[ i - 1 ];
+            baseDirs.Add( baseDir );
+
+            distancesHor.Add( distancesHor[ i - 1 ] + baseDir.magnitude );
+        }
+
+        // Genero i tutti i profili e aggiungo i vertici alla lista dei vertici
+        for( int i = 0; i < baseVertices.Count; i++ ) {
+
+            vertices[ i * h ] = baseVertices[ i ];
+            float u = distancesHor[ i ] / textureHorLenght;
+            uv[ i * h ] = new Vector2( u, 0 );
+
+            // Il numero di dir orizontali e verticali è minore di 1 rispetto al nomero di vertici che stiamo ciclando, quindi per l'ultimo punto calcolo la normale usando la dire precedente
+            int normalHorIndex = i < baseDirs.Count ? i : ( baseDirs.Count - 1 );
+            normals[ i * h ] = clockwiseRotation ? -Vector3.Cross( baseDirs[ normalHorIndex ], profileDirs[ 0 ] ).normalized : Vector3.Cross( baseDirs[ normalHorIndex ], profileDirs[ 0 ] ).normalized;
+            Debug.DrawRay( vertices[ i * h ], normals[ i * h ], Color.red, 9999 );
+
+            float alpha = 90.0f - Vector3.SignedAngle( Vector3.up, baseDirs[ normalHorIndex ], -Vector3.forward );
+            //float beta = Vector3.SignedAngle( Vector3.right, baseDirs[ normalHorIndex ], Vector3.up );
+            //Debug.Log( ">>> beta: " + beta );
+
+            for( int j = 0; j < profileDirs.Count; j++ ) {
+
+                vertices[ ( i * h ) + j + 1 ] = vertices[ ( i * h ) + j ] + Quaternion.Euler( 0.0f, /*beta*/0.0f, alpha + verticalRotationCorrection ) * profileDirs[ j ];
+
+                float v = distancesVert[ j + 1 ] / textureVertLenght;
+                uv[ ( i * h ) + j + 1 ] = new Vector2( u, v );
+
+                int normalVertIndex = ( j + 1 ) < profileDirs.Count ? ( j + 1 ) : ( profileDirs.Count - 1 );
+                normals[ ( i * h ) + j + 1 ] = clockwiseRotation ? -Vector3.Cross( baseDirs[ normalHorIndex ], profileDirs[ normalVertIndex ] ).normalized : Vector3.Cross( baseDirs[ normalHorIndex ], profileDirs[ normalVertIndex ] ).normalized;
+
+                if( i > 0 ) {
+                    int arrayIndex = ( 6 * ( ( (  i - 1 ) * ( h - 1 ) ) + j ) );
+                    int vertIndex = ( int )( arrayIndex / 6 ) + ( i - 1 );
+
+                    triangles[ arrayIndex + 0 ] = triangles[ arrayIndex + 3 ] = vertIndex;
+
+                    if( clockwiseRotation ) {
+
+                        triangles[ arrayIndex + 1 ] = triangles[ arrayIndex + 5 ] = vertIndex + ( h + 1 ); 
+                        triangles[ arrayIndex + 2 ] = vertIndex + h;
+                        triangles[ arrayIndex + 4 ] = vertIndex + 1;
+                    }
+                    else {
+                        triangles[ arrayIndex + 1 ] = vertIndex + h;
+                        triangles[ arrayIndex + 2 ] = triangles[ arrayIndex + 4 ] = vertIndex + ( h + 1 ); 
+                        triangles[ arrayIndex + 5 ] = vertIndex + 1;
+                    }
+                }
+            }
+        }
+
+        extrudedMesh.vertices = vertices;
+        extrudedMesh.triangles = triangles;
+        extrudedMesh.uv = uv;
+        extrudedMesh.normals = normals;
+
+        return extrudedMesh;
     }
 
     public static Mesh GenerateFloorMesh( List<Vector3> curve, Vector3[ , ] vertMatrix, float textureHorLenght, float textureVertLenght )
