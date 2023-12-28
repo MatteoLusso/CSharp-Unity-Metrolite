@@ -13,6 +13,7 @@ public class CameraController : MonoBehaviour
     public float horizontalAxisRotationSpeed = 1.0f;
     public float horizontalAxisDeadZone = 0.1f;
     public float horizontalButtonRotationSpeed = 1.0f;
+    public float deadZoomSpeed = 5.0f;
 
     public float orthographicMinSize = 100;
     public float orthographicMaxSize = 250;
@@ -72,7 +73,12 @@ public class CameraController : MonoBehaviour
             if( thisCamera.orthographic ) {
                 
                 TrainController trainController = train.GetComponent<TrainController>();
-                thisCamera.orthographicSize = orthographicMinSize + ( ( orthographicMaxSize - orthographicMinSize ) * ( Mathf.Abs( trainController.speed ) / trainController.maxSpeed ) );
+                if( Mathf.Abs( trainController.speed ) < deadZoomSpeed ) {
+                    thisCamera.orthographicSize = orthographicMinSize;
+                }
+                else {
+                    thisCamera.orthographicSize = orthographicMinSize + ( ( orthographicMaxSize - orthographicMinSize ) * ( ( Mathf.Abs( trainController.speed ) - deadZoomSpeed ) / ( trainController.maxSpeed - deadZoomSpeed ) ) );
+                }
             }
         }
 
