@@ -31,7 +31,7 @@ public class SwitchPath : ScriptableObject
         return switchPathScript;
     }
 
-    public LineSection generateBiToBiSwitch( int index, List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
+    public LineSection generateBiToBiSwitch( List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
 
         LineSection section = new LineSection();
         section.type = Type.Switch;
@@ -103,7 +103,7 @@ public class SwitchPath : ScriptableObject
         return section;
     }
 
-    public LineSection generateBiToMonoSwitch( int index, List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
+    public LineSection generateBiToMonoSwitch( List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
 
         LineSection section = new LineSection();
         section.type = Type.Switch;
@@ -235,7 +235,7 @@ public class SwitchPath : ScriptableObject
         return section;
     }
 
-    public LineSection generateMonoToBiSwitch( int index, List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
+    public LineSection generateMonoToBiSwitch( List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
 
         LineSection section = new LineSection();
         section.type = Type.Switch;
