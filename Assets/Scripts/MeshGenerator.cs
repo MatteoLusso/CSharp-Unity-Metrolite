@@ -2,9 +2,16 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using DLL_MathExt;
+
 public static class MeshGenerator
 {
     public class Floor {
+
+        public List<Vector3> railLeftR { get; set; }
+        public List<Vector3> railLeftL { get; set; }
+        public List<Vector3> railRightR { get; set; }
+        public List<Vector3> railRightL { get; set; }
 
         public List<Vector3> rightR { get; set; }
         public List<Vector3> rightLine { get; set; }
@@ -59,6 +66,12 @@ public static class MeshGenerator
 
     }
 
+    public class ExtrudedMesh{ 
+         
+         public Mesh mesh { get; set; }
+         public List<Vector3> lastProfileVertex { get; set; }
+    }
+
     public class Wall {
 
     public List<Vector3> rightDown { get; set; }
@@ -105,10 +118,15 @@ public static class MeshGenerator
         }
     }
 
-    public static Floor CalculateBidirectionalWithBothSidesPlatformFloorMeshVertex( LineSection section, float centerWidth, float sideWidth/*, bool floorParabolic,*/ )
+    public static Floor CalculateBidirectionalWithBothSidesPlatformFloorMeshVertex( LineSection section, float centerWidth, float sideWidth, float railsWidth/*, bool floorParabolic,*/ )
     {
         List<Vector3> curve = section.bezierCurveLimitedAngle;
         List<Vector3> controlPoints = section.controlsPoints;
+
+        List<Vector3> railLeftR = new List<Vector3>();
+        List<Vector3> railLeftL = new List<Vector3>();
+        List<Vector3> railRightR = new List<Vector3>();
+        List<Vector3> railRightL = new List<Vector3>();
         
         List<Vector3> leftR = new List<Vector3>();
         List<Vector3> leftLine = new List<Vector3>();
@@ -141,6 +159,11 @@ public static class MeshGenerator
         rightLine.Add( curve[ 0 ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
         rightR.Add( curve[ 0 ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
 
+        railLeftL.Add( leftLine[ 0 ] - ( dir * ( railsWidth / 2 ) ) );
+        railLeftR.Add( leftLine[ 0 ] + ( dir * ( railsWidth / 2 ) ) );
+        railRightL.Add( rightLine[ 0 ] + ( dir * ( railsWidth / 2 ) ) );
+        railRightR.Add( rightLine[ 0 ] - ( dir * ( railsWidth / 2 ) ) );
+
         for( int i = 1; i < curve.Count - 1; i++ )
         {
             /*if( floorParabolic )
@@ -159,6 +182,16 @@ public static class MeshGenerator
 
             rightLine.Add( curve[ i ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
             rightR.Add( curve[ i ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
+
+            railLeftL.Add( leftLine[ i ] - ( dir * ( railsWidth / 2 ) ) );
+            railLeftR.Add( leftLine[ i ] + ( dir * ( railsWidth / 2 ) ) );
+            railRightL.Add( rightLine[ i ] + ( dir * ( railsWidth / 2 ) ) );
+            railRightR.Add( rightLine[ i ] - ( dir * ( railsWidth / 2 ) ) );
+
+            //Debug.DrawLine( railLeftL [ i - 1 ], railLeftL[ i ], Color.red, 999 );
+            //Debug.DrawLine( railLeftR [ i - 1 ], railLeftR[ i ], Color.green, 999 );
+            //Debug.DrawLine( railRightL [ i - 1 ], railRightL[ i ], Color.red, 999 );
+            //Debug.DrawLine( railRightR [ i - 1 ], railRightR[ i ], Color.green, 999 );
         }
 
         /*if( floorParabolic )
@@ -178,6 +211,11 @@ public static class MeshGenerator
         rightLine.Add( curve[ curve.Count - 1 ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
         rightR.Add( curve[ curve.Count - 1 ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
 
+        railLeftL.Add( leftLine[ curve.Count - 1 ] - ( dir * ( railsWidth / 2 ) ) );
+        railLeftR.Add( leftLine[ curve.Count - 1 ] + ( dir * ( railsWidth / 2 ) ) );
+        railRightL.Add( rightLine[ curve.Count - 1 ] + ( dir * ( railsWidth / 2 ) ) );
+        railRightR.Add( rightLine[ curve.Count - 1 ] - ( dir * ( railsWidth / 2 ) ) );
+
         Floor singleFloor = new Floor();
         singleFloor.leftL = leftL;
         singleFloor.leftLine = leftLine;
@@ -190,6 +228,11 @@ public static class MeshGenerator
         singleFloor.rightL = centerR;
         singleFloor.rightLine = rightLine;
         singleFloor.rightR = rightR;
+
+        singleFloor.railLeftL = railLeftL;
+        singleFloor.railLeftR = railLeftR;
+        singleFloor.railRightL = railRightL;
+        singleFloor.railRightR = railRightR;
 
         return singleFloor;
     }
@@ -409,8 +452,8 @@ public static class MeshGenerator
             lines.left.Add( curve[ i ] + leftDir );
             lines.right.Add( curve[ i ] + rightDir );
 
-            Debug.DrawLine( curve[ i ], lines.left[ i ], Color.green, 999 );
-            Debug.DrawLine( curve[ i ], lines.right[ i ], Color.red, 999 );
+            //Debug.DrawLine( curve[ i ], lines.left[ i ], Color.green, 999 );
+            //Debug.DrawLine( curve[ i ], lines.right[ i ], Color.red, 999 );
         }
 
         curveDir = ( curve[ curve.Count - 1 ] - curve[ curve.Count - 2 ] ).normalized;
@@ -627,16 +670,49 @@ public static class MeshGenerator
         return platformSide;
     }
 
-    public static Mesh GenerateExtrudedMesh( List<Vector3> profileVertices, List<Vector3> baseVertices, bool clockwiseRotation, float textureHorLenght, float textureVertLenght, float verticalRotationCorrection ) {
-        Mesh extrudedMesh = new Mesh();
-        extrudedMesh.name = "Procedural Mesh";
+    public static List<Vector3> CalculateCircularShape( float radius, int points, Vector2 centerCoords, float eccentricity ) {
+        List<Vector3> shape = new List<Vector3>();
 
-        int h = profileVertices.Count;
+        float fixedAngle = 360.0f / points;
+
+        float k = Mathf.Sqrt( 1 - Mathf.Pow( eccentricity, 2 ) );
+        float a = radius / k;
+        float b = a * k;
+
+        float alpha = 0.0f;
+        for( int i = 0; i < points; i++ ) {
+            //Debug.Log( ">>> alpha: " + alpha );
+            float x = centerCoords.x + ( a * Mathf.Cos( alpha * Mathf.Deg2Rad ) );
+            float y = centerCoords.y + ( b * Mathf.Sin( alpha * Mathf.Deg2Rad ) );
+
+            shape.Add( new Vector3( 0.0f, x, y ) );
+
+            alpha += fixedAngle;
+        }
+        shape.Add( shape[ 0 ] );
+
+        return shape;
+    }
+
+    public static ExtrudedMesh GenerateExtrudedMesh( List<Vector3> profileVertices, float profileScale, List<Vector3> previousProfileVertices, List<Vector3> baseVertices, float horPosCorrection, bool clockwiseRotation, float textureHorLenght, float textureVertLenght, float verticalRotationCorrection, float smoothFactor ) {
+        ExtrudedMesh extrudedMesh = new ExtrudedMesh();
+
+        List<Vector3> lastProfileVertices = new List<Vector3>();
+
+        List<Vector3> profileVerticesScaled = new List<Vector3>();
+        foreach( Vector3 profileVertex in profileVertices ) {
+            profileVerticesScaled.Add( profileVertex * profileScale );
+        }
+        
+        Mesh mesh = new Mesh();
+        mesh.name = "Procedural Mesh";
+
+        int h = profileVerticesScaled.Count;
 
         int[] triangles = new int[ ( h - 1 ) * ( baseVertices.Count - 1 ) * 6 ];
-        Vector3[] vertices = new Vector3[ profileVertices.Count * baseVertices.Count ];
-        Vector2[] uv = new Vector2[ profileVertices.Count * baseVertices.Count ];
-        Vector3[] normals = new Vector3[ profileVertices.Count * baseVertices.Count ];
+        Vector3[] vertices = new Vector3[ profileVerticesScaled.Count * baseVertices.Count ];
+        Vector2[] uv = new Vector2[ profileVerticesScaled.Count * baseVertices.Count ];
+        Vector3[] normals = new Vector3[ profileVerticesScaled.Count * baseVertices.Count ];
 
         // Array di supporto con le distanze dei punti del profilo e della base calcolate rispetto allo zero (serve per gestire l'UV mapping ripetuto)
         List<float> distancesHor = new List<float>();
@@ -646,9 +722,10 @@ public static class MeshGenerator
 
         List<Vector3> profileDirs = new List<Vector3>();
         List<Vector3> baseDirs = new List<Vector3>();
+        List<float>baseAlphas = new List<float>();
         for( int i = 1; i < h; i++ ) {
 
-            Vector3 profileDir = profileVertices[ i ] - profileVertices[ i - 1 ];
+            Vector3 profileDir = profileVerticesScaled[ i ] - profileVerticesScaled[ i - 1 ];
             profileDirs.Add( profileDir );
 
             distancesVert.Add( distancesVert[ i - 1 ] + profileDir.magnitude );
@@ -658,34 +735,98 @@ public static class MeshGenerator
             Vector3 baseDir = baseVertices[ i ] - baseVertices[ i - 1 ];
             baseDirs.Add( baseDir );
 
+            Debug.DrawRay( baseVertices[ i - 1 ], baseDirs[ i - 1 ], Color.red, 999 );
+
+            baseAlphas.Add( DLL_MathExt.Angles.SignedAngleTo360Angle( Vector3.SignedAngle( Vector3.right, baseDir, Vector3.forward ) ) );
+            //baseAlphas[ i - 1 ] += baseAlphas[ i - 1 ] > 180.0f ? 90.0f : 0.0f;
+
+            Debug.Log( "baseAlpha[ " + ( i - 1 ) + "]: " + baseAlphas[ i - 1 ] );
+
             distancesHor.Add( distancesHor[ i - 1 ] + baseDir.magnitude );
         }
+        baseAlphas.Add( baseAlphas[ baseAlphas.Count - 1 ] );
+        //baseAlphas[ baseAlphas.Count - 1 ] -= baseAlphas[ baseAlphas.Count - 1 ] >= 180.0f ? -180.0f : 0.0f;
 
         // Genero i tutti i profili e aggiungo i vertici alla lista dei vertici
         for( int i = 0; i < baseVertices.Count; i++ ) {
+            
+            // Alpha è l'angolo che il profilo deve essere ruotato per risultare sempre alla stessa angolazione con il baseDir attuale
+            float alpha = baseAlphas[ i ];
+            if( i > 0 && i < baseVertices.Count - 1 ) {
 
-            vertices[ i * h ] = baseVertices[ i ];
+                float prevAlpha = baseAlphas[ i - 1 ];
+
+                float deltaAlpha = alpha - prevAlpha;
+                int rotDir = deltaAlpha > 0 ? -1 : 1;
+
+                float deltaAlphaAbs = Mathf.Abs( alpha - prevAlpha );
+                deltaAlphaAbs = deltaAlphaAbs > 180 ? 360 - deltaAlphaAbs : deltaAlphaAbs;
+
+                alpha += deltaAlphaAbs * smoothFactor * rotDir;
+            }
+
+            if( i == 0 && previousProfileVertices != null && previousProfileVertices.Count == profileVerticesScaled.Count ) {
+                vertices[ 0 ] = previousProfileVertices [ 0 ];
+            }
+            else {
+
+                if( i >= baseDirs.Count ) {
+                    vertices[ i * h ] = baseVertices[ i ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * baseDirs[ baseDirs.Count - 1 ].normalized * horPosCorrection * profileScale );
+                }
+                else {
+                    vertices[ i * h ] = baseVertices[ i ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * baseDirs[ i ].normalized * horPosCorrection * profileScale );
+                }
+
+                if( i == baseVertices.Count - 1 ) {
+                    lastProfileVertices.Add( vertices[ i * h ] );
+                }
+            }
+            //Debug.DrawLine( vertices[ i * h ], baseVertices[ i ], Color.cyan, 999 ); 
             float u = distancesHor[ i ] / textureHorLenght;
             uv[ i * h ] = new Vector2( u, 0 );
 
             // Il numero di dir orizontali e verticali è minore di 1 rispetto al nomero di vertici che stiamo ciclando, quindi per l'ultimo punto calcolo la normale usando la dire precedente
             int normalHorIndex = i < baseDirs.Count ? i : ( baseDirs.Count - 1 );
-            normals[ i * h ] = clockwiseRotation ? -Vector3.Cross( baseDirs[ normalHorIndex ], profileDirs[ 0 ] ).normalized : Vector3.Cross( baseDirs[ normalHorIndex ], profileDirs[ 0 ] ).normalized;
-            Debug.DrawRay( vertices[ i * h ], normals[ i * h ], Color.red, 9999 );
+            Vector3 normal = Vector3.Cross( profileDirs[ 0 ], baseDirs[ normalHorIndex ] ).normalized;
+            //Debug.DrawRay( vertices[ i * h  ], baseDirs[ normalHorIndex ], Color.yellow, 9999 );
+            if( !clockwiseRotation ) {
+                normal = -normal;
+            }
+            normals[ i * h ] = normal;
 
-            float alpha = 90.0f - Vector3.SignedAngle( Vector3.up, baseDirs[ normalHorIndex ], -Vector3.forward );
+            //normals[ i * h ] = clockwiseRotation ? Vector3.Cross( profileDirs[ 0 ], baseDirs[ normalHorIndex ] ).normalized : Quaternion.AngleAxis( ( Vector3.SignedAngle( , -Vector3.forward, baseDirs[ normalHorIndex ] ) ), baseDirs[ normalHorIndex ] ) * Vector3.Cross( profileDirs[ 0 ], baseDirs[ normalHorIndex ] ).normalized;
+
             //float beta = Vector3.SignedAngle( Vector3.right, baseDirs[ normalHorIndex ], Vector3.up );
             //Debug.Log( ">>> beta: " + beta );
 
             for( int j = 0; j < profileDirs.Count; j++ ) {
 
-                vertices[ ( i * h ) + j + 1 ] = vertices[ ( i * h ) + j ] + Quaternion.Euler( 0.0f, /*beta*/0.0f, alpha + verticalRotationCorrection ) * profileDirs[ j ];
+                if( i == 0 && previousProfileVertices != null && previousProfileVertices.Count == profileVertices.Count ) {
+                    vertices[ j + 1 ] = previousProfileVertices [ j + 1 ];
+                }
+                else {
+                    vertices[ ( i * h ) + j + 1 ] = ( vertices[ ( i * h ) + j ] + Quaternion.Euler( 0.0f, /*beta*/0.0f, alpha + verticalRotationCorrection ) * profileDirs[ j ] );
+
+                    if( i == baseVertices.Count - 1 ) {
+                        lastProfileVertices.Add( vertices[ ( i * h ) + j + 1 ] );
+                    }
+                }
+
+                //Debug.DrawLine( vertices[ ( i * h ) + j + 1 ], baseVertices[ i ], Color.cyan, 999 ); 
 
                 float v = distancesVert[ j + 1 ] / textureVertLenght;
                 uv[ ( i * h ) + j + 1 ] = new Vector2( u, v );
 
                 int normalVertIndex = ( j + 1 ) < profileDirs.Count ? ( j + 1 ) : ( profileDirs.Count - 1 );
-                normals[ ( i * h ) + j + 1 ] = clockwiseRotation ? -Vector3.Cross( baseDirs[ normalHorIndex ], profileDirs[ normalVertIndex ] ).normalized : Vector3.Cross( baseDirs[ normalHorIndex ], profileDirs[ normalVertIndex ] ).normalized;
+                //normals[ ( i * h ) + j + 1 ] = clockwiseRotation ? Vector3.Cross( profileDirs[ normalVertIndex ], baseDirs[ normalHorIndex ] ).normalized : Quaternion.AngleAxis( 0.0f, baseDirs[ normalHorIndex ] ) * Vector3.Cross( profileDirs[ normalVertIndex ], baseDirs[ normalHorIndex ] ).normalized;
+                normal = Vector3.Cross( Quaternion.Euler( 0.0f, /*beta*/0.0f, alpha + verticalRotationCorrection ) * profileDirs[ normalVertIndex ], baseDirs[ normalHorIndex ] ).normalized;
+                //Debug.DrawRay( vertices[ ( i * h ) ], profileDirs[ normalVertIndex ], Color.cyan, 9999 );
+                if( !clockwiseRotation ) {
+                    normal = -normal;
+                }
+                normals[ ( i * h ) + j + 1 ] = normal;
+                
+                Debug.DrawRay( vertices[ ( i * h ) + j + 1 ], normals[ ( i * h ) + j + 1 ] * 0.5f, Color.red, 9999 );
 
                 if( i > 0 ) {
                     int arrayIndex = ( 6 * ( ( (  i - 1 ) * ( h - 1 ) ) + j ) );
@@ -708,10 +849,13 @@ public static class MeshGenerator
             }
         }
 
-        extrudedMesh.vertices = vertices;
-        extrudedMesh.triangles = triangles;
-        extrudedMesh.uv = uv;
-        extrudedMesh.normals = normals;
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.uv = uv;
+        mesh.normals = normals;
+
+        extrudedMesh.mesh = mesh;
+        extrudedMesh.lastProfileVertex = lastProfileVertices;
 
         return extrudedMesh;
     }
