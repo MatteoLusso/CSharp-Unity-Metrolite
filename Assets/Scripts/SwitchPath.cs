@@ -10,14 +10,16 @@ public class SwitchPath : ScriptableObject
     private float centerWidth;
     private float tunnelWidth;
     private float switchLightDistance;
+    private float switchRailsWidth;
     private float switchLightHeight;
     private Vector3 switchLightRotation;
     private GameObject switchLight;
     private int curvePointsNumber;
 
-    public static SwitchPath CreateInstance( float switchLenght, float switchBracketsLenght, float centerWidth, float tunnelWidth, float switchLightDistance, float switchLightHeight, int curvePointsNumber, Vector3 switchLightRotation, GameObject switchLight ) {
+    public static SwitchPath CreateInstance( float switchRailsWidth, float switchLenght, float switchBracketsLenght, float centerWidth, float tunnelWidth, float switchLightDistance, float switchLightHeight, int curvePointsNumber, Vector3 switchLightRotation, GameObject switchLight ) {
         
         var switchPathScript = ScriptableObject.CreateInstance<SwitchPath>();
+        switchPathScript.switchRailsWidth = switchRailsWidth;
         switchPathScript.switchLenght = switchLenght;
         switchPathScript.centerWidth = centerWidth;
         switchPathScript.tunnelWidth = tunnelWidth;
@@ -81,6 +83,20 @@ public class SwitchPath : ScriptableObject
         switchFloor.leftLine = new List<Vector3>{ l0, lb, l1 };
         switchFloor.centerLine = new List<Vector3>{ c0, c1 };
         switchFloor.rightLine = new List<Vector3>{ r0, rb, r1 };
+
+        MeshGenerator.SpecularBaseLine railLeftLine = MeshGenerator.CalculateBaseLinesFromCurve( switchFloor.leftLine, null, switchRailsWidth / 2, 0.0f );
+        MeshGenerator.SpecularBaseLine railRightLine = MeshGenerator.CalculateBaseLinesFromCurve( switchFloor.rightLine, null, switchRailsWidth / 2, 0.0f );
+        MeshGenerator.SpecularBaseLine railRightLeftLine = MeshGenerator.CalculateBaseLinesFromCurve( switchFloor.rightLeftLine, null, switchRailsWidth / 2, 0.0f );
+        MeshGenerator.SpecularBaseLine railLeftRightLine = MeshGenerator.CalculateBaseLinesFromCurve( switchFloor.leftRightLine, null, switchRailsWidth / 2, 0.0f );
+
+        switchFloor.railLeftL = railLeftLine.left;
+        switchFloor.railLeftR = railLeftLine.right;
+        switchFloor.railRightL = railRightLine.left;
+        switchFloor.railRightR = railRightLine.right;
+        switchFloor.railSwitchLeftRightL = railLeftRightLine.left;
+        switchFloor.railSwitchLeftRightR = railLeftRightLine.right;
+        switchFloor.railSwitchRightLeftL = railRightLeftLine.left;
+        switchFloor.railSwitchRightLeftR = railRightLeftLine.right;
 
         List<Vector3> nextStartingDirections = new List<Vector3>();
         nextStartingDirections.Add( startingDir );

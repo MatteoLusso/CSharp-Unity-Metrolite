@@ -101,4 +101,12 @@ public class LineSection
     public int sectionIndex { get; set; }
     public string sectionName { get; set; }
     public GameObject indicatorObj { get; set; }
+
+    public LineSection previousSection { get; set; }
+
+    public List<Vector3> wallLeftLastProfile { get; set; }
+    public List<Vector3> wallRightLastProfile { get; set; }
+
+    public List<Vector3> sidePlatformFloorLeftLastProfile { get; set; }
+    public List<Vector3> sidePlatformFloorRightLastProfile { get; set; }
 }
