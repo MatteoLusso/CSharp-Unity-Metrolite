@@ -52,7 +52,16 @@ public class TrainController : MonoBehaviour
     private List<Vector3> actualSectionPoints = new List<Vector3>{ Vector3.zero };
     private Vector3 actualPoint = Vector3.zero;
     private Vector3 actualOrientationPoint = Vector3.zero;
-    private int actualSwitchIndex = -1;
+    public int actualSwitchIndex = -1;
+    public string actualSwitchLine = "Linea 0";
+    public SwitchDirection actualSwitchDirection;
+
+    public int nextSwitchIndex = -1;
+    public string nextSwitchLine = "Linea 0";
+    public SwitchDirection nextSwitchDirection;
+    public int previousSwitchIndex = -1;
+    public string previousSwitchLine = "Linea 0";
+    public SwitchDirection previousSwitchDirection;
 
     private bool inverseSection = false;
     private bool inverseLine = false;
@@ -142,9 +151,15 @@ public class TrainController : MonoBehaviour
                          "Section: " + indexSection + "\n" +
                          "Point: " + indexPoint + "\n" +
                          "\n" +
-                         "Next Switch Index: " + actualSwitchIndex + "\n" + 
-                         "Next Switch Type: " + switchType + "\n" +
-                         "Next Switch Direction: " + switchDir + "\n" +
+                         "Actual Switch Index: " + actualSwitchIndex + "\n" + 
+                         "Actual Switch Type: " + switchType + "\n" +
+                         "Actual Switch Direction: " + switchDir + "\n" +
+                         "Previous Switch Index: " + this.previousSwitchIndex + "\n" + 
+                         //"Previous Switch Type: " + switchType + "\n" +
+                         "Previous Switch Direction: " + this.previousSwitchDirection + "\n" +
+                         "Next Switch Index: " + this.nextSwitchIndex + "\n" + 
+                         //"Next Switch Type: " + switchType + "\n" +
+                         "Next Switch Direction: " + this.nextSwitchDirection + "\n" +
                          "\n" +
                          "Speed: " + speed + "\n" +
                          "Direction: " + actualMovement + "\n" +
@@ -268,52 +283,59 @@ public class TrainController : MonoBehaviour
         string lineName = keyLine;
         List<LineSection> sections = lines[ lineName ];
 
+        // Determino gli indici 
+        this.nextSwitchIndex = sections.Count;
+        for( int i = indexSection; i < sections.Count; i++ ) {
+            if( sections[ i ].type == Type.Switch && i != indexSection ) {
+                this.nextSwitchIndex = i;
+                this.nextSwitchLine = lineName;
+                this.nextSwitchDirection = lines[ nextSwitchLine ][ nextSwitchIndex ].activeSwitch;
+                break;
+            }
+        }
+
+        this.previousSwitchIndex = -1;
+        for( int i = indexSection; i >= 0; i-- ) {
+            
+            if( i == 0 && sections[ i ].fromSection != null ) {
+                this.previousSwitchIndex = sections[ i ].fromSection.sectionIndex;
+                this.previousSwitchLine = sections[ i ].fromSection.lineName;
+
+                this.previousSwitchDirection = lines[ previousSwitchLine ][ previousSwitchIndex ].activeSwitch;
+                break;
+            }
+            else if( sections[ i ].type == Type.Switch && i != indexSection ) {
+                this.previousSwitchIndex = i;
+                this.previousSwitchLine = lineName;
+
+                this.previousSwitchDirection = lines[ previousSwitchLine ][ previousSwitchIndex ].activeSwitch;
+                break;
+            }
+        }
+
         if( ( ( actualMovement == Direction.Forward && !inverseLine ) || ( actualMovement == Direction.Backward && inverseLine ) ) && actualSwitchIndex < indexSection ) {
 
-            //Debug.Log( "Calcolo switch Successivo" );
-
-            actualSwitchIndex = sections.Count;
-            for( int i = indexSection; i < sections.Count; i++ ) {
-                if( sections[ i ].type == Type.Switch && i != indexSection ) {
-                    actualSwitchIndex = i;
-                    break;
-                }
-            }
-
-            //Debug.Log( "actualSwitchIndex: " + actualSwitchIndex );
+            this.actualSwitchIndex = this.nextSwitchIndex;
+            lineName = this.nextSwitchLine;
         }
         else if( ( ( actualMovement == Direction.Forward && inverseLine ) || ( actualMovement == Direction.Backward && !inverseLine ) ) && actualSwitchIndex > indexSection ) {
 
-            //Debug.Log( "Calcolo switch Precedente" );
-
-            actualSwitchIndex = -1;
-            for( int i = indexSection; i >= 0; i-- ) {
-                
-                if( i == 0 && sections[ i ].fromSection != null ) {
-                    actualSwitchIndex = sections[ i ].fromSection.sectionIndex;
-                    lineName = sections[ i ].fromSection.lineName;
-
-                    //Debug.Log( "Switch Linea Precedente " + lineName + " " + actualSwitchIndex );
-                    break;
-                }
-                else if( sections[ i ].type == Type.Switch && i != indexSection ) {
-                    actualSwitchIndex = i;
-                    //Debug.Log( "Switch Linea Attuale " + lineName + " " + actualSwitchIndex );
-                    break;
-                }
-            }
-
-            //Debug.Log( "actualSwitchIndex: " + actualSwitchIndex );
+            this.actualSwitchIndex = this.previousSwitchIndex;
+            lineName = this.previousSwitchLine;
         }
+
+        this.actualSwitchLine = lineName;
+        
 
         if( actualSwitchIndex != indexSection && ( Input.GetButtonDown( "RB" ) || Input.GetKeyDown( KeyCode.F ) ) ) {
 
             sections = lines[ lineName ];
 
+            SwitchDirection selectedDir;
             if( lineName != keyLine ) {
                 if( sections[ actualSwitchIndex ].switchType == SwitchType.MonoToNewMono ) {
 
-                    SwitchDirection selectedDir = new SwitchDirection();
+                    selectedDir = new SwitchDirection();
                     int sectionCount = -1;
 
                     if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceLeft || sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToExitLeft ) {
@@ -348,7 +370,7 @@ public class TrainController : MonoBehaviour
                 else if( sections[ actualSwitchIndex ].switchType == SwitchType.BiToNewBi ) {
 
                     // Dalla linea figlia mi dirigo verso lo switch della linea madre
-                    SwitchDirection selectedDir = new SwitchDirection();
+                    selectedDir = new SwitchDirection();
                     int sectionCount = -1;
 
                     Debug.Log( ">>> New line start keys: " );
@@ -388,7 +410,7 @@ public class TrainController : MonoBehaviour
             }
             else if( indexSection != actualSwitchIndex && actualSwitchIndex > -1 && actualSwitchIndex < lines[ lineName ].Count ) {
 
-                SwitchDirection selectedDir = sections[ actualSwitchIndex ].activeSwitch;
+                selectedDir = sections[ actualSwitchIndex ].activeSwitch;
                 int sectionCount = -1;
 
                 if( sections[ actualSwitchIndex ].switchType == SwitchType.BiToBi ) {
@@ -577,6 +599,8 @@ public class TrainController : MonoBehaviour
                         }
                     }
                 }
+
+                this.actualSwitchDirection = selectedDir;
 
                 sections[ actualSwitchIndex ].activeSwitch = selectedDir;
                 sections[ actualSwitchIndex ].curvePointsCount = sectionCount;

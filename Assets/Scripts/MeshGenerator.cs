@@ -358,7 +358,7 @@ public static class MeshGenerator
         return singleFloor;
     }
 
-    public static Floor CalculateMonodirectionalFloorMeshVertex( List<Vector3> curve, List<Vector3> controlPoints, float floorWidth, bool floorParabolic, float railsWidth )
+    public static Floor CalculateMonodirectionalFloorMeshVertex( List<Vector3> curve, Vector3? startingDir, float floorWidth, bool floorParabolic, float railsWidth )
     {
 
         List<Vector3> rightPoints = new List<Vector3>();
@@ -388,7 +388,13 @@ public static class MeshGenerator
             }*/
 
             if( i == 0 ) {
-                dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) ).normalized;
+                if( startingDir == null ) {
+                    dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 1 ].x, curve[ 1 ].y, zHeightNext ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) ).normalized;
+                }
+                else {
+                    dir = ( Vector3 )startingDir;
+                    dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dir.normalized;
+                }
             }
             else {
                 dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i ].x, curve[ i ].y, zHeightNext ) - new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) ).normalized;
@@ -588,7 +594,7 @@ public static class MeshGenerator
         return walls;
     }
 
-    public static PlatformSide CalculatePlatformSidesMeshesVertex( List<Vector3> curve, List<Vector3> controlPoints, float floorWidth, bool floorParabolic, float sideHeight, float sideWidth )
+    public static PlatformSide CalculatePlatformSidesMeshesVertex( List<Vector3> curve, Vector3? startingDir, float floorWidth, bool floorParabolic, float sideHeight, float sideWidth )
     {
         PlatformSide platformSide = new PlatformSide();
         platformSide.leftDown = new List<Vector3>();
@@ -603,55 +609,34 @@ public static class MeshGenerator
         float zHeightPrev = 0.0f;
         float zHeightNext = 0.0f;
 
-        if( floorParabolic )
+        Vector3 dir;
+
+        for( int i = 0; i < curve.Count; i++ )
         {
-            zHeightPrev = curve[ 0 ].z;
-            zHeightNext = curve[ 1 ].z;
-        }
 
-        List<Vector3> dirs = new List<Vector3>();
-        Vector3 dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * ( floorWidth / 2 );
-        dirs.Add( dir.normalized );
-
-        platformSide.leftDown.Add( curve[ 0 ] - dir );
-        platformSide.rightDown.Add(curve[ 0 ] + dir );
-
-        for( int i = 1; i < curve.Count - 1; i++ )
-        {
-            if( floorParabolic )
-            {
-                zHeightPrev = curve[ i - 1 ].z;
-                zHeightNext = curve[ i + 1 ].z;
+            if( i == 0 ) {
+                if( startingDir == null ) {
+                    dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 1 ].x, curve[ 1 ].y, zHeightNext ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) ).normalized;
+                }
+                else {
+                    dir = ( Vector3 )startingDir;
+                    dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dir.normalized;
+                }
+            }
+            else {
+                dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i ].x, curve[ i ].y, zHeightNext ) - new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) ).normalized;
             }
 
-            dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * ( floorWidth / 2 );
-            dirs.Add( dir.normalized );
-
-            platformSide.leftDown.Add( curve[ i ] - dir );
-            platformSide.rightDown.Add(curve[ i ] + dir );
-        }
-
-        if( floorParabolic )
-        {
-            zHeightPrev = curve[ curve.Count - 2 ].z;
-            zHeightNext = curve[ curve.Count - 1 ].z;
-        }
-
-        dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * ( floorWidth / 2 );
-        dirs.Add( dir.normalized );
-
-        platformSide.leftDown.Add( curve[ curve.Count - 1 ] - dir );
-        platformSide.rightDown.Add( curve[ curve.Count - 1 ] + dir );
-
-        for( int i = 0; i < platformSide.leftDown.Count; i++ ) {
+            platformSide.leftDown.Add( curve[ i ] + ( dir * ( floorWidth / 2 ) ) );
+            platformSide.rightDown.Add(curve[ i ] - ( dir * ( floorWidth / 2 ) ) );
 
             platformSide.leftUp.Add( new Vector3( platformSide.leftDown[ i ].x, platformSide.leftDown[ i ].y, platformSide.leftDown[ i ].z - sideHeight ) ); 
             platformSide.leftFloorRight.Add( platformSide.leftUp[ i ] );
-            platformSide.leftFloorLeft.Add( platformSide.leftUp[ i ] - dirs[ i ] * sideWidth );
+            platformSide.leftFloorLeft.Add( platformSide.leftUp[ i ] + ( dir * sideWidth ) );
 
             platformSide.rightUp.Add( new Vector3( platformSide.rightDown[ i ].x, platformSide.rightDown[ i ].y, platformSide.rightDown[ i ].z - sideHeight ) );
             platformSide.rightFloorLeft.Add( platformSide.rightUp[ i ] );
-            platformSide.rightFloorRight.Add( platformSide.rightUp[ i ] + dirs[ i ] * sideWidth );
+            platformSide.rightFloorRight.Add( platformSide.rightUp[ i ] - ( dir * sideWidth ) );
         }
 
         return platformSide;
@@ -727,7 +712,7 @@ public static class MeshGenerator
             baseAlphas.Add( DLL_MathExt.Angles.SignedAngleTo360Angle( Vector3.SignedAngle( Vector3.right, baseDir, Vector3.forward ) ) );
             //baseAlphas[ i - 1 ] += baseAlphas[ i - 1 ] > 180.0f ? 90.0f : 0.0f;
 
-            Debug.Log( "baseAlpha[ " + ( i - 1 ) + "]: " + baseAlphas[ i - 1 ] );
+            //Debug.Log( "baseAlpha[ " + ( i - 1 ) + "]: " + baseAlphas[ i - 1 ] );
 
             distancesHor.Add( distancesHor[ i - 1 ] + baseDir.magnitude );
         }
@@ -842,14 +827,14 @@ public static class MeshGenerator
         return extrudedMesh;
     }
 
-    public static Mesh GeneratePlanarMesh( List<Vector3> curve, Vector3[ , ] vertMatrix, float textureHorLenght, float textureVertLenght )
+    public static Mesh GeneratePlanarMesh( List<Vector3> curve, Vector3[ , ] vertMatrix, bool centerTexture, float textureHorLenght, float textureVertLenght )
     {
         Mesh floorMesh = new Mesh();
 
         Vector3[] vertices = new Vector3[ curve.Count * 2 ];
         int[] edges = new int[( curve.Count - 1 ) * 6 ];
         Vector2[] uvs = new Vector2[ vertices.Length ];
-        float meshPercent = 0.0f;
+        float u = 0.0f, vMin = 0.0f, vMax = 0.0f;
         for( int i = 0; i < curve.Count; i++ )
         {
             vertices[ i * 2 ] = vertMatrix[ 0, i ];
@@ -862,11 +847,17 @@ public static class MeshGenerator
             // sulla curva indipendentemente dalla lunghezza della stessa.
             
             if( i > 0 ) {
-                meshPercent += ( float )( ( curve[ i ] - curve[ i - 1 ] ).magnitude / textureHorLenght );
+                u += ( float )( ( curve[ i ] - curve[ i - 1 ] ).magnitude / textureHorLenght );
+            }
+            vMax = ( float )( ( vertMatrix[ 1, i ] - vertMatrix[ 0, i ] ).magnitude / textureVertLenght );
+
+            if( centerTexture ){
+                vMin = -( vMax / 2 );
+                vMax = -vMin;
             }
 
-            uvs[ ( i * 2 ) ] = new Vector2( meshPercent, 0 );
-            uvs[ ( i * 2 ) + 1 ] = new Vector2( meshPercent, textureVertLenght );
+            uvs[ ( i * 2 ) ] = new Vector2( u, vMin );
+            uvs[ ( i * 2 ) + 1 ] = new Vector2( u, vMax );
 
             if( i < curve.Count - 1 )
             {
