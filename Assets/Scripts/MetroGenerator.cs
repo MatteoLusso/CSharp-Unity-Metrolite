@@ -142,7 +142,8 @@ public class MetroGenerator : MonoBehaviour
     public enum Side{ 
         Left,
         Right,
-        Both,
+        Top,
+        Bottom,
     }
 
     // Start is called before the first frame update
@@ -285,116 +286,102 @@ public class MetroGenerator : MonoBehaviour
         return ground;
     }
 
-    private void GenerateTunnelFloorMesh( LineSection section, GameObject sectionGameObj ) {
+    private void InstantiateTunnelGround( Transform parentTransform, string gameObjName, List<Vector3> curve, List<Vector3> curveLeft, List<Vector3> curveRight, float verticalPosCorrection, bool closeMesh, bool centerTexture, Material textureMaterial, Vector2 textureTilting ) {
+        
+        Mesh planarMesh = MeshGenerator.GeneratePlanarMesh( curve, MeshGenerator.ConvertListsToMatrix_2xM( curveLeft, curveRight ), closeMesh, centerTexture, textureTilting.x, textureTilting.y );
+        planarMesh.name = "Procedural Planar Mesh";
+
+        GameObject planarGameObj = new GameObject( gameObjName );
+        planarGameObj.transform.parent = parentTransform;
+        planarGameObj.transform.position = new Vector3( 0.0f, 0.0f, verticalPosCorrection );
+        planarGameObj.AddComponent<MeshFilter>();
+        planarGameObj.AddComponent<MeshRenderer>();
+        planarGameObj.GetComponent<MeshFilter>().sharedMesh = planarMesh;
+        planarGameObj.GetComponent<MeshRenderer>().material = textureMaterial;
+    }
+
+    private Dictionary<Side, List<Vector3>> InstantiateGrate( Transform parentTransform, string gameObjName, List<Vector3> initialVertices, List<Vector3> dirs, float width, bool inverseSides, Material textureMaterial, Vector2 textureTilting ) {
+        
+        Dictionary<Side, List<Vector3>> planarMeshVertices = new Dictionary<Side, List<Vector3>>();
+        planarMeshVertices.Add( inverseSides ? Side.Bottom : Side.Top, initialVertices );
+        planarMeshVertices.Add( inverseSides ? Side.Top : Side.Bottom, new List<Vector3>{ initialVertices[ 0 ] + ( dirs[ 0 ].normalized * width ), initialVertices[ 1 ] + ( dirs[ 1 ].normalized * width ) } );
+
+        Mesh planarMesh = MeshGenerator.GeneratePlanarMesh( planarMeshVertices[ Side.Top ], MeshGenerator.ConvertListsToMatrix_2xM( planarMeshVertices[ Side.Top ], planarMeshVertices[ Side.Bottom ] ), false, false, textureTilting.x, textureTilting.y );
+        planarMesh.name = "Procedural Planar Mesh";
+
+        GameObject planarGameObj = new GameObject( gameObjName );
+        planarGameObj.transform.parent = parentTransform;
+        planarGameObj.transform.position = new Vector3( 0.0f, 0.0f, -0.01f );
+        planarGameObj.AddComponent<MeshFilter>();
+        planarGameObj.AddComponent<MeshRenderer>();
+        planarGameObj.GetComponent<MeshFilter>().sharedMesh = planarMesh;
+        planarGameObj.GetComponent<MeshRenderer>().material = textureMaterial;
+
+        return planarMeshVertices;
+    }
+
+    private List<Vector3> InstantiateRail( Transform parentTransform, string gameObjName, List<Vector3> baseLine, List<Vector3> profileShape, List<Vector3> previousProfileShape, 
+                                           float profileScale, float profileHorPositionCorrection, float profileRotationCorrection, float profileSmoothFactor, 
+                                           bool clockwiseRotation, bool closeMesh, Material textureMaterial, Vector2 textureTilting,
+                                           string switchLineName, int? switchSectionIndex, SwitchDirection? switchDirection ) {
+
+        if( previousProfileShape == null || previousProfileShape.Count == 0 ) {
+            previousProfileShape = null;
+        }
+        
+        MeshGenerator.ExtrudedMesh extrudedMesh = MeshGenerator.GenerateExtrudedMesh( profileShape, profileScale, previousProfileShape, baseLine, profileHorPositionCorrection, clockwiseRotation, closeMesh, textureTilting.x, textureTilting.y, profileRotationCorrection, profileSmoothFactor );
+        extrudedMesh.mesh.name = "Procedural Extruded Mesh";
+
+        GameObject extrudedGameObj = new GameObject( gameObjName );
+        extrudedGameObj.transform.parent = parentTransform;
+        extrudedGameObj.transform.position = Vector3.zero;
+        extrudedGameObj.AddComponent<MeshFilter>();
+        extrudedGameObj.AddComponent<MeshRenderer>();
+        extrudedGameObj.GetComponent<MeshFilter>().sharedMesh = extrudedMesh.mesh;
+        extrudedGameObj.GetComponent<MeshRenderer>().material = textureMaterial;
+
+        if( switchLineName != null && switchSectionIndex != null && switchDirection != null ) {
+            
+            extrudedGameObj.AddComponent<RailHighlighter>();
+            extrudedGameObj.GetComponent<RailHighlighter>().line = switchLineName;
+            extrudedGameObj.GetComponent<RailHighlighter>().index = ( int )switchSectionIndex;
+            extrudedGameObj.GetComponent<RailHighlighter>().direction = ( SwitchDirection )switchDirection;
+        }
+
+        return extrudedMesh.lastProfileVertex;
+    }
+
+    private void GenerateTunnelGroundMeshes( LineSection section, GameObject sectionGameObj ) {
+
         MeshGenerator.Floor floorVertexPoints = new MeshGenerator.Floor();
+
         if( section.bidirectional ) {
-            Mesh leftFloorMesh = new Mesh();
-            Mesh centerFloorMesh = new Mesh();
-            Mesh rightFloorMesh = new Mesh();
 
             floorVertexPoints = MeshGenerator.CalculateBidirectionalWithBothSidesPlatformFloorMeshVertex( section, this.centerWidth, this.tunnelWidth, this.railsWidth );
 
-            leftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.leftL, floorVertexPoints.leftR ), false, false, tunnelRailTextureTilting.x, tunnelRailTextureTilting.y );
-            GameObject leftFloorGameObj = new GameObject( "Pavimento binari sinistra" );
-            leftFloorGameObj.transform.parent = sectionGameObj.transform;
-            leftFloorGameObj.transform.position = Vector3.zero;
-            leftFloorGameObj.AddComponent<MeshFilter>();
-            leftFloorGameObj.AddComponent<MeshRenderer>();
-            leftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftFloorMesh;
-            leftFloorGameObj.GetComponent<MeshRenderer>().material = tunnelRailTexture;
+            // Generazione mesh planari pavimento tunnel
+            InstantiateTunnelGround( sectionGameObj.transform, "Tunnel - Pavimento binari - Sinistra", section.bezierCurveLimitedAngle, floorVertexPoints.leftL, floorVertexPoints.leftR, 0.0f, false, false, this.tunnelRailTexture, this.tunnelRailTextureTilting );
+            InstantiateTunnelGround( sectionGameObj.transform, "Tunnel - Pavimento divisore - Centro", section.bezierCurveLimitedAngle, floorVertexPoints.centerL, floorVertexPoints.centerR, 0.0f, false, false, this.centerTexture, this.centerTextureTilting );
+            InstantiateTunnelGround( sectionGameObj.transform, "Tunnel - Pavimento binari - Destra", section.bezierCurveLimitedAngle, floorVertexPoints.rightL, floorVertexPoints.rightR, 0.0f, false, false, this.tunnelRailTexture, this.tunnelRailTextureTilting );
 
-            centerFloorMesh = MeshGenerator.GeneratePlanarMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.centerL, floorVertexPoints.centerR ), false, false, centerTextureTilting.x, centerTextureTilting.y );
-            GameObject centerFloorGameObj = new GameObject( "Divisore centrale" );
-            centerFloorGameObj.transform.parent = sectionGameObj.transform;
-            centerFloorGameObj.transform.position = Vector3.zero;
-            centerFloorGameObj.AddComponent<MeshFilter>();
-            centerFloorGameObj.AddComponent<MeshRenderer>();
-            centerFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerFloorMesh;
-            centerFloorGameObj.GetComponent<MeshRenderer>().material = centerTexture;
-
-            rightFloorMesh = MeshGenerator.GeneratePlanarMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.rightL, floorVertexPoints.rightR ), false, false, tunnelRailTextureTilting.x, tunnelRailTextureTilting.y );
-            GameObject rightFloorGameObj = new GameObject( "Pavimento binari destra" );
-            rightFloorGameObj.transform.parent = sectionGameObj.transform;
-            rightFloorGameObj.transform.position = Vector3.zero;
-            rightFloorGameObj.AddComponent<MeshFilter>();
-            rightFloorGameObj.AddComponent<MeshRenderer>();
-            rightFloorGameObj.GetComponent<MeshFilter>().sharedMesh = rightFloorMesh;
-            rightFloorGameObj.GetComponent<MeshRenderer>().material = tunnelRailTexture;
-
-            MeshGenerator.ExtrudedMesh railLeftLMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, floorVertexPoints.railLeftL, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-            MeshGenerator.ExtrudedMesh railLeftRMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, floorVertexPoints.railLeftR, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-            MeshGenerator.ExtrudedMesh railRightLMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, floorVertexPoints.railRightL, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-            MeshGenerator.ExtrudedMesh railRightRMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, floorVertexPoints.railRightR, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-
-            GameObject railLeftLGameObj = new GameObject( "Binario sinistro L" );
-            railLeftLGameObj.transform.parent = sectionGameObj.transform;
-            railLeftLGameObj.transform.position = Vector3.zero;
-            railLeftLGameObj.AddComponent<MeshFilter>();
-            railLeftLGameObj.AddComponent<MeshRenderer>();
-            railLeftLGameObj.GetComponent<MeshFilter>().sharedMesh = railLeftLMesh.mesh;
-            railLeftLGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-
-            GameObject railLeftRGameObj = new GameObject( "Binario sinistro R" );
-            railLeftRGameObj.transform.parent = sectionGameObj.transform;
-            railLeftRGameObj.transform.position = Vector3.zero;
-            railLeftRGameObj.AddComponent<MeshFilter>();
-            railLeftRGameObj.AddComponent<MeshRenderer>();
-            railLeftRGameObj.GetComponent<MeshFilter>().sharedMesh = railLeftRMesh.mesh;
-            railLeftRGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-
-            GameObject railRightLGameObj = new GameObject( "Binario destro L" );
-            railRightLGameObj.transform.parent = sectionGameObj.transform;
-            railRightLGameObj.transform.position = Vector3.zero;
-            railRightLGameObj.AddComponent<MeshFilter>();
-            railRightLGameObj.AddComponent<MeshRenderer>();
-            railRightLGameObj.GetComponent<MeshFilter>().sharedMesh = railRightLMesh.mesh;
-            railRightLGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-
-            GameObject railRightRGameObj = new GameObject( "Binario destro R" );
-            railRightRGameObj.transform.parent = sectionGameObj.transform;
-            railRightRGameObj.transform.position = Vector3.zero;
-            railRightRGameObj.AddComponent<MeshFilter>();
-            railRightRGameObj.AddComponent<MeshRenderer>();
-            railRightRGameObj.GetComponent<MeshFilter>().sharedMesh = railRightRMesh.mesh;
-            railRightRGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
+            // Generazione mesh extruded binari
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Sinistra", floorVertexPoints.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Sinistra", floorVertexPoints.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Destra", floorVertexPoints.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Destra", floorVertexPoints.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
 
             section.bidirectional = true;
         }
         else {
-            Mesh floorMesh = new Mesh();
 
-            Vector3 startingDir = section.controlsPoints[ 1 ] - section.bezierCurveLimitedAngle[ 0 ];
+            floorVertexPoints = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.bezierCurveLimitedAngle, section.controlsPoints[ 1 ] - section.bezierCurveLimitedAngle[ 0 ], tunnelWidth, tunnelParabolic, this.railsWidth );
 
-            floorVertexPoints = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.bezierCurveLimitedAngle, startingDir, tunnelWidth, tunnelParabolic, this.railsWidth );
+            // Generazione mesh planari pavimento tunnel
+            InstantiateTunnelGround( sectionGameObj.transform, "Tunnel - Pavimento binari - Centro", section.bezierCurveLimitedAngle, floorVertexPoints.centerL, floorVertexPoints.centerR, 0.0f, false, false, this.tunnelRailTexture, this.tunnelRailTextureTilting );
 
-            floorMesh = MeshGenerator.GeneratePlanarMesh( section.bezierCurveLimitedAngle, MeshGenerator.ConvertListsToMatrix_2xM( floorVertexPoints.centerL, floorVertexPoints.centerR ), false, false, tunnelRailTextureTilting.x, tunnelRailTextureTilting.y );
-
-            GameObject floorGameObj = new GameObject( "Pavimmento binari centrali" );
-            floorGameObj.transform.parent = sectionGameObj.transform;
-            floorGameObj.transform.position = Vector3.zero;
-            floorGameObj.AddComponent<MeshFilter>();
-            floorGameObj.AddComponent<MeshRenderer>();
-            floorGameObj.GetComponent<MeshFilter>().sharedMesh = floorMesh;
-            floorGameObj.GetComponent<MeshRenderer>().material = this.tunnelRailTexture;
-
-            MeshGenerator.ExtrudedMesh railCenterLMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, floorVertexPoints.railCenterL, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-            MeshGenerator.ExtrudedMesh railCenterRMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, floorVertexPoints.railCenterR, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-
-            GameObject railCenterLGameObj = new GameObject( "Binario centrale L" );
-            railCenterLGameObj.transform.parent = sectionGameObj.transform;
-            railCenterLGameObj.transform.position = Vector3.zero;
-            railCenterLGameObj.AddComponent<MeshFilter>();
-            railCenterLGameObj.AddComponent<MeshRenderer>();
-            railCenterLGameObj.GetComponent<MeshFilter>().sharedMesh = railCenterLMesh.mesh;
-            railCenterLGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-
-            GameObject railCenterRGameObj = new GameObject( "Binario centrale R" );
-            railCenterRGameObj.transform.parent = sectionGameObj.transform;
-            railCenterRGameObj.transform.position = Vector3.zero;
-            railCenterRGameObj.AddComponent<MeshFilter>();
-            railCenterRGameObj.AddComponent<MeshRenderer>();
-            railCenterRGameObj.GetComponent<MeshFilter>().sharedMesh = railCenterRMesh.mesh;
-            railCenterRGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
+            // Generazione mesh extruded binari
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Centro", floorVertexPoints.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Centro", floorVertexPoints.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
 
             section.bidirectional = false;
         }
@@ -451,81 +438,18 @@ public class MetroGenerator : MonoBehaviour
 
         switch( section.switchType ) {
             case SwitchType.MonoToBi:
-            case SwitchType.BiToMono:       // Generazione mesh pavimento binari
+            case SwitchType.BiToMono:       // Generazione mesh planari pavimento scambio
                                             MeshGenerator.Floor centerToLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftCenterLine, null, tunnelWidth, false, this.railsWidth );
                                             MeshGenerator.Floor centerToRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.rightCenterLine, null, tunnelWidth, false, this.railsWidth );
 
-                                            Mesh centerToLeftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.leftCenterLine, MeshGenerator.ConvertListsToMatrix_2xM( centerToLeftFloor.centerL, centerToLeftFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                            GameObject centerToLeftFloorGameObj = new GameObject( "Pavimento Scambio Binario Centrale - Sinistro" );
-                                            centerToLeftFloorGameObj.transform.parent = sectionGameObj.transform;
-                                            centerToLeftFloorGameObj.transform.position = Vector3.zero;
-                                            centerToLeftFloorGameObj.AddComponent<MeshFilter>();
-                                            centerToLeftFloorGameObj.AddComponent<MeshRenderer>();
-                                            centerToLeftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerToLeftFloorMesh;
-                                            centerToLeftFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
+                                            InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Centro", section.floorPoints.leftCenterLine, centerToLeftFloor.centerL, centerToLeftFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
+                                            InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Centro", section.floorPoints.rightCenterLine, centerToRightFloor.centerL, centerToRightFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
 
-                                            Mesh centerToRightFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.rightCenterLine, MeshGenerator.ConvertListsToMatrix_2xM( centerToRightFloor.centerL, centerToRightFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                            GameObject centerToRightFloorGameObj = new GameObject( "Pavimento Scambio Binario Centrale - Destro" );
-                                            centerToRightFloorGameObj.transform.parent = sectionGameObj.transform;
-                                            centerToRightFloorGameObj.transform.position = Vector3.zero;
-                                            centerToRightFloorGameObj.AddComponent<MeshFilter>();
-                                            centerToRightFloorGameObj.AddComponent<MeshRenderer>();
-                                            centerToRightFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerToRightFloorMesh;
-                                            centerToRightFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
-
-                                            // Generazione mesh binari
-                                            MeshGenerator.ExtrudedMesh railSwitchRightCenterLMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, centerToRightFloor.railCenterL, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railSwitchRightCenterRMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, centerToRightFloor.railCenterR, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railSwitchLeftCenterLMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, centerToLeftFloor.railCenterL, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railSwitchLeftCenterRMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, centerToLeftFloor.railCenterR, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-
-                                            GameObject railLeftCenterLGameObj = new GameObject( "Binario sinistra-centro L" );
-                                            railLeftCenterLGameObj.transform.parent = sectionGameObj.transform;
-                                            railLeftCenterLGameObj.transform.position = Vector3.zero;
-                                            railLeftCenterLGameObj.AddComponent<MeshFilter>();
-                                            railLeftCenterLGameObj.AddComponent<MeshRenderer>();
-                                            railLeftCenterLGameObj.GetComponent<MeshFilter>().sharedMesh = railSwitchLeftCenterLMesh.mesh;
-                                            railLeftCenterLGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railLeftCenterLGameObj.AddComponent<RailHighlighter>();
-                                            railLeftCenterLGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railLeftCenterLGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railLeftCenterLGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.LeftToCenter;
-
-                                            GameObject railLeftCenterRGameObj = new GameObject( "Binario sinistra-centro R" );
-                                            railLeftCenterRGameObj.transform.parent = sectionGameObj.transform;
-                                            railLeftCenterRGameObj.transform.position = Vector3.zero;
-                                            railLeftCenterRGameObj.AddComponent<MeshFilter>();
-                                            railLeftCenterRGameObj.AddComponent<MeshRenderer>();
-                                            railLeftCenterRGameObj.GetComponent<MeshFilter>().sharedMesh = railSwitchLeftCenterRMesh.mesh;
-                                            railLeftCenterRGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railLeftCenterRGameObj.AddComponent<RailHighlighter>();
-                                            railLeftCenterRGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railLeftCenterRGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railLeftCenterRGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.LeftToCenter;
-
-                                            GameObject railRightCenterLGameObj = new GameObject( "Binario destra-centro L" );
-                                            railRightCenterLGameObj.transform.parent = sectionGameObj.transform;
-                                            railRightCenterLGameObj.transform.position = Vector3.zero;
-                                            railRightCenterLGameObj.AddComponent<MeshFilter>();
-                                            railRightCenterLGameObj.AddComponent<MeshRenderer>();
-                                            railRightCenterLGameObj.GetComponent<MeshFilter>().sharedMesh = railSwitchRightCenterLMesh.mesh;
-                                            railRightCenterLGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railRightCenterLGameObj.AddComponent<RailHighlighter>();
-                                            railRightCenterLGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railRightCenterLGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railRightCenterLGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.RightToCenter;
-
-                                            GameObject railRightCenterRGameObj = new GameObject( "Binario destra-centro R" );
-                                            railRightCenterRGameObj.transform.parent = sectionGameObj.transform;
-                                            railRightCenterRGameObj.transform.position = Vector3.zero;
-                                            railRightCenterRGameObj.AddComponent<MeshFilter>();
-                                            railRightCenterRGameObj.AddComponent<MeshRenderer>();
-                                            railRightCenterRGameObj.GetComponent<MeshFilter>().sharedMesh = railSwitchRightCenterRMesh.mesh;
-                                            railRightCenterRGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railRightCenterRGameObj.AddComponent<RailHighlighter>();
-                                            railRightCenterRGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railRightCenterRGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railRightCenterRGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.RightToCenter;
+                                            // Generazione mesh extruded binari
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra/Centro", centerToRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra/Centro", centerToRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
+                                            InstantiateRail( sectionGameObj.transform, "Scammbio - Binario L - Destra/Centro", centerToLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Centro", centerToLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, null, null, null );
 
                                             // Generazione mesh piattaforma laterale
                                             Mesh platformSideLeftMesh = new Mesh();
@@ -685,195 +609,29 @@ public class MetroGenerator : MonoBehaviour
                                             MeshGenerator.Floor rightToRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.rightLine, null, tunnelWidth, false, this.railsWidth );
                                             MeshGenerator.Floor leftToRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftRightLine, null, tunnelWidth, false, this.railsWidth );
                                             MeshGenerator.Floor rightToLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.rightLeftLine, null, tunnelWidth, false, this.railsWidth );
-                                            
 
-                                            Mesh leftToLeftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.leftLine, MeshGenerator.ConvertListsToMatrix_2xM( leftToLeftFloor.centerL, leftToLeftFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                            GameObject leftToLeftFloorGameObj = new GameObject( "Pavimento Scambio Binario Sinistro - Sinistro" );
-                                            leftToLeftFloorGameObj.transform.parent = sectionGameObj.transform;
-                                            leftToLeftFloorGameObj.transform.position = Vector3.zero;
-                                            leftToLeftFloorGameObj.AddComponent<MeshFilter>();
-                                            leftToLeftFloorGameObj.AddComponent<MeshRenderer>();
-                                            leftToLeftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftToLeftFloorMesh;
-                                            leftToLeftFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
+                                            InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Sinistra", section.floorPoints.leftLine, leftToLeftFloor.centerL, leftToLeftFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
+                                            InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Destra", section.floorPoints.rightLine, rightToRightFloor.centerL, rightToRightFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
+                                            InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Sinistra", section.floorPoints.leftRightLine, leftToRightFloor.centerL, leftToRightFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
+                                            InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Destra", section.floorPoints.rightLeftLine, rightToLeftFloor.centerL, rightToLeftFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
 
-                                            Mesh rightToRightFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.rightLine, MeshGenerator.ConvertListsToMatrix_2xM( rightToRightFloor.centerL, rightToRightFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                            GameObject rightToRightFloorGameObj = new GameObject( "Pavimento Scambio Binario Destro - Destro" );
-                                            rightToRightFloorGameObj.transform.parent = sectionGameObj.transform;
-                                            rightToRightFloorGameObj.transform.position = Vector3.zero;
-                                            rightToRightFloorGameObj.AddComponent<MeshFilter>();
-                                            rightToRightFloorGameObj.AddComponent<MeshRenderer>();
-                                            rightToRightFloorGameObj.GetComponent<MeshFilter>().sharedMesh = rightToRightFloorMesh;
-                                            rightToRightFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
+                                            // Generazione mesh extruded binari
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra/Sinistra", section.floorPoints.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, section.lineName, section.sectionIndex, SwitchDirection.LeftToLeft );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra/Sinistra", section.floorPoints.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, section.lineName, section.sectionIndex, SwitchDirection.LeftToLeft );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra/Destra", section.floorPoints.railSwitchLeftRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, section.lineName, section.sectionIndex, SwitchDirection.LeftToRight );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra/Destra", section.floorPoints.railSwitchLeftRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, section.lineName, section.sectionIndex, SwitchDirection.LeftToRight );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra/Sinistra", section.floorPoints.railSwitchRightLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, section.lineName, section.sectionIndex, SwitchDirection.RightToLeft );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Sinistra", section.floorPoints.railSwitchRightLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, section.lineName, section.sectionIndex, SwitchDirection.RightToLeft );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra/Destra", section.floorPoints.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, section.lineName, section.sectionIndex, SwitchDirection.RightToRight);
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Destra", section.floorPoints.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTilting, section.lineName, section.sectionIndex, SwitchDirection.RightToRight);
 
-                                            Mesh leftToRightFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.leftRightLine, MeshGenerator.ConvertListsToMatrix_2xM( leftToRightFloor.centerL, leftToRightFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                            GameObject leftToRightFloorGameObj = new GameObject( "Pavimento Scambio Binario Sinistro - Destro" );
-                                            leftToRightFloorGameObj.transform.parent = sectionGameObj.transform;
-                                            leftToRightFloorGameObj.transform.position = Vector3.zero;
-                                            leftToRightFloorGameObj.AddComponent<MeshFilter>();
-                                            leftToRightFloorGameObj.AddComponent<MeshRenderer>();
-                                            leftToRightFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftToRightFloorMesh;
-                                            leftToRightFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
 
-                                            Mesh rightToLeftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.rightLeftLine, MeshGenerator.ConvertListsToMatrix_2xM( rightToLeftFloor.centerL, rightToLeftFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                            GameObject rightToLeftFloorGameObj = new GameObject( "Pavimento Scambio Binario Destro - Sinistro" );
-                                            rightToLeftFloorGameObj.transform.parent = sectionGameObj.transform;
-                                            rightToLeftFloorGameObj.transform.position = Vector3.zero;
-                                            rightToLeftFloorGameObj.AddComponent<MeshFilter>();
-                                            rightToLeftFloorGameObj.AddComponent<MeshRenderer>();
-                                            rightToLeftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = rightToLeftFloorMesh;
-                                            rightToLeftFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
+                                            Vector3 switchDir = ( section.floorPoints.leftLine[ section.floorPoints.leftLine.Count - 1 ] - section.floorPoints.leftLine[ section.floorPoints.leftLine.Count - 2 ] ).normalized;
 
-                                            MeshGenerator.ExtrudedMesh railLeftLMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, section.floorPoints.railLeftL, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railLeftRMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, section.floorPoints.railLeftR, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railRightLMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, section.floorPoints.railRightL, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railRightRMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, section.floorPoints.railRightR, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railSwitchRightLeftLMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, section.floorPoints.railSwitchRightLeftL, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railSwitchRightLeftRMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, section.floorPoints.railSwitchRightLeftR, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railSwitchLeftRightLMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, section.floorPoints.railSwitchLeftRightL, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
-                                            MeshGenerator.ExtrudedMesh railSwitchLeftRightRMesh = MeshGenerator.GenerateExtrudedMesh( this.railShape, this.railShapeScale, null, section.floorPoints.railSwitchLeftRightR, this.railShapeHorPosCorrection, true, false, this.railTextureTilting.x, this.railTextureTilting.y, 0.0f, this.railSmoothFactor );
+                                            Dictionary<Side, List<Vector3>> startingGrateVertices = InstantiateGrate( sectionGameObj.transform, "Scambio - Tombino iniziale", new List<Vector3>{ rightToRightFloor.centerR[ 0 ], leftToLeftFloor.centerL[ 0 ] }, new List<Vector3>{ switchDir, switchDir }, this.grateWidth, false, this.grateTexture, this.grateTextureTilting );
+                                            Dictionary<Side, List<Vector3>> endingGrateVertices = InstantiateGrate( sectionGameObj.transform, "Scambio - Tombino finale", new List<Vector3>{ rightToRightFloor.centerR[ rightToRightFloor.centerR.Count - 1 ], leftToLeftFloor.centerL[ leftToLeftFloor.centerL.Count - 1 ] }, new List<Vector3>{ -switchDir, -switchDir }, this.grateWidth, true, this.grateTexture, this.grateTextureTilting );
 
-                                            GameObject railLeftLGameObj = new GameObject( "Binario sinistro L" );
-                                            railLeftLGameObj.transform.parent = sectionGameObj.transform;
-                                            railLeftLGameObj.transform.position = Vector3.zero;
-                                            railLeftLGameObj.AddComponent<MeshFilter>();
-                                            railLeftLGameObj.AddComponent<MeshRenderer>();
-                                            railLeftLGameObj.GetComponent<MeshFilter>().sharedMesh = railLeftLMesh.mesh;
-                                            railLeftLGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railLeftLGameObj.AddComponent<RailHighlighter>();
-                                            railLeftLGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railLeftLGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railLeftLGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.LeftToLeft;
-
-                                            GameObject railLeftRGameObj = new GameObject( "Binario sinistro R" );
-                                            railLeftRGameObj.transform.parent = sectionGameObj.transform;
-                                            railLeftRGameObj.transform.position = Vector3.zero;
-                                            railLeftRGameObj.AddComponent<MeshFilter>();
-                                            railLeftRGameObj.AddComponent<MeshRenderer>();
-                                            railLeftRGameObj.GetComponent<MeshFilter>().sharedMesh = railLeftRMesh.mesh;
-                                            railLeftRGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railLeftRGameObj.AddComponent<RailHighlighter>();
-                                            railLeftRGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railLeftRGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railLeftRGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.LeftToLeft;
-
-                                            GameObject railRightLGameObj = new GameObject( "Binario destro L" );
-                                            railRightLGameObj.transform.parent = sectionGameObj.transform;
-                                            railRightLGameObj.transform.position = Vector3.zero;
-                                            railRightLGameObj.AddComponent<MeshFilter>();
-                                            railRightLGameObj.AddComponent<MeshRenderer>();
-                                            railRightLGameObj.GetComponent<MeshFilter>().sharedMesh = railRightLMesh.mesh;
-                                            railRightLGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railRightLGameObj.AddComponent<RailHighlighter>();
-                                            railRightLGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railRightLGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railRightLGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.RightToRight;
-
-                                            GameObject railRightRGameObj = new GameObject( "Binario destro R" );
-                                            railRightRGameObj.transform.parent = sectionGameObj.transform;
-                                            railRightRGameObj.transform.position = Vector3.zero;
-                                            railRightRGameObj.AddComponent<MeshFilter>();
-                                            railRightRGameObj.AddComponent<MeshRenderer>();
-                                            railRightRGameObj.GetComponent<MeshFilter>().sharedMesh = railRightRMesh.mesh;
-                                            railRightRGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railRightRGameObj.AddComponent<RailHighlighter>();
-                                            railRightRGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railRightRGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railRightRGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.RightToRight;
-
-                                            GameObject railSwitchRightLeftRGameObj = new GameObject( "Binario destra-sinistra R" );
-                                            railSwitchRightLeftRGameObj.transform.parent = sectionGameObj.transform;
-                                            railSwitchRightLeftRGameObj.transform.position = Vector3.zero;
-                                            railSwitchRightLeftRGameObj.AddComponent<MeshFilter>();
-                                            railSwitchRightLeftRGameObj.AddComponent<MeshRenderer>();
-                                            railSwitchRightLeftRGameObj.GetComponent<MeshFilter>().sharedMesh = railSwitchRightLeftRMesh.mesh;
-                                            railSwitchRightLeftRGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railSwitchRightLeftRGameObj.AddComponent<RailHighlighter>();
-                                            railSwitchRightLeftRGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railSwitchRightLeftRGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railSwitchRightLeftRGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.RightToLeft;
-
-                                            GameObject railSwitchRightLeftLGameObj = new GameObject( "Binario destra-sinistra L" );
-                                            railSwitchRightLeftLGameObj.transform.parent = sectionGameObj.transform;
-                                            railSwitchRightLeftLGameObj.transform.position = Vector3.zero;
-                                            railSwitchRightLeftLGameObj.AddComponent<MeshFilter>();
-                                            railSwitchRightLeftLGameObj.AddComponent<MeshRenderer>();
-                                            railSwitchRightLeftLGameObj.GetComponent<MeshFilter>().sharedMesh = railSwitchRightLeftLMesh.mesh;
-                                            railSwitchRightLeftLGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railSwitchRightLeftLGameObj.AddComponent<RailHighlighter>();
-                                            railSwitchRightLeftLGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railSwitchRightLeftLGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railSwitchRightLeftLGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.RightToLeft;
-
-                                            GameObject railSwitchLeftRightRGameObj = new GameObject( "Binario sinistra-destra R" );
-                                            railSwitchLeftRightRGameObj.transform.parent = sectionGameObj.transform;
-                                            railSwitchLeftRightRGameObj.transform.position = Vector3.zero;
-                                            railSwitchLeftRightRGameObj.AddComponent<MeshFilter>();
-                                            railSwitchLeftRightRGameObj.AddComponent<MeshRenderer>();
-                                            railSwitchLeftRightRGameObj.GetComponent<MeshFilter>().sharedMesh = railSwitchLeftRightRMesh.mesh;
-                                            railSwitchLeftRightRGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railSwitchLeftRightRGameObj.AddComponent<RailHighlighter>();
-                                            railSwitchLeftRightRGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railSwitchLeftRightRGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railSwitchLeftRightRGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.LeftToRight;
-
-                                            GameObject railSwitchLeftRightLGameObj = new GameObject( "Binario sinistra-destra L" );
-                                            railSwitchLeftRightLGameObj.transform.parent = sectionGameObj.transform;
-                                            railSwitchLeftRightLGameObj.transform.position = Vector3.zero;
-                                            railSwitchLeftRightLGameObj.AddComponent<MeshFilter>();
-                                            railSwitchLeftRightLGameObj.AddComponent<MeshRenderer>();
-                                            railSwitchLeftRightLGameObj.GetComponent<MeshFilter>().sharedMesh = railSwitchLeftRightLMesh.mesh;
-                                            railSwitchLeftRightLGameObj.GetComponent<MeshRenderer>().material = this.railTexture;
-                                            railSwitchLeftRightLGameObj.AddComponent<RailHighlighter>();
-                                            railSwitchLeftRightLGameObj.GetComponent<RailHighlighter>().line = section.lineName;
-                                            railSwitchLeftRightLGameObj.GetComponent<RailHighlighter>().index = section.sectionIndex;
-                                            railSwitchLeftRightLGameObj.GetComponent<RailHighlighter>().direction = SwitchDirection.LeftToRight;
-
-                                            Vector3 dir = ( section.floorPoints.leftLine[ section.floorPoints.leftLine.Count - 1 ] - section.floorPoints.leftLine[ section.floorPoints.leftLine.Count - 2 ] ).normalized;
-
-                                            List<Vector3> grate0Up = new List<Vector3>();
-                                            grate0Up.Add( rightToRightFloor.centerR[ 0 ] );
-                                            grate0Up.Add( leftToLeftFloor.centerL[ 0 ] );
-                                            List<Vector3> grate0Down = new List<Vector3>();
-                                            grate0Down.Add( grate0Up[ 0 ] + ( dir * this.grateWidth ) );
-                                            grate0Down.Add( grate0Up[ 1 ] + ( dir * this.grateWidth ) );
-                                            Mesh grate0Mesh = MeshGenerator.GeneratePlanarMesh( grate0Down, MeshGenerator.ConvertListsToMatrix_2xM( grate0Up, grate0Down ), false, false, this.grateTextureTilting.x, this.grateTextureTilting.y );
-                                            GameObject grate0GameObj = new GameObject( "Tombino iniziale" );
-                                            grate0GameObj.transform.parent = sectionGameObj.transform;
-                                            grate0GameObj.transform.position = new Vector3( 0.0f, 0.0f, -0.01f );
-                                            grate0GameObj.AddComponent<MeshFilter>();
-                                            grate0GameObj.AddComponent<MeshRenderer>();
-                                            grate0GameObj.GetComponent<MeshFilter>().sharedMesh = grate0Mesh;
-                                            grate0GameObj.GetComponent<MeshRenderer>().material = this.grateTexture;
-
-                                            List<Vector3> grate1Down = new List<Vector3>();
-                                            grate1Down.Add( rightToRightFloor.centerR[ rightToRightFloor.centerR.Count - 1 ] );
-                                            grate1Down.Add( leftToLeftFloor.centerL[ leftToLeftFloor.centerL.Count - 1 ] );
-                                            List<Vector3> grate1Up = new List<Vector3>();
-                                            grate1Up.Add( grate1Down[ 0 ] - ( dir * this.grateWidth ) );
-                                            grate1Up.Add( grate1Down[ 1 ] - ( dir * this.grateWidth ) );
-                                            Mesh grate1Mesh = MeshGenerator.GeneratePlanarMesh( grate1Down, MeshGenerator.ConvertListsToMatrix_2xM( grate1Up, grate1Down ), false, false, this.grateTextureTilting.x, this.grateTextureTilting.y );
-                                            GameObject grate1GameObj = new GameObject( "Tombino finale" );
-                                            grate1GameObj.transform.parent = sectionGameObj.transform;
-                                            grate1GameObj.transform.position = new Vector3( 0.0f, 0.0f, -0.01f );
-                                            grate1GameObj.AddComponent<MeshFilter>();
-                                            grate1GameObj.AddComponent<MeshRenderer>();
-                                            grate1GameObj.GetComponent<MeshFilter>().sharedMesh = grate1Mesh;
-                                            grate1GameObj.GetComponent<MeshRenderer>().material = this.grateTexture;
-
-                                            List<Vector3> groundDown = new List<Vector3>();
-                                            groundDown.Add( grate0Down[ 0 ] );
-                                            groundDown.Add( grate1Up[ 0 ] );
-                                            List<Vector3> groundUp = new List<Vector3>();
-                                            groundUp.Add( grate0Down[ 1 ] );
-                                            groundUp.Add( grate1Up[ 1 ] );
-                                            Mesh groundMesh = MeshGenerator.GeneratePlanarMesh( groundDown, MeshGenerator.ConvertListsToMatrix_2xM( groundUp, groundDown ), false, false, this.switchGroundTextureTilting.x, this.switchGroundTextureTilting.y );
-                                            GameObject groundGameObj = new GameObject( "Pavimentazione base scambio" );
-                                            groundGameObj.transform.parent = sectionGameObj.transform;
-                                            groundGameObj.transform.position = new Vector3( 0.0f, 0.0f, 0.01f );;
-                                            groundGameObj.AddComponent<MeshFilter>();
-                                            groundGameObj.AddComponent<MeshRenderer>();
-                                            groundGameObj.GetComponent<MeshFilter>().sharedMesh = groundMesh;
-                                            groundGameObj.GetComponent<MeshRenderer>().material = this.switchGroundTexture;
+                                            InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimentazione base", new List<Vector3>{ startingGrateVertices[ Side.Bottom ][ 1 ], endingGrateVertices[ Side.Top ][ 1 ] }, new List<Vector3>{ startingGrateVertices[ Side.Bottom ][ 1 ], endingGrateVertices[ Side.Top ][ 1 ] }, new List<Vector3>{ startingGrateVertices[ Side.Bottom ][ 0 ], endingGrateVertices[ Side.Top ][ 0 ] }, 0.01f, false, false, this.switchGroundTexture, this.switchGroundTextureTilting );
 
                                             GenerateTunnelSidePlatformMesh( section, sectionGameObj );
                                             GenerateTunnelWallMesh( section, sectionGameObj );
@@ -882,101 +640,41 @@ public class MetroGenerator : MonoBehaviour
 
             case SwitchType.MonoToNewMono:  MeshGenerator.Floor centerToCenterFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerLine, null, tunnelWidth, false, this.railsWidth );
                                             
-                                            Mesh centerToCenterFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.centerLine, MeshGenerator.ConvertListsToMatrix_2xM( centerToCenterFloor.centerL, centerToCenterFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                            GameObject centerToCenterFloorGameObj = new GameObject( "Scambio Binario Centrale - Centrale" );
-                                            centerToCenterFloorGameObj.transform.parent = sectionGameObj.transform;
-                                            centerToCenterFloorGameObj.transform.position = Vector3.zero;
-                                            centerToCenterFloorGameObj.AddComponent<MeshFilter>();
-                                            centerToCenterFloorGameObj.AddComponent<MeshRenderer>();
-                                            centerToCenterFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerToCenterFloorMesh;
-                                            centerToCenterFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
+                                            InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Centro", section.floorPoints.centerLine, centerToCenterFloor.centerL, centerToCenterFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
 
                                             if( section.newLinesStarts.ContainsKey( NewLineSide.Left ) ) {
-                                                MeshGenerator.Floor centerToEntranceLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerEntranceLeft, null, tunnelWidth, false, this.railsWidth );
-                                                Mesh centerToEntranceLeftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.centerEntranceLeft, MeshGenerator.ConvertListsToMatrix_2xM( centerToEntranceLeftFloor.centerL, centerToEntranceLeftFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                                GameObject centerToEntranceLeftFloorGameObj = new GameObject( "Scambio Binario Centrale - Ingresso Sinistro" );
-                                                centerToEntranceLeftFloorGameObj.transform.parent = sectionGameObj.transform;
-                                                centerToEntranceLeftFloorGameObj.transform.position = Vector3.zero;
-                                                centerToEntranceLeftFloorGameObj.AddComponent<MeshFilter>();
-                                                centerToEntranceLeftFloorGameObj.AddComponent<MeshRenderer>();
-                                                centerToEntranceLeftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerToEntranceLeftFloorMesh;
-                                                centerToEntranceLeftFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
 
+                                                MeshGenerator.Floor centerToEntranceLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerEntranceLeft, null, tunnelWidth, false, this.railsWidth );
                                                 MeshGenerator.Floor centerToExitLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerExitLeft, null, tunnelWidth, false, this.railsWidth );
-                                                Mesh centerToExitLeftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.centerExitLeft, MeshGenerator.ConvertListsToMatrix_2xM( centerToExitLeftFloor.centerL, centerToExitLeftFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                                GameObject centerToExitLeftFloorGameObj = new GameObject( "Scambio Binario Centrale - Uscita Sinistra" );
-                                                centerToExitLeftFloorGameObj.transform.parent = sectionGameObj.transform;
-                                                centerToExitLeftFloorGameObj.transform.position = Vector3.zero;
-                                                centerToExitLeftFloorGameObj.AddComponent<MeshFilter>();
-                                                centerToExitLeftFloorGameObj.AddComponent<MeshRenderer>();
-                                                centerToExitLeftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerToExitLeftFloorMesh;
-                                                centerToExitLeftFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
+
+                                                InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Ingresso (Sinistra)", section.floorPoints.centerEntranceLeft, centerToEntranceLeftFloor.centerL, centerToEntranceLeftFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
+                                                InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Uscita (Sinistra)", section.floorPoints.centerExitLeft, centerToExitLeftFloor.centerL, centerToExitLeftFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
                                             }
 
                                             if( section.newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+                                                
                                                 MeshGenerator.Floor centerToEntranceRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerEntranceRight, null, tunnelWidth, false, this.railsWidth );
-                                                Mesh centerToEntranceRightFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.centerEntranceRight, MeshGenerator.ConvertListsToMatrix_2xM( centerToEntranceRightFloor.centerL, centerToEntranceRightFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                                GameObject centerToEntranceRightFloorGameObj = new GameObject( "Scambio Binario Centrale - Ingresso Destro" );
-                                                centerToEntranceRightFloorGameObj.transform.parent = sectionGameObj.transform;
-                                                centerToEntranceRightFloorGameObj.transform.position = Vector3.zero;
-                                                centerToEntranceRightFloorGameObj.AddComponent<MeshFilter>();
-                                                centerToEntranceRightFloorGameObj.AddComponent<MeshRenderer>();
-                                                centerToEntranceRightFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerToEntranceRightFloorMesh;
-                                                centerToEntranceRightFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
-
                                                 MeshGenerator.Floor centerToExitRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerExitRight, null, tunnelWidth, false, this.railsWidth );
-                                                Mesh centerToExitRightFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.centerExitRight, MeshGenerator.ConvertListsToMatrix_2xM( centerToExitRightFloor.centerL, centerToExitRightFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                                GameObject centerToExitRightFloorGameObj = new GameObject( "Scambio Binario Centrale - Uscita Destra" );
-                                                centerToExitRightFloorGameObj.transform.parent = sectionGameObj.transform;
-                                                centerToExitRightFloorGameObj.transform.position = Vector3.zero;
-                                                centerToExitRightFloorGameObj.AddComponent<MeshFilter>();
-                                                centerToExitRightFloorGameObj.AddComponent<MeshRenderer>();
-                                                centerToExitRightFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerToExitRightFloorMesh;
-                                                centerToExitRightFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
+
+                                                InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Ingresso (Destra)", section.floorPoints.centerEntranceRight, centerToEntranceRightFloor.centerL, centerToEntranceRightFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
+                                                InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Uscita (Destra)", section.floorPoints.centerExitRight, centerToExitRightFloor.centerL, centerToExitRightFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
                                             }
                                             
                                             break;
 
             case SwitchType.BiToNewBi:      MeshGenerator.Floor centerFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerLine, null, centerWidth, false, this.railsWidth );
-                                            Mesh centerFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.centerLine, MeshGenerator.ConvertListsToMatrix_2xM( centerFloor.centerL, centerFloor.centerR ), false, false, centerTextureTilting.x, centerTextureTilting.y );
-                                            GameObject centerFloorGameObj = new GameObject( "Divisore centrale" );
-                                            centerFloorGameObj.transform.parent = sectionGameObj.transform;
-                                            centerFloorGameObj.transform.position = Vector3.zero;
-                                            centerFloorGameObj.AddComponent<MeshFilter>();
-                                            centerFloorGameObj.AddComponent<MeshRenderer>();
-                                            centerFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerFloorMesh;
-                                            centerFloorGameObj.GetComponent<MeshRenderer>().material = centerTexture;
+                                            
+                                            InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento Divisore - Centro", section.floorPoints.centerLine, centerFloor.centerL, centerFloor.centerR, 0.0f, false, false, this.centerTexture, this.centerTextureTilting );
 
                                             if( section.newLinesStarts.ContainsKey( NewLineSide.Left ) ) {
+
                                                 MeshGenerator.Floor leftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftLine, null, tunnelWidth, false, this.railsWidth );
-                                                Mesh leftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.leftLine, MeshGenerator.ConvertListsToMatrix_2xM( leftFloor.centerL, leftFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                                GameObject leftFloorGameObj = new GameObject( "Scambio Binario Sinistro - Sinistro" );
-                                                leftFloorGameObj.transform.parent = sectionGameObj.transform;
-                                                leftFloorGameObj.transform.position = Vector3.zero;
-                                                leftFloorGameObj.AddComponent<MeshFilter>();
-                                                leftFloorGameObj.AddComponent<MeshRenderer>();
-                                                leftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftFloorMesh;
-                                                leftFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
-
                                                 MeshGenerator.Floor leftToEntranceLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftEntranceLeft, null, tunnelWidth, false, this.railsWidth );
-                                                Mesh leftToEntranceLeftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.leftEntranceLeft, MeshGenerator.ConvertListsToMatrix_2xM( leftToEntranceLeftFloor.centerL, leftToEntranceLeftFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                                GameObject leftToEntranceLeftFloorGameObj = new GameObject( "Scambio Binario Sinistro - Ingresso Sinistro" );
-                                                leftToEntranceLeftFloorGameObj.transform.parent = sectionGameObj.transform;
-                                                leftToEntranceLeftFloorGameObj.transform.position = Vector3.zero;
-                                                leftToEntranceLeftFloorGameObj.AddComponent<MeshFilter>();
-                                                leftToEntranceLeftFloorGameObj.AddComponent<MeshRenderer>();
-                                                leftToEntranceLeftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftToEntranceLeftFloorMesh;
-                                                leftToEntranceLeftFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
-
                                                 MeshGenerator.Floor leftToExitLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftExitLeft, null, tunnelWidth, false, this.railsWidth );
-                                                Mesh leftToExitLeftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.leftExitLeft, MeshGenerator.ConvertListsToMatrix_2xM( leftToExitLeftFloor.centerL, leftToExitLeftFloor.centerR ), false, false, switchRailTextureTilting.x, switchRailTextureTilting.y );
-                                                GameObject leftToExitLeftFloorGameObj = new GameObject( "Scambio Binario Sinistro - Uscita Sinistra" );
-                                                leftToExitLeftFloorGameObj.transform.parent = sectionGameObj.transform;
-                                                leftToExitLeftFloorGameObj.transform.position = Vector3.zero;
-                                                leftToExitLeftFloorGameObj.AddComponent<MeshFilter>();
-                                                leftToExitLeftFloorGameObj.AddComponent<MeshRenderer>();
-                                                leftToExitLeftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftToExitLeftFloorMesh;
-                                                leftToExitLeftFloorGameObj.GetComponent<MeshRenderer>().material = switchRailTexture;
+
+                                                InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Sinistra", section.floorPoints.leftLine, leftFloor.centerL, leftFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
+                                                InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Ingresso (Sinistra)", section.floorPoints.leftEntranceLeft, leftToEntranceLeftFloor.centerL, leftToEntranceLeftFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
+                                                InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Uscita (Sinistra)", section.floorPoints.leftExitLeft, leftToExitLeftFloor.centerL, leftToExitLeftFloor.centerR, 0.0f, false, false, this.switchRailTexture, this.switchRailTextureTilting );
 
                                                 Vector3 dirSwitch = ( section.bezierCurveLimitedAngle[ 1 ] - section.bezierCurveLimitedAngle[ 0 ] ).normalized;
                                                 Vector3 dirLeftSwitch = Quaternion.Euler( 0.0f, 0.0f, -90.0f) * dirSwitch;
@@ -1203,14 +901,16 @@ public class MetroGenerator : MonoBehaviour
                                             }
                                             else {
                                                 MeshGenerator.Floor leftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftLine, null, tunnelWidth, false, this.railsWidth );
-                                                Mesh leftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.leftLine, MeshGenerator.ConvertListsToMatrix_2xM( leftFloor.centerL, leftFloor.centerR ), false, false, tunnelRailTextureTilting.x, tunnelRailTextureTilting.y );
-                                                GameObject leftFloorGameObj = new GameObject( "Binario Sinistro" );
-                                                leftFloorGameObj.transform.parent = sectionGameObj.transform;
-                                                leftFloorGameObj.transform.position = Vector3.zero;
-                                                leftFloorGameObj.AddComponent<MeshFilter>();
-                                                leftFloorGameObj.AddComponent<MeshRenderer>();
-                                                leftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftFloorMesh;
-                                                leftFloorGameObj.GetComponent<MeshRenderer>().material = tunnelRailTexture;
+                                                
+                                                InstantiateTunnelGround( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Sinistra", section.floorPoints.leftLine, leftFloor.centerL, leftFloor.centerR, 0.0f, false, false, this.tunnelRailTexture, this.tunnelRailTextureTilting );
+                                                // Mesh leftFloorMesh = MeshGenerator.GeneratePlanarMesh( section.floorPoints.leftLine, MeshGenerator.ConvertListsToMatrix_2xM( leftFloor.centerL, leftFloor.centerR ), false, false, tunnelRailTextureTilting.x, tunnelRailTextureTilting.y );
+                                                // GameObject leftFloorGameObj = new GameObject( "Binario Sinistro" );
+                                                // leftFloorGameObj.transform.parent = sectionGameObj.transform;
+                                                // leftFloorGameObj.transform.position = Vector3.zero;
+                                                // leftFloorGameObj.AddComponent<MeshFilter>();
+                                                // leftFloorGameObj.AddComponent<MeshRenderer>();
+                                                // leftFloorGameObj.GetComponent<MeshFilter>().sharedMesh = leftFloorMesh;
+                                                // leftFloorGameObj.GetComponent<MeshRenderer>().material = tunnelRailTexture;
                                             }
 
                                             if( section.newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
@@ -1571,7 +1271,7 @@ public class MetroGenerator : MonoBehaviour
             }
         }
         else {
-            return 0.0f;
+            return previousOffset;
         }
 
         return offset;
@@ -1718,7 +1418,7 @@ public class MetroGenerator : MonoBehaviour
             }
         }
         else {
-            return Vector2.zero;
+            return previousOffsets;
         }
 
         return new Vector2( meshOffsetLeft, meshOffsetRight );
@@ -1874,12 +1574,11 @@ public class MetroGenerator : MonoBehaviour
             }
         }
         else {
-            return 0.0f;
+            return previousOffset;
         }
 
         return offset;
     }
-
 
     private void GenerateMeshes() {
 
@@ -1918,7 +1617,7 @@ public class MetroGenerator : MonoBehaviour
                 section.sectionObj = sectionGameObj;
 
                 switch( section.type ) {
-                    case Type.Tunnel:   GenerateTunnelFloorMesh( section, sectionGameObj );
+                    case Type.Tunnel:   GenerateTunnelGroundMeshes( section, sectionGameObj );
                                         GenerateTunnelSidePlatformMesh( section, sectionGameObj );
                                         GenerateTunnelWallMesh( section, sectionGameObj );
                                         GenerateTunnelTubesMesh( section, sectionGameObj );
@@ -1956,12 +1655,6 @@ public class MetroGenerator : MonoBehaviour
                                                 centerFloorGameObj.AddComponent<MeshRenderer>();
                                                 centerFloorGameObj.GetComponent<MeshFilter>().sharedMesh = centerFloorMesh;
                                                 centerFloorGameObj.GetComponent<MeshRenderer>().material = centerTexture;
-
-                                                /*for( int p = 0; p < stationRails.centerLine.Count; p += 2 ) {
-                                                    GameObject pillarGameObj = Instantiate( pillar, stationRails.centerLine[ p ] + new Vector3( 0.0f, 0.0f, -pillar.transform.localScale.y / 2 ), Quaternion.Euler( 0.0f, -90.0f, 90.0f ) );
-                                                    pillarGameObj.transform.parent = sectionGameObj.transform;
-                                                    pillarGameObj.name = "Pilastro";
-                                                }*/
 
                                                 rightFloorMesh = MeshGenerator.GeneratePlanarMesh( stationsPoints, MeshGenerator.ConvertListsToMatrix_2xM( stationRails.rightL, stationRails.rightR ), false, false, tunnelRailTextureTilting.x, tunnelRailTextureTilting.y );
                                                 GameObject rightFloorGameObj = new GameObject( "Binari destra" );

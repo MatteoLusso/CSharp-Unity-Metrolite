@@ -18,7 +18,7 @@ public class SwitchPath : ScriptableObject
 
     public static SwitchPath CreateInstance( float switchRailsWidth, float switchLenght, float switchBracketsLenght, float centerWidth, float tunnelWidth, float switchLightDistance, float switchLightHeight, int curvePointsNumber, Vector3 switchLightRotation, GameObject switchLight ) {
         
-        var switchPathScript = ScriptableObject.CreateInstance<SwitchPath>();
+        SwitchPath switchPathScript = ScriptableObject.CreateInstance<SwitchPath>();
         switchPathScript.switchRailsWidth = switchRailsWidth;
         switchPathScript.switchLenght = switchLenght;
         switchPathScript.centerWidth = centerWidth;
