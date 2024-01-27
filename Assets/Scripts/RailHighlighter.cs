@@ -9,13 +9,17 @@ public class RailHighlighter : MonoBehaviour
     public Material originalMaterial;
     public float lightWaveSpeed = 1.0f;
     public Color lightColor = Color.yellow;
-
-    public string line;
-    public int index;
+    public LineSection section;
     public SwitchDirection direction;
+
+    public string lineName;
+    public int index;
 
     void Start()
     {
+        lineName = section.lineName;
+        index = section.sectionIndex;
+
         highlightedMaterial = ( Material )Resources.Load( "Materials/Rust Highlighted", typeof( Material ) );
         originalMaterial = this.GetComponent<Renderer>().material;
     }
@@ -28,12 +32,12 @@ public class RailHighlighter : MonoBehaviour
         else { 
             TrainController trainController = train.GetComponent<TrainController>();
             
-            if( ( trainController.actualSwitchLine == line && trainController.actualSwitchIndex == index && trainController.actualSwitchDirection == direction ) || 
-                ( trainController.previousSwitchLine == line && trainController.previousSwitchIndex == index && trainController.previousSwitchDirection == direction ) || 
-                ( trainController.nextSwitchLine == line && trainController.nextSwitchIndex == index && trainController.nextSwitchDirection == direction ) ) {
-
-                this.highlightedMaterial.SetColor("_EmissionColor", Color.Lerp( Color.black, lightColor, Mathf.PingPong( Time.time, lightWaveSpeed ) ) );
-                this.highlightedMaterial.EnableKeyword("_EMISSION");
+            if( ( trainController.actualSwitchLine == lineName && trainController.actualSwitchIndex == index && trainController.actualSwitchDirection == direction ) || 
+                ( trainController.previousSwitchLine == lineName && trainController.previousSwitchIndex == index && trainController.previousSwitchDirection == direction ) || 
+                ( trainController.nextSwitchLine == lineName && trainController.nextSwitchIndex == index && trainController.nextSwitchDirection == direction ) ) {
+                
+                this.highlightedMaterial.SetColor( "_EmissionColor", Color.Lerp( Color.black, lightColor, Mathf.PingPong( Time.time, lightWaveSpeed ) ) );
+                this.highlightedMaterial.EnableKeyword( "_EMISSION" );
                 this.GetComponent<Renderer>().material = this.highlightedMaterial; 
             }
             else {

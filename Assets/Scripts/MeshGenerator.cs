@@ -86,6 +86,7 @@ public static class MeshGenerator
          
          public Mesh mesh { get; set; }
          public List<Vector3> lastProfileVertex { get; set; }
+         public GameObject gameObj { get; set; }
     }
 
     public class Wall {
@@ -134,7 +135,7 @@ public static class MeshGenerator
         }
     }
 
-    public static Mesh GenerateSwitchNewBiGround( List<Vector3> points0, List<Vector3> points1, int start0, int end0, List<Vector3> points2, int minIndex1, int maxIndex1, Vector3 switchDir, Vector2 textureTilting, float tunnelWidth, float centerWidth ) {
+    public static Mesh GenerateSwitchNewBiGround( NewLineSide side, List<Vector3> points0, List<Vector3> points1, int start0, int end0, List<Vector3> points2, int minIndex1, int maxIndex1, Vector3 switchDir, bool clockwiseRotation, Vector2 textureTilting, float tunnelWidth, float centerWidth ) {
         
         Mesh groundMesh = new Mesh();
 
@@ -147,8 +148,7 @@ public static class MeshGenerator
         float u, v;
 
         List<Vector3> groundLimitPoints0 = new List<Vector3>();
-
-        groundLimitPoints0.Add( points0[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir.normalized * tunnelWidth ) );
+        groundLimitPoints0.Add( points0[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) );
 
         for( int i = 0; i <= start0; i++ ) {
             groundLimitPoints0.Add( points0[ i ] );
@@ -158,7 +158,7 @@ public static class MeshGenerator
             groundLimitPoints0.Add( points2[ i ] );
         }
 
-        groundLimitPoints0.Add( points2[ minIndex1 ] + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir.normalized * tunnelWidth ) );
+        groundLimitPoints0.Add( points2[ minIndex1 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) );
         groundLimitPoints0.Add( groundLimitPoints0[ 0 ] + ( switchDir.normalized * ( groundLimitPoints0[ groundLimitPoints0.Count - 1 ] - groundLimitPoints0[ 0 ] ).magnitude / 2 ) );
 
         vertices.AddRange( groundLimitPoints0 );
@@ -166,9 +166,18 @@ public static class MeshGenerator
         for( int i = 0; i < groundLimitPoints0.Count - 1; i++ ){
             
             if( i < groundLimitPoints0.Count - 2 ) {
+
                 triangles.Add( verticesCounter + i );
-                triangles.Add( verticesCounter + i + 1 );
-                triangles.Add( verticesCounter + groundLimitPoints0.Count - 1 );
+                if( clockwiseRotation ) {
+                    triangles.Add( verticesCounter + i + 1 );
+                    triangles.Add( verticesCounter + groundLimitPoints0.Count - 1 );
+                }
+                else {
+                    triangles.Add( verticesCounter + groundLimitPoints0.Count - 1 );
+                    triangles.Add( verticesCounter + i + 1 );
+                }
+
+
             }
 
             normals.Add( -Vector3.forward );
@@ -205,14 +214,26 @@ public static class MeshGenerator
             
             vertices.Add( down1[ i ] );
             vertices.Add( up1[ i ] );
-            
+
             triangles.Add( verticesCounter + ( i * 2 ) );
-            triangles.Add( verticesCounter + ( i * 2 ) + 1 );
-            triangles.Add( verticesCounter + ( i * 2 ) + 2 );
+            if( clockwiseRotation ) {
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 2 );
+            }
+            else {
+                triangles.Add( verticesCounter + ( i * 2 ) + 2 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+            }
 
             triangles.Add( verticesCounter + ( i * 2 ) + 2 );
-            triangles.Add( verticesCounter + ( i * 2 ) + 1 );
-            triangles.Add( verticesCounter + ( i * 2 ) + 3 );
+            if( clockwiseRotation ) {
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 3 );
+            }
+            else {
+                triangles.Add( verticesCounter + ( i * 2 ) + 3 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+            }
 
             normals.Add( -Vector3.forward );
             normals.Add( -Vector3.forward );
@@ -269,8 +290,14 @@ public static class MeshGenerator
         for( int i = 0; i < groundLimitPoints2.Count - 1; i++ ){
 
             triangles.Add( verticesCounter + i );
-            triangles.Add( verticesCounter + i + 1 );
-            triangles.Add( verticesCounter + groundLimitPoints2.Count - 1 );
+            if( clockwiseRotation ) {
+                triangles.Add( verticesCounter + i + 1 );
+                triangles.Add( verticesCounter + groundLimitPoints2.Count - 1 );
+            }
+            else {
+                triangles.Add( verticesCounter + groundLimitPoints2.Count - 1 );
+                triangles.Add( verticesCounter + i + 1 );
+            }
 
             normals.Add( -Vector3.forward );
 
@@ -310,12 +337,24 @@ public static class MeshGenerator
             vertices.Add( up3[ i ] );
             
             triangles.Add( verticesCounter + ( i * 2 ) );
-            triangles.Add( verticesCounter + ( i * 2 ) + 1 );
-            triangles.Add( verticesCounter + ( i * 2 ) + 2 );
+            if( clockwiseRotation ) {
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 2 );
+            }
+            else {
+                triangles.Add( verticesCounter + ( i * 2 ) + 2 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+            }
 
             triangles.Add( verticesCounter + ( i * 2 ) + 2 );
-            triangles.Add( verticesCounter + ( i * 2 ) + 1 );
-            triangles.Add( verticesCounter + ( i * 2 ) + 3 );
+            if( clockwiseRotation ) {
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 3 );
+            }
+            else {
+                triangles.Add( verticesCounter + ( i * 2 ) + 3 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+            }
 
             normals.Add( -Vector3.forward );
             normals.Add( -Vector3.forward );
@@ -353,7 +392,7 @@ public static class MeshGenerator
 
         List<Vector3> groundLimitPoints4 = new List<Vector3>();
 
-        groundLimitPoints4.Add( points2[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir.normalized * tunnelWidth ) );
+        groundLimitPoints4.Add( points2[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 )  ) * switchDir.normalized * tunnelWidth ) );
         groundLimitPoints4.Add( points2[ 0 ] );
 
         for( int i = points2.Count - 1; i > ( points2.Count - 1 ) - maxIndex1 + minIndex1; i-- ) {
@@ -364,7 +403,7 @@ public static class MeshGenerator
             groundLimitPoints4.Add( points1[ i ] );
         }
 
-        groundLimitPoints4.Add( groundLimitPoints4[ groundLimitPoints4.Count - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir.normalized * tunnelWidth ) );
+        groundLimitPoints4.Add( groundLimitPoints4[ groundLimitPoints4.Count - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) );
         groundLimitPoints4.Add( groundLimitPoints4[ groundLimitPoints4.Count - 1 ] - ( switchDir.normalized * ( groundLimitPoints4[ groundLimitPoints4.Count - 1 ] - groundLimitPoints4[ 0 ] ).magnitude / 2 ) );
 
         vertices.AddRange( groundLimitPoints4 );
@@ -372,8 +411,14 @@ public static class MeshGenerator
         for( int i = 0; i < groundLimitPoints4.Count - 1; i++ ){
 
             triangles.Add( verticesCounter + i );
-            triangles.Add( verticesCounter + i + 1 );
-            triangles.Add( verticesCounter + groundLimitPoints4.Count - 1 );
+            if( clockwiseRotation ) {
+                triangles.Add( verticesCounter + i + 1 );
+                triangles.Add( verticesCounter + groundLimitPoints4.Count - 1 );
+            }
+            else {
+                triangles.Add( verticesCounter + groundLimitPoints4.Count - 1 );
+                triangles.Add( verticesCounter + i + 1 );
+            }
 
             normals.Add( -Vector3.forward );
 
@@ -410,12 +455,24 @@ public static class MeshGenerator
             vertices.Add( up5[ i ] );
 
             triangles.Add( verticesCounter + ( i * 2 ) );
-            triangles.Add( verticesCounter + ( i * 2 ) + 1 );
-            triangles.Add( verticesCounter + ( i * 2 ) + 2 );
+            if( clockwiseRotation ) {
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 2 );
+            }
+            else {
+                triangles.Add( verticesCounter + ( i * 2 ) + 2 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+            }
 
             triangles.Add( verticesCounter + ( i * 2 ) + 2 );
-            triangles.Add( verticesCounter + ( i * 2 ) + 1 );
-            triangles.Add( verticesCounter + ( i * 2 ) + 3 );
+            if( clockwiseRotation ) {
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 3 );
+            }
+            else {
+                triangles.Add( verticesCounter + ( i * 2 ) + 3 );
+                triangles.Add( verticesCounter + ( i * 2 ) + 1 );
+            }
 
             normals.Add( -Vector3.forward );
             normals.Add( -Vector3.forward );
@@ -1092,7 +1149,7 @@ public static class MeshGenerator
                 float deltaAlphaAbs = Mathf.Abs( alpha - prevAlpha );
                 deltaAlphaAbs = deltaAlphaAbs > 180 ? 360 - deltaAlphaAbs : deltaAlphaAbs;
 
-                alpha += deltaAlphaAbs * smoothFactor;
+                alpha += deltaAlphaAbs * smoothFactor * ( clockwiseRotation ? -1 : 1 );
             }
 
             if( i == 0 && previousProfileVertices != null && previousProfileVertices.Count == profileVerticesScaled.Count ) {
@@ -1209,7 +1266,7 @@ public static class MeshGenerator
         return extrudedMesh;
     }
 
-    public static Mesh GeneratePlanarMesh( List<Vector3> line, Vector3[ , ] vertMatrix,  bool closeMesh, bool centerTexture, float textureHorLenght, float textureVertLenght )
+    public static Mesh GeneratePlanarMesh( List<Vector3> line, Vector3[ , ] vertMatrix, bool clockwiseRotation,  bool closeMesh, bool centerTexture, float textureHorLenght, float textureVertLenght )
     {
         // In questo modo anche se aggiungo un punto alla lista è stata copiata per valore e non per riferimento, quindi la
         // modifica non ha effetti fuori dal metodo.
@@ -1262,10 +1319,18 @@ public static class MeshGenerator
 
             if( i < curve.Count - 1 )
             {
-                edges[ ( i * 6 ) + 0 ] = ( i * 2 );
-                edges[ ( i * 6 ) + 1 ] = edges[ ( i * 6 ) + 4 ] = ( i * 2 ) + 2;
-                edges[ ( i * 6 ) + 2 ] = edges[ ( i * 6 ) + 3 ] = ( i * 2 ) + 1;
-                edges[ ( i * 6 ) + 5 ] = ( i * 2 ) + 3;
+                if( clockwiseRotation ) {
+                    edges[ ( i * 6 ) + 0 ] = ( i * 2 );
+                    edges[ ( i * 6 ) + 1 ] = edges[ ( i * 6 ) + 4 ] = ( i * 2 ) + 1;
+                    edges[ ( i * 6 ) + 2 ] = edges[ ( i * 6 ) + 3 ] = ( i * 2 ) + 2;
+                    edges[ ( i * 6 ) + 5 ] = ( i * 2 ) + 3;
+                }
+                else {
+                    edges[ ( i * 6 ) + 0 ] = ( i * 2 );
+                    edges[ ( i * 6 ) + 1 ] = edges[ ( i * 6 ) + 4 ] = ( i * 2 ) + 2;
+                    edges[ ( i * 6 ) + 2 ] = edges[ ( i * 6 ) + 3 ] = ( i * 2 ) + 1;
+                    edges[ ( i * 6 ) + 5 ] = ( i * 2 ) + 3;
+                }
             }
         }
 
