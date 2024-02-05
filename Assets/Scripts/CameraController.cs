@@ -63,8 +63,8 @@ public class CameraController : MonoBehaviour
 
             newPos = train.transform.position + Quaternion.Euler( rotation.x, rotation.y, rotation.z ) * ( offset + -Vector3.forward );
 
-            this.transform.position = Vector3.SmoothDamp( this.transform.position, newPos, ref velocity, smoothTime );
-            //this.transform.position = newPos;
+            //this.transform.position = Vector3.SmoothDamp( this.transform.position, newPos, ref velocity, smoothTime );
+            this.transform.position = newPos;
             this.transform.LookAt( train.transform, -Vector3.forward );
 
             prevPos = newPos;

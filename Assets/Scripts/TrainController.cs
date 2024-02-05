@@ -34,9 +34,9 @@ public class TrainController : MonoBehaviour
     private float previousSpeed = 0.0f;
     private Direction mainDir = Direction.None;
 
-    private string keyLine = "Linea 0";
-    private int indexPoint = 0;
-    private int indexSection = 0;
+    public string keyLine = "Linea 0";
+    public int indexPoint = 0;
+    public int indexSection = 0;
 
     private float heightCorrection;
 
@@ -117,7 +117,7 @@ public class TrainController : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void LateUpdate()
     {
         previousSpeed = speed;
         HandleMovement();
@@ -738,7 +738,8 @@ public class TrainController : MonoBehaviour
             speed = 0.0f;
         }
 
-        noise.pitch = Mathf.Abs( speed ) / maxSpeed;
+        noise.pitch = ( Mathf.Abs( speed ) / maxSpeed ) * Time.timeScale;
+        noise.volume = Time.timeScale;
     }
 
     private void HandleBrakingNoise() {
@@ -747,22 +748,24 @@ public class TrainController : MonoBehaviour
 
             ////Debug.Log( "Braking" );
             if( !braking.isPlaying ) {
-                braking.volume = Mathf.Abs( speed ) / maxSpeed;
+                braking.volume = ( Mathf.Abs( speed ) / maxSpeed ) * Time.timeScale;
                 braking.time = 0.0f;
                 braking.Play();
             }
             else {
-                braking.volume = Mathf.Lerp( 0.0f, 1.0f, ( Mathf.Abs( speed ) / maxSpeed ) );
+                braking.volume = ( Mathf.Lerp( 0.0f, 1.0f, ( Mathf.Abs( speed ) / maxSpeed ) ) ) * Time.timeScale;
             }
         }
         else{
-            braking.volume = Mathf.Lerp( braking.volume, 0.0f, brakingNoiseDecreasingSpeed * Time.deltaTime );
+            braking.volume = ( Mathf.Lerp( braking.volume, 0.0f, brakingNoiseDecreasingSpeed * Time.deltaTime ) ) * Time.timeScale;
 
             if( braking.isPlaying && braking.volume <= 0.0f ) {
                 ////Debug.Log( "Stop Braking" );
                 braking.Stop();
             }
         }
+
+        braking.pitch = Time.timeScale;
     }
 
     private List<Vector3> getPoints( LineSection section ) {
@@ -1304,7 +1307,7 @@ public class TrainController : MonoBehaviour
                                         LineSection previousSection = sections[ i - 1 ];
                                         List<Vector3> navigationPoints = new List<Vector3>();
 
-                                        //if( sections[ i - 1 ].type == Type.Tunnel ) {
+                                        if( sections[ i - 1 ].type == Type.Tunnel ) {
                                             if( sections[ i - 1 ].bidirectional ) {
                                                 if( railSide == Rail.Left ) {
                                                     indexDiff = ( sections[ i - 1 ].floorPoints.leftLine.Count - 1 ) + ( j - indexDiff );
@@ -1339,10 +1342,10 @@ public class TrainController : MonoBehaviour
                                             else {
                                                 previousOrientationPoint = navigationPoints[ indexDiff ] + ( Vector3.forward * heightCorrection );
                                             }
-                                        //}
-                                        //else {
-                                            //previousOrientationPoint = sections[ i - 1 ].bezierCurveLimitedAngle[ indexDiff ];
-                                        //}
+                                        }
+                                        else {
+                                            previousOrientationPoint = sections[ i - 1 ].bezierCurveLimitedAngle[ indexDiff ];
+                                        }
                                     }
                                     else {
                                         previousOrientationPoint = points[ 0 ] + ( Vector3.forward * heightCorrection );
@@ -2185,7 +2188,7 @@ public class TrainController : MonoBehaviour
                                         if( i + 1 < sections.Count && sections[ i ].type != Type.Switch && sections[ i + 1 ].type != Type.Switch ) {
                                             indexDiff = j + indexDiff - ( points.Count - 1 );
 
-                                            //if( sections[ i + 1 ].type == Type.Tunnel ) {
+                                            if( sections[ i + 1 ].type == Type.Tunnel ) {
                                                 if( sections[ i + 1 ].bidirectional ) {
                                                     if( railSide == Rail.Left ) {
                                                         nextOrientationPoint = sections[ i + 1 ].floorPoints.leftLine[ indexDiff ]  + ( Vector3.forward * heightCorrection );
@@ -2197,10 +2200,10 @@ public class TrainController : MonoBehaviour
                                                 else {
                                                     nextOrientationPoint = sections[ i + 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
                                                 }
-                                            //}
-                                            //else {
-                                                //nextOrientationPoint = sections[ i + 1 ].bezierCurveLimitedAngle[ indexDiff ];
-                                            //}
+                                            }
+                                            else {
+                                                nextOrientationPoint = sections[ i + 1 ].bezierCurveLimitedAngle[ indexDiff ];
+                                            }
                                         }
                                         else {
                                             nextOrientationPoint = points[ points.Count - 1 ] + ( Vector3.forward * heightCorrection );
