@@ -87,6 +87,7 @@ public static class MeshGenerator
          public Mesh mesh { get; set; }
          public List<Vector3> lastProfileVertex { get; set; }
          public GameObject gameObj { get; set; }
+         public Dictionary<int, List<Vector3>> verticesStructure { get; set; }
     }
 
     public class Wall {
@@ -103,6 +104,30 @@ public static class MeshGenerator
         public List<Vector3> left { get; set; }
         public List<Vector3> right { get; set; }
 
+    }
+
+    public static Vector3 CalculatePoligonCenterPoint( List<Vector3> vertices )
+    {
+        int  verticesNumber =  vertices.Count;
+
+        float x = 0;
+        float y = 0;
+        float z = 0;
+
+        foreach( Vector3 vertex in vertices )
+        {
+            x += vertex.x;
+            y += vertex.y;
+            z += vertex.z;
+        }
+
+        x /= verticesNumber;
+        y /= verticesNumber;
+        z /= verticesNumber;
+
+        Vector3 centerPoint = new Vector3( x, y, z );
+
+        return centerPoint;
     }
 
     public static Vector3[ , ] ConvertListsToMatrix_2xM( List<Vector3> up, List<Vector3> down )
@@ -852,7 +877,7 @@ public static class MeshGenerator
             lines.left.Add( curve[ i ] + leftDir );
             lines.right.Add( curve[ i ] + rightDir );
 
-            Debug.DrawRay( lines.left[ i ], lines.left[ i - 1 ] - lines.left[ i ], Color.yellow, 999 );
+            //Debug.DrawRay( lines.left[ i ], lines.left[ i - 1 ] - lines.left[ i ], Color.yellow, 999 );
         }
 
         return lines;
@@ -1062,16 +1087,22 @@ public static class MeshGenerator
         return shape;
     }
 
-    public static ExtrudedMesh GenerateExtrudedMesh( List<Vector3> profileVertices, float profileScale, List<Vector3> previousProfileVertices, List<Vector3> baseVertices, float horPosCorrection, bool clockwiseRotation, bool closeMesh, float textureHorLenght, float textureVertLenght, float verticalRotationCorrection, float smoothFactor ) {
-        
-        if( closeMesh ) {
-            baseVertices.Add( baseVertices[ 0 ] );
-        }
+    public static ExtrudedMesh GenerateExtrudedMesh( List<Vector3> profileVertices, float profileScale, List<Vector3> previousProfileVertices, List<Vector3> baseVertices, float horPosCorrection, float vertPosCorrection, bool clockwiseRotation, bool closeMesh, float textureHorLenght, float textureVertLenght, float verticalRotationCorrection, float smoothFactor ) {
         
         ExtrudedMesh extrudedMesh = new ExtrudedMesh();
 
-        List<Vector3> lastProfileVertices = new List<Vector3>();
+        // Mappa livello - vertice (ogni livello è un punto del profilo della mesh)
+        Dictionary<int, List<Vector3>> verticesStructure = new Dictionary<int, List<Vector3>>();
+        verticesStructure[ 0 ] = baseVertices;
+        for( int i = 1; i < profileVertices.Count; i++ ) {
+            verticesStructure.Add( i, new List<Vector3>() ); 
+        }
 
+        if( closeMesh ) {
+            baseVertices.Add( baseVertices[ 0 ] );
+        }
+
+        List<Vector3> lastProfileVertices = new List<Vector3>();
         List<Vector3> profileVerticesScaled = new List<Vector3>();
         foreach( Vector3 profileVertex in profileVertices ) {
             profileVerticesScaled.Add( profileVertex * profileScale );
@@ -1097,7 +1128,6 @@ public static class MeshGenerator
 
         List<Vector3> profileDirs = new List<Vector3>();
         for( int i = 1; i < h; i++ ) {
-
             Vector3 profileDir = profileVerticesScaled[ i ] - profileVerticesScaled[ i - 1 ];
             profileDirs.Add( profileDir );
 
@@ -1105,51 +1135,35 @@ public static class MeshGenerator
         }
 
         List<Vector3> baseDirs = new List<Vector3>();
-        List<float>baseAlphas = new List<float>();
         for( int i = 1; i < baseVertices.Count; i++ ) { 
-            
-            Vector3 baseDir = Vector3.zero;
-            if( i == baseVertices.Count - 1 && closeMesh ) {
-                baseDir = baseVertices[ 0 ] - baseVertices[ i - 1 ];
-            }
-            else {
-                baseDir = baseVertices[ i ] - baseVertices[ i - 1 ];
-            }
+            Vector3 baseDir = baseVertices[ i ] - baseVertices[ i - 1 ];
             baseDirs.Add( baseDir );
-
-            //Debug.DrawRay( baseVertices[ i - 1 ], baseDirs[ i - 1 ], Color.red, 999 );
-            float baseAlpha = DLL_MathExt.Angles.SignedAngleTo360Angle( Vector3.SignedAngle( Vector3.right, baseDir, Vector3.forward ) );
-            baseAlphas.Add( baseAlpha );
-            //baseAlphas[ i - 1 ] += baseAlphas[ i - 1 ] > 180.0f ? 90.0f : 0.0f;
-
-            //Debug.Log( "baseAlpha[ " + ( i - 1 ) + "]: " + baseAlphas[ i - 1 ] );
 
             distancesHor.Add( distancesHor[ i - 1 ] + baseDir.magnitude );
         }
-        if( closeMesh ) { 
-            baseAlphas.Add( baseAlphas[ 0 ] );
-        }
-        else {
-            baseAlphas.Add( baseAlphas[ baseAlphas.Count - 1 ] );
-        }
-        //baseAlphas[ baseAlphas.Count - 1 ] -= baseAlphas[ baseAlphas.Count - 1 ] >= 180.0f ? -180.0f : 0.0f;
 
         // Genero i tutti i profili e aggiungo i vertici alla lista dei vertici
         for( int i = 0; i < baseVertices.Count; i++ ) {
             
             // Alpha è l'angolo che il profilo deve essere ruotato per risultare sempre alla stessa angolazione con il baseDir attuale
-            float alpha = baseAlphas[ i ];
-            if( i > 0 && i < baseVertices.Count - 1 ) {
+            float alpha = 0.0f;
+            if( ( i == 0 || i == baseVertices.Count - 1 ) && closeMesh ) {
+                // Nel caso di mesh chiusa, l'alpha del primo punto e ultimo punto combaciano
+                alpha = Vector3.SignedAngle( Vector3.right, baseDirs[ 0 ], Vector3.forward ) + ( Vector3.SignedAngle( baseDirs[ 0 ], baseDirs[ baseDirs.Count - 1 ], Vector3.forward ) * smoothFactor );
+            }
+            else {
+                if( i < baseVertices.Count - 1 ) {
+                    alpha = Vector3.SignedAngle( Vector3.right, baseDirs[ i ], Vector3.forward );
 
-                float prevAlpha = baseAlphas[ i - 1 ];
-
-                float deltaAlpha = alpha - prevAlpha;
-                int rotDir = deltaAlpha > 0 ? -1 : 1;
-
-                float deltaAlphaAbs = Mathf.Abs( alpha - prevAlpha );
-                deltaAlphaAbs = deltaAlphaAbs > 180 ? 360 - deltaAlphaAbs : deltaAlphaAbs;
-
-                alpha += deltaAlphaAbs * smoothFactor * ( clockwiseRotation ? -1 : 1 );
+                    // Correzione alpha per punti successivi al primo e precedenti all'ultimo
+                    if( i > 0 ) {
+                        alpha += Vector3.SignedAngle( baseDirs[ i ], baseDirs[ i - 1 ], Vector3.forward ) * smoothFactor;
+                    }
+                }
+                else {
+                    // L'angolo alpha dell'ultimo punto è calcolato sulla baseDir del punto precedente
+                    alpha = Vector3.SignedAngle( Vector3.right, baseDirs[ baseDirs.Count - 1 ], Vector3.forward );
+                }
             }
 
             if( i == 0 && previousProfileVertices != null && previousProfileVertices.Count == profileVerticesScaled.Count ) {
@@ -1158,21 +1172,23 @@ public static class MeshGenerator
             else {
 
                 if( i >= baseDirs.Count ) {
-                    vertices[ i * h ] = baseVertices[ i ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * baseDirs[ baseDirs.Count - 1 ].normalized * horPosCorrection * profileScale );
+                    Vector3 baseNormal = Vector3.Cross( baseDirs[ baseDirs.Count - 1 ].normalized, -Vector3.forward ).normalized;
+                    vertices[ i * h ] = baseVertices[ i ] + ( baseNormal * horPosCorrection ) + ( -Vector3.forward * vertPosCorrection );
                 }
                 else {
-                    vertices[ i * h ] = baseVertices[ i ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * baseDirs[ i ].normalized * horPosCorrection * profileScale );
+                    Vector3 baseNormal = Vector3.Cross( baseDirs[ i ].normalized, -Vector3.forward ).normalized;
+                    vertices[ i * h ] = baseVertices[ i ] + ( baseNormal * horPosCorrection ) + ( -Vector3.forward * vertPosCorrection );
                 }
 
                 if( i == baseVertices.Count - 1 ) {
                     lastProfileVertices.Add( vertices[ i * h ] );
                 }
             }
-            //Debug.DrawLine( vertices[ i * h ], baseVertices[ i ], Color.cyan, 999 ); 
+
             float u = distancesHor[ i ] / textureHorLenght;
             uv[ i * h ] = new Vector2( u, 0 );
 
-            // Il numero di dir orizontali e verticali è minore di 1 rispetto al nomero di vertici che stiamo ciclando, quindi per l'ultimo punto calcolo la normale usando la dire precedente
+            // Il numero di dir orizontali e verticali è minore di 1 rispetto al nomero di vertici che stiamo ciclando, quindi per l'ultimo punto calcolo la normale usando la direzione precedente
             int normalHorIndex = i < baseDirs.Count ? i : ( baseDirs.Count - 1 );
             Vector3 normal = Vector3.Cross( profileDirs[ 0 ], baseDirs[ normalHorIndex ] ).normalized;
             if( !clockwiseRotation ) {
@@ -1180,37 +1196,30 @@ public static class MeshGenerator
             }
             normals[ i * h ] = normal;
 
-            //float beta = Vector3.SignedAngle( Vector3.right, baseDirs[ normalHorIndex ], Vector3.up );
-            //Debug.Log( ">>> beta: " + beta );
-
             for( int j = 0; j < profileDirs.Count; j++ ) {
 
                 if( i == 0 && previousProfileVertices != null && previousProfileVertices.Count == profileVertices.Count ) {
-                    vertices[ j + 1 ] = previousProfileVertices [ j + 1 ];
+                    vertices[ j + 1 ] = previousProfileVertices[ j + 1 ];
+                    verticesStructure[ j + 1 ].Add( vertices[ j + 1 ] );
                 }
                 else {
-                    //Debug.Log( ">>> i: " + i );
-                    //Debug.Log( ">>> j: " + j );
-                    vertices[ ( i * h ) + j + 1 ] = ( vertices[ ( i * h ) + j ] + Quaternion.Euler( 0.0f, /*beta*/0.0f, alpha + verticalRotationCorrection ) * profileDirs[ j ] );
+                    vertices[ ( i * h ) + j + 1 ] = ( vertices[ ( i * h ) + j ] + Quaternion.Euler( 0.0f, 0.0f, alpha + verticalRotationCorrection ) * profileDirs[ j ] );
+                    verticesStructure[ j + 1 ].Add( vertices[ ( i * h ) + j + 1 ] );
 
                     if( i == baseVertices.Count - 1 ) {
                         lastProfileVertices.Add( vertices[ ( i * h ) + j + 1 ] );
                     }
                 }
 
-                //Debug.DrawLine( vertices[ ( i * h ) + j + 1 ], baseVertices[ i ], Color.cyan, 999 ); 
-
                 float v = distancesVert[ j + 1 ] / textureVertLenght;
                 uv[ ( i * h ) + j + 1 ] = new Vector2( u, v );
 
                 int normalVertIndex = ( j + 1 ) < profileDirs.Count ? ( j + 1 ) : ( profileDirs.Count - 1 );
-                normal = Vector3.Cross( Quaternion.Euler( 0.0f, /*beta*/0.0f, alpha + verticalRotationCorrection ) * profileDirs[ normalVertIndex ], baseDirs[ normalHorIndex ] ).normalized;
+                normal = Vector3.Cross( Quaternion.Euler( 0.0f, 0.0f, alpha + verticalRotationCorrection ) * profileDirs[ normalVertIndex ], baseDirs[ normalHorIndex ] ).normalized;
                 if( !clockwiseRotation ) {
                     normal = -normal;
                 }
                 normals[ ( i * h ) + j + 1 ] = normal;
-                
-                //Debug.DrawRay( vertices[ ( i * h ) + j + 1 ], normals[ ( i * h ) + j + 1 ] * 0.5f, Color.red, 9999 );
 
                 if( i > 0 ) {
                     int arrayIndex = ( 6 * ( ( ( i - 1 ) * ( h - 1 ) ) + j ) );
@@ -1233,28 +1242,6 @@ public static class MeshGenerator
             }
         }
 
-        // if( closeMesh ) {
-            
-        //     int trianglesOffset = ( h - 1 ) * ( baseVertices.Count - 1 ) * 6;
-
-        //     for( int k = 0; k < profileDirs.Count - 1; k++ ) {
-                
-        //         triangles[ trianglesOffset + ( k * 6 ) + 0 ] = triangles[ trianglesOffset + ( k * 6 ) + 3 ] = k;
-
-        //         if( !clockwiseRotation ) {
-
-        //             triangles[ trianglesOffset + ( k * 6 ) + 1 ] = triangles[ trianglesOffset + ( k * 6 ) + 5 ] = verticesCounter - profileDirs.Count + k/* + ( h + 1 )*/; 
-        //             triangles[ trianglesOffset + ( k * 6 ) + 2 ] = verticesCounter - profileDirs.Count + k/* + h*/;
-        //             triangles[ trianglesOffset + ( k * 6 ) + 4 ] = k + 1;
-        //         }
-        //         else {
-        //             triangles[ trianglesOffset + ( k * 6 ) + 1 ] = verticesCounter - profileDirs.Count + k/* + h*/;
-        //             triangles[ trianglesOffset + ( k * 6 ) + 2 ] = triangles[ trianglesOffset + ( k * 6 ) + 4 ] = verticesCounter - profileDirs.Count + k/* + ( h + 1 )*/; 
-        //             triangles[ trianglesOffset + ( k * 6 ) + 5 ] = k + 1;
-        //         }
-        //     }
-        // }
-
         mesh.vertices = vertices;
         mesh.triangles = triangles;
         mesh.uv = uv;
@@ -1262,13 +1249,62 @@ public static class MeshGenerator
 
         extrudedMesh.mesh = mesh;
         extrudedMesh.lastProfileVertex = lastProfileVertices;
+        extrudedMesh.verticesStructure = verticesStructure;
 
         return extrudedMesh;
     }
 
+    public static Mesh GeneratePlanarMesh( List<Vector3> closedLine, Vector3 center, bool clockwiseRotation, Vector3 textureDir, float textureHorLenght, float textureVertLenght ) {
+        Mesh planarMesh = new Mesh();
+        
+        List<Vector3> perimeter = new List<Vector3>( closedLine );
+        if( perimeter[ 0 ] != perimeter[ closedLine.Count - 1 ] ) {
+            perimeter.Add( perimeter[ 0 ] );
+        }
+
+        List<Vector3> vertices = new List<Vector3>( perimeter );
+        vertices.Insert( 0, center );
+
+        int[] triangles = new int[ ( vertices.Count - 1 ) * 3 ];
+        Vector2[] uv = new Vector2[ vertices.Count ];
+
+        Vector3 dirU = textureDir.normalized;
+        Debug.DrawRay( center, dirU * 100, Color.red, Mathf.Infinity );
+        Vector3 dirV = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dirU;
+        Debug.DrawRay( center, dirV * 100, Color.blue, Mathf.Infinity );
+        uv[ 0 ] = new Vector2( 0.0f, 0.0f );
+
+        for( int i = 0; i < perimeter.Count; i++ ) {
+
+            // Per mia convenzione closedLine è clockwise
+            if( clockwiseRotation ) {
+                triangles[ i * 3 ] = i + 1;
+                triangles[ ( i * 3 ) + 1 ] = ( i + 2 ) >= perimeter.Count ? 1 : ( i + 2 );
+                triangles[ ( i * 3 ) + 2 ] = 0;
+            }
+            else {
+                triangles[ i * 3 ] = i + 1;
+                triangles[ ( i * 3 ) + 1 ] = 0;
+                triangles[ ( i * 3 ) + 2 ] = ( i + 2 ) >= perimeter.Count ? 1 : ( i + 2 );
+            }
+
+            Vector3 r = ( perimeter[ i ] - center );
+            float dotU = Vector3.Dot( r, dirU );
+            float dotV = Vector3.Dot( r, dirV );
+            uv[ i + 1 ] = new Vector3( dotU / textureHorLenght, dotV / textureVertLenght );
+        }
+
+        planarMesh.vertices = vertices.ToArray();
+        planarMesh.triangles = triangles;
+        planarMesh.uv = uv;
+        planarMesh.RecalculateNormals();
+
+        return planarMesh;
+    }
+
     public static Mesh GeneratePlanarMesh( List<Vector3> line, Vector3[ , ] vertMatrix, bool clockwiseRotation,  bool closeMesh, bool centerTexture, float textureHorLenght, float textureVertLenght )
     {
-        // In questo modo anche se aggiungo un punto alla lista è stata copiata per valore e non per riferimento, quindi la
+        // In questo modo anche se aggiungo un punto alla lista, è stata copiata per valore e non per riferimento, quindi la
         // modifica non ha effetti fuori dal metodo.
         List<Vector3> curve = new List<Vector3>( line );
 

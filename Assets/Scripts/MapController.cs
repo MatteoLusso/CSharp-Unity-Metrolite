@@ -15,7 +15,7 @@ public class MapController : MonoBehaviour
     public GameObject mapTrain;
 
     public float lineWidth = 400.0f;
-    public float lineBackgroundWidth = 800.0f;
+    public float lineBackgroundWidth = 600.0f;
     public float stationSize = 800.0f;
     public float stationBackgroundSize = 1200.0f;
     public float switchSize = 200.0f;
@@ -178,12 +178,12 @@ public class MapController : MonoBehaviour
                 }
 
                 float mapPerc = ( float )( trainIndex - previousTrainIndex ) / ( float )( nextTrainIndex - previousTrainIndex );
-                Debug.Log( "trainIndex: " + trainIndex );
-                Debug.Log( "previousTrainIndex: " + previousTrainIndex );
-                Debug.Log( "nextTrainIndex: " + nextTrainIndex );
-                Debug.Log( "mapPerc: " + mapPerc );
-                Debug.Log( "linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex ].coords: " + linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex ].coords );
-                Debug.Log( "linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex + 1 ].coords: " + linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex + 1 ].coords );
+                // Debug.Log( "trainIndex: " + trainIndex );
+                // Debug.Log( "previousTrainIndex: " + previousTrainIndex );
+                // Debug.Log( "nextTrainIndex: " + nextTrainIndex );
+                // Debug.Log( "mapPerc: " + mapPerc );
+                // Debug.Log( "linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex ].coords: " + linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex ].coords );
+                // Debug.Log( "linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex + 1 ].coords: " + linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex + 1 ].coords );
 
                 Vector3 newPos = linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex ].coords + ( ( linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex + 1 ].coords - linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex ].coords ).normalized * ( linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex + 1 ].coords - linesMap[ train.GetComponent<TrainController>().keyLine ][ mapIndex ].coords ).magnitude * mapPerc );
                 mapTrain.transform.position = newPos;
@@ -233,7 +233,7 @@ public class MapController : MonoBehaviour
                  mapLineObj.transform.Translate( 0.0f, 0.0f, 0.01f );
             }
 
-            Debug.Log( ">>> linename: " + lineName );
+            //Debug.Log( ">>> linename: " + lineName );
 
             for( int i = 0; i < metroData.lines[ lineName ].Count; i++ ) {
 
@@ -324,7 +324,7 @@ public class MapController : MonoBehaviour
                             linesMap.Add( lineName, new List<MapPoint>{  mapPoint } );
                         }
 
-                        Debug.Log( "MapPoint.coords: " + mapPoint.coords );
+                        //Debug.Log( "MapPoint.coords: " + mapPoint.coords );
                     }
                     else if( metroData.lines[ lineName ].IndexOf( metroData.lines[ lineName ][ i ] ) == metroData.lines[ lineName ].Count - 1 ) {
                         mapPoint.coords = metroData.lines[ lineName ][ i ].bezierCurveLimitedAngle[ metroData.lines[ lineName ][ i ].bezierCurveLimitedAngle.Count - 1 ];
@@ -350,7 +350,7 @@ public class MapController : MonoBehaviour
                             linesMap.Add( lineName, new List<MapPoint>{  mapPoint } );
                         }
 
-                        Debug.Log( "MapPoint.coords: " + mapPoint.coords );
+                        //Debug.Log( "MapPoint.coords: " + mapPoint.coords );
                     }
                 }
             }
