@@ -7,7 +7,7 @@ public static class BezierCurveCalculator
 {
     public static List<Vector3> CalculateBezierCurve( List<Vector3> controlsPoints, int curvePointsNumber )
     {
-        List<Vector3> curve = new List<Vector3>();
+        List<Vector3> curve = new();
 
         for(int k = 0; k < curvePointsNumber; k++)
         {
@@ -65,7 +65,7 @@ public static class BezierCurveCalculator
 
     public static List<Vector3> RecalcultateCurveWithFixedLenght( List<Vector3> baseCurve, float fixedCurvePointsNumber )
     {
-        List<Vector3> fixedLenghtCurve = new List<Vector3>();
+        List<Vector3> fixedLenghtCurve = new();
 
         float baseBezierCurveLenght = CalculateCurveLenght( baseCurve );
         float fixedLenght = baseBezierCurveLenght / fixedCurvePointsNumber;
@@ -94,7 +94,7 @@ public static class BezierCurveCalculator
 
     public static List<Vector3> RecalcultateCurveWithLimitedAngle( List<Vector3> baseCurve, float angleLimit, Vector3 startingDir )
     {
-        List<Vector3> limitedAngleCurve = new List<Vector3>();
+        List<Vector3> limitedAngleCurve = new();
         int i;
         limitedAngleCurve.Add( baseCurve[ 0 ] );
         if( startingDir == Vector3.zero ) {
