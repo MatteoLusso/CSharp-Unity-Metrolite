@@ -43,7 +43,7 @@ public class TrainController : MonoBehaviour
     private Rail railSide = Rail.Right;
     private Direction actualMovement = Direction.None;
 
-    private List<Vector3> actualSectionPoints = new List<Vector3>{ Vector3.zero };
+    private List<Vector3> actualSectionPoints = new() { Vector3.zero };
     private Vector3 actualPoint = Vector3.zero;
     private Vector3 actualOrientationPoint = Vector3.zero;
     public int actualSwitchIndex = -1;
@@ -60,6 +60,8 @@ public class TrainController : MonoBehaviour
     private bool inverseSection = false;
     private bool inverseLine = false;
 
+    //private DynamicIcons[] dynamicIconsCmps;
+    private TMP_Text debugText;
 
     public bool showDebugInfo = false;
 
@@ -71,6 +73,8 @@ public class TrainController : MonoBehaviour
             deceleration *= 10;
             drag *= 10;
         }
+
+        //this.dynamicIconsCmps = ( DynamicIcons[] )GameObject.FindObjectsOfType( typeof( DynamicIcons ) );
 
         AudioSource[] audios = this.transform.GetComponents<AudioSource>();
         foreach( AudioSource audio in audios ) {
@@ -86,9 +90,7 @@ public class TrainController : MonoBehaviour
             }
         }
 
-        //FullLineGenerator metroGen = GameObject.Find( "LineGenerator" ).GetComponent<FullLineGenerator>();
         MetroGenerator metroGen = GameObject.Find( "MetroGenerator" ).GetComponent<MetroGenerator>(); 
-        //lines = metroGen.lineMap;
         lines = metroGen.lines;
         heightCorrection = metroGen.trainHeightFromGround;
 
@@ -114,6 +116,10 @@ public class TrainController : MonoBehaviour
         }
         this.transform.position = startPos + ( Vector3.forward * heightCorrection );
         this.transform.right = startDir;
+
+        if( showDebugInfo ) {
+            this.debugText = GameObject.Find( "Debug Text" ).GetComponent<TMP_Text>();
+        }
     }
 
     // Update is called once per frame
@@ -123,7 +129,7 @@ public class TrainController : MonoBehaviour
         HandleMovement();
         HandleBrakingNoise();
         HandleSwitch();
-        HandleSwitchesIndicators();
+        //HandleSwitchesIndicators();
 
         if( showDebugInfo ) {
             ShowDebugInfo();
@@ -131,7 +137,6 @@ public class TrainController : MonoBehaviour
     }
 
     private void ShowDebugInfo() {
-        TMP_Text debugText = GameObject.Find( "Debug Text" ).GetComponent<TMP_Text>();
 
         string switchDir = "-";
         string switchType = "-";
@@ -140,7 +145,7 @@ public class TrainController : MonoBehaviour
             switchType = lines[ keyLine ][ actualSwitchIndex ].switchType.ToString();
         }
 
-        debugText.text = "DEBUG INFO: \n" +
+        this.debugText.text = "DEBUG INFO: \n" +
                          "Line Name: " + keyLine + "\n" +
                          "Section: " + indexSection + "\n" +
                          "Point: " + indexPoint + "\n" +
@@ -161,116 +166,115 @@ public class TrainController : MonoBehaviour
                          "Inverse: " + inverseLine + "\n";
     }
     
-    private void HandleSwitchesIndicators() {
-        string lineName = keyLine;
-        List<LineSection> sections = lines[ lineName ];
+    // private void HandleSwitchesIndicators() {
+    //     string lineName = keyLine;
+    //     List<LineSection> sections = lines[ lineName ];
 
-        DynamicIcons[] dynamicIconsCmps = ( DynamicIcons[] )GameObject.FindObjectsOfType( typeof( DynamicIcons ) );
-        foreach( DynamicIcons dynamicIconsCmp in dynamicIconsCmps )
-        {
-            dynamicIconsCmp.TARGET_MaxVisibleDistance = 0.0f;
-        }
+    //     foreach( DynamicIcons dynamicIconsCmp in this.dynamicIconsCmps )
+    //     {
+    //         dynamicIconsCmp.TARGET_MaxVisibleDistance = 0.0f;
+    //     }
 
-        if( actualSwitchIndex < sections.Count && actualSwitchIndex > -1 && actualSwitchIndex != indexSection ) {
+    //     if( actualSwitchIndex < sections.Count && actualSwitchIndex > -1 && actualSwitchIndex != indexSection ) {
 
-            string iconName = "Wrong_Way";
+    //         string iconName = "Wrong_Way";
 
-            // Costruiamo i nomi delle icone
+    //         // Costruiamo i nomi delle icone
 
-            //Debug.Log( ">>> Icona scambio: " + sections[ actualSwitchIndex ].switchType.ToString() + '_' + sections[ actualSwitchIndex ].activeSwitch.ToString() + '_' + railSide.ToString() );
+    //         //Debug.Log( ">>> Icona scambio: " + sections[ actualSwitchIndex ].switchType.ToString() + '_' + sections[ actualSwitchIndex ].activeSwitch.ToString() + '_' + railSide.ToString() );
             
 
-            if( mainDir == Direction.Forward || ( mainDir == Direction.Backward && inverseLine ) ) {
+    //         if( mainDir == Direction.Forward || ( mainDir == Direction.Backward && inverseLine ) ) {
                 
-                // Distinguo lo scambio selezionato
+    //             // Distinguo lo scambio selezionato
 
-                /*switch( sections[ actualSwitchIndex ].switchType ) { 
+    //             /*switch( sections[ actualSwitchIndex ].switchType ) { 
 
-                    case SwitchType.BiToBi:     switch( railSide ) {
+    //                 case SwitchType.BiToBi:     switch( railSide ) {
 
-                                                    case Side.Right:    switch( sections[ actualSwitchIndex ].activeSwitch ) {
+    //                                                 case Side.Right:    switch( sections[ actualSwitchIndex ].activeSwitch ) {
 
-                                                                            case SwitchDirection.RightToRight:  iconName = "Bi_To_Bi_Right";  
-                                                                                                                break;
-                                                                        } 
+    //                                                                         case SwitchDirection.RightToRight:  iconName = "Bi_To_Bi_Right";  
+    //                                                                                                             break;
+    //                                                                     } 
 
-                                                                        break; 
-                                                }
+    //                                                                     break; 
+    //                                             }
 
-                                                break;
-                }*/
+    //                                             break;
+    //             }*/
 
 
 
-                switch( railSide ) {
+    //             switch( railSide ) {
 
-                    case Rail.Right:   
-                                        if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToRight ) {
-                                            iconName = "Bi_To_Bi_Right";
-                                        }
-                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToLeft ) {
-                                            iconName = "Bi_To_Bi_Right_To_Left";
-                                        }
-                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                            iconName = "Bi_To_Mono_Right_To_Center";
-                                        }
+    //                 case Rail.Right:   
+    //                                     if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToRight ) {
+    //                                         iconName = "Bi_To_Bi_Right";
+    //                                     }
+    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToLeft ) {
+    //                                         iconName = "Bi_To_Bi_Right_To_Left";
+    //                                     }
+    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToCenter ) {
+    //                                         iconName = "Bi_To_Mono_Right_To_Center";
+    //                                     }
 
-                                        break;
+    //                                     break;
 
-                    case Rail.Left:     if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToLeft ) {
-                                            iconName = "Bi_To_Bi_Left";
-                                        }
-                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToRight ) {
-                                            iconName = "Bi_To_Bi_Left_To_Right";
-                                        }
-                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                            iconName = "Bi_To_Mono_Left_To_Center";
-                                        }
+    //                 case Rail.Left:     if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToLeft ) {
+    //                                         iconName = "Bi_To_Bi_Left";
+    //                                     }
+    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToRight ) {
+    //                                         iconName = "Bi_To_Bi_Left_To_Right";
+    //                                     }
+    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToCenter ) {
+    //                                         iconName = "Bi_To_Mono_Left_To_Center";
+    //                                     }
 
-                                        break;
+    //                                     break;
 
-                    case Rail.Center:   if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                            iconName = "Mono_To_Bi_Center_To_Left";
-                                        }
-                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                            iconName = "Mono_To_Bi_Center_To_Right";
-                                        }
-                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToCenter ) {
-                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Right ) {
-                                                iconName = "Center_To_Center_New_Right";
-                                            }
-                                            else if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Left ) {
-                                                iconName = "Center_To_Center_New_Left";
-                                            }
-                                        }
-                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
-                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Right ) {
-                                                iconName = "Center_To_Entrance_Right";
-                                            }
-                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Both ) {
-                                                // TODO
-                                            }
-                                        }
-                                        else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
-                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Left ) {
-                                                iconName = "Center_To_Entrance_Left";
-                                            }
-                                            if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Both ) {
-                                                // TODO
-                                            }
-                                        }
+    //                 case Rail.Center:   if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToCenter ) {
+    //                                         iconName = "Mono_To_Bi_Center_To_Left";
+    //                                     }
+    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToCenter ) {
+    //                                         iconName = "Mono_To_Bi_Center_To_Right";
+    //                                     }
+    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToCenter ) {
+    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Right ) {
+    //                                             iconName = "Center_To_Center_New_Right";
+    //                                         }
+    //                                         else if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Left ) {
+    //                                             iconName = "Center_To_Center_New_Left";
+    //                                         }
+    //                                     }
+    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
+    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Right ) {
+    //                                             iconName = "Center_To_Entrance_Right";
+    //                                         }
+    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Both ) {
+    //                                             // TODO
+    //                                         }
+    //                                     }
+    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
+    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Left ) {
+    //                                             iconName = "Center_To_Entrance_Left";
+    //                                         }
+    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Both ) {
+    //                                             // TODO
+    //                                         }
+    //                                     }
 
-                                        break;
-                }
-            }
+    //                                     break;
+    //             }
+    //         }
 
-            //sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Active = true;
-            sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().TARGET_MaxVisibleDistance = 2500.0f;
-            sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Color = iconName == "Wrong_Way" ? Color.red : Color.green;
-            sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Rotation = iconName == "Wrong_Way" ? false : true;
-            sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Texture2D = Resources.Load( "Indicatori/Texture2D/" + iconName ) as Texture2D;
-        }
-    }
+    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Active = true;
+    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().TARGET_MaxVisibleDistance = 2500.0f;
+    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Color = iconName == "Wrong_Way" ? Color.red : Color.green;
+    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Rotation = iconName == "Wrong_Way" ? false : true;
+    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Texture2D = Resources.Load( "Indicatori/Texture2D/" + iconName ) as Texture2D;
+    //     }
+    // }
 
     private void HandleSwitch() {
 
@@ -606,7 +610,7 @@ public class TrainController : MonoBehaviour
     }
 
     public static void UpdateSwitchLight( LineSection switchSection ) { 
-        Dictionary<string, List<Light>> updateLast = new Dictionary<string, List<Light>>();
+        Dictionary<string, List<Light>> updateLast = new();
         foreach( SwitchDirection activeSwitch in switchSection.switchLights.Keys ) {
             List<GameObject> lights = switchSection.switchLights[ activeSwitch ];
             foreach( GameObject light in lights ) {
@@ -685,10 +689,10 @@ public class TrainController : MonoBehaviour
             goBackwardActive = false;
         }
 
-        if( Input.GetKey( KeyCode.D ) || Input.GetAxis( "RT" ) > ( deadZoneTriggerRight ) ) {
+        if( Input.GetKey( KeyCode.D ) || Input.GetAxis( "RT" ) > deadZoneTriggerRight ) {
 
             float rightTriggerPression = 1.0f;
-            if( Input.GetAxis( "RT" ) > ( deadZoneTriggerRight ) ) {
+            if( Input.GetAxis( "RT" ) > deadZoneTriggerRight ) {
                 rightTriggerPression = Input.GetAxis( "RT" );
             }
 
@@ -706,10 +710,10 @@ public class TrainController : MonoBehaviour
                 speed = maxSpeed;
             }
         }
-        if( Input.GetKey( KeyCode.A ) || Input.GetAxis( "LT" ) > ( deadZoneTriggerLeft ) ) {
+        if( Input.GetKey( KeyCode.A ) || Input.GetAxis( "LT" ) > deadZoneTriggerLeft ) {
 
             float leftTriggerPression = 1.0f;
-            if( Input.GetAxis( "LT" ) > ( deadZoneTriggerLeft ) ) {
+            if( Input.GetAxis( "LT" ) > deadZoneTriggerLeft ) {
                 leftTriggerPression = Input.GetAxis( "LT" );
             }
 
@@ -738,26 +742,26 @@ public class TrainController : MonoBehaviour
             speed = 0.0f;
         }
 
-        noise.pitch = ( Mathf.Abs( speed ) / maxSpeed ) * Time.timeScale;
+        noise.pitch = Mathf.Abs( speed ) / maxSpeed * Time.timeScale;
         noise.volume = Time.timeScale;
     }
 
     private void HandleBrakingNoise() {
 
-        if( ( ( Input.GetKey( KeyCode.D ) || Input.GetAxis( "RT" ) > ( deadZoneTriggerRight ) ) && mainDir == Direction.Backward ) || ( ( Input.GetKey( KeyCode.A ) || Input.GetAxis( "LT" ) > ( deadZoneTriggerLeft ) ) && mainDir == Direction.Forward ) ) { 
+        if( ( ( Input.GetKey( KeyCode.D ) || Input.GetAxis( "RT" ) > deadZoneTriggerRight ) && mainDir == Direction.Backward ) || ( ( Input.GetKey( KeyCode.A ) || Input.GetAxis( "LT" ) > deadZoneTriggerLeft ) && mainDir == Direction.Forward ) ) { 
 
             ////Debug.Log( "Braking" );
             if( !braking.isPlaying ) {
-                braking.volume = ( Mathf.Abs( speed ) / maxSpeed ) * Time.timeScale;
+                braking.volume = Mathf.Abs( speed ) / maxSpeed * Time.timeScale;
                 braking.time = 0.0f;
                 braking.Play();
             }
             else {
-                braking.volume = ( Mathf.Lerp( 0.0f, 1.0f, ( Mathf.Abs( speed ) / maxSpeed ) ) ) * Time.timeScale;
+                braking.volume = Mathf.Lerp( 0.0f, 1.0f, ( Mathf.Abs( speed ) / maxSpeed ) ) * Time.timeScale;
             }
         }
         else{
-            braking.volume = ( Mathf.Lerp( braking.volume, 0.0f, brakingNoiseDecreasingSpeed * Time.deltaTime ) ) * Time.timeScale;
+            braking.volume = Mathf.Lerp( braking.volume, 0.0f, brakingNoiseDecreasingSpeed * Time.deltaTime ) * Time.timeScale;
 
             if( braking.isPlaying && braking.volume <= 0.0f ) {
                 ////Debug.Log( "Stop Braking" );
@@ -942,7 +946,7 @@ public class TrainController : MonoBehaviour
                                         indexDiff = j + indexDiff - ( points.Count - 1 );
 
                                         LineSection nextSection = sections[ i + 1 ];
-                                        List<Vector3> navigationPoints = new List<Vector3>();
+                                        List<Vector3> navigationPoints = new();
 
                                         //if( sections[ i + 1 ].type == Type.Tunnel ) {
                                             if( sections[ i + 1 ].bidirectional ) {
@@ -1305,7 +1309,7 @@ public class TrainController : MonoBehaviour
                                         //indexDiff = ( sections[ i - 1 ].bezierCurveLimitedAngle.Count - 1 ) + ( j - indexDiff );
 
                                         LineSection previousSection = sections[ i - 1 ];
-                                        List<Vector3> navigationPoints = new List<Vector3>();
+                                        List<Vector3> navigationPoints = new();
 
                                         if( sections[ i - 1 ].type == Type.Tunnel ) {
                                             if( sections[ i - 1 ].bidirectional ) {
@@ -2489,39 +2493,39 @@ public class TrainController : MonoBehaviour
         }
     }
 
-    private void OnDrawGizmos()
-    {
-        Gizmos.color = Color.red;
-        LineSection segment = lines[ keyLine ][ indexSection];
-        if( segment.type == Type.Switch ) {
+    // private void OnDrawGizmos()
+    // {
+    //     Gizmos.color = Color.red;
+    //     LineSection segment = lines[ keyLine ][ indexSection];
+    //     if( segment.type == Type.Switch ) {
             
-            if( segment.switchType == SwitchType.MonoToNewMono ) {
+    //         if( segment.switchType == SwitchType.MonoToNewMono ) {
 
-                if( segment.activeSwitch == SwitchDirection.CenterToEntranceRight) {
-                    Gizmos.DrawWireSphere( segment.floorPoints.centerEntranceRight[ 0 ], 10 );
-                }
-                else if( segment.activeSwitch == SwitchDirection.CenterToExitRight) {
-                    Gizmos.DrawWireSphere( segment.floorPoints.centerExitRight[ 0 ], 10 );
-                }
-                else if( segment.activeSwitch == SwitchDirection.CenterToEntranceLeft) {
-                    Gizmos.DrawWireSphere( segment.floorPoints.centerEntranceLeft[ 0 ], 10 );
-                }
-                else if( segment.activeSwitch == SwitchDirection.CenterToExitLeft) {
-                    Gizmos.DrawWireSphere( segment.floorPoints.centerExitLeft[ 0 ], 10 );
-                }
-            }
-        }
+    //             if( segment.activeSwitch == SwitchDirection.CenterToEntranceRight) {
+    //                 Gizmos.DrawWireSphere( segment.floorPoints.centerEntranceRight[ 0 ], 10 );
+    //             }
+    //             else if( segment.activeSwitch == SwitchDirection.CenterToExitRight) {
+    //                 Gizmos.DrawWireSphere( segment.floorPoints.centerExitRight[ 0 ], 10 );
+    //             }
+    //             else if( segment.activeSwitch == SwitchDirection.CenterToEntranceLeft) {
+    //                 Gizmos.DrawWireSphere( segment.floorPoints.centerEntranceLeft[ 0 ], 10 );
+    //             }
+    //             else if( segment.activeSwitch == SwitchDirection.CenterToExitLeft) {
+    //                 Gizmos.DrawWireSphere( segment.floorPoints.centerExitLeft[ 0 ], 10 );
+    //             }
+    //         }
+    //     }
 
-        if( actualSectionPoints != null ) {
-            for( int i = 1; i < actualSectionPoints.Count; i++ ) {
-                Gizmos.color = Color.yellow;
-                Gizmos.DrawSphere( actualSectionPoints[ i ], 0.5f );
-            }
+    //     if( actualSectionPoints != null ) {
+    //         for( int i = 1; i < actualSectionPoints.Count; i++ ) {
+    //             Gizmos.color = Color.yellow;
+    //             Gizmos.DrawSphere( actualSectionPoints[ i ], 0.5f );
+    //         }
 
-            Gizmos.color = Color.green;
-            Gizmos.DrawSphere( actualPoint, 1.0f );
-            Gizmos.color = Color.red;
-            Gizmos.DrawSphere( actualOrientationPoint, 0.75f );
-        }
-    }
+    //         Gizmos.color = Color.green;
+    //         Gizmos.DrawSphere( actualPoint, 1.0f );
+    //         Gizmos.color = Color.red;
+    //         Gizmos.DrawSphere( actualOrientationPoint, 0.75f );
+    //     }
+    // }
 }

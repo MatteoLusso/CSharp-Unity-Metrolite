@@ -14,7 +14,10 @@ public enum Side{
     Bottom,
 }
 
-
+public enum Orientation {
+    Horizontal,
+    Vertical,
+}
 
 public enum Direction
 {

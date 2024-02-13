@@ -20,7 +20,7 @@ public class RailHighlighter : MonoBehaviour
         lineName = section.lineName;
         index = section.sectionIndex;
 
-        highlightedMaterial = ( Material )Resources.Load( "Materials/Rust Highlighted", typeof( Material ) );
+        highlightedMaterial = ( Material )Resources.Load( "Materials/HighlightedRail", typeof( Material ) );
         originalMaterial = this.GetComponent<Renderer>().material;
     }
 
@@ -36,8 +36,6 @@ public class RailHighlighter : MonoBehaviour
                 ( trainController.previousSwitchLine == lineName && trainController.previousSwitchIndex == index && trainController.previousSwitchDirection == direction ) || 
                 ( trainController.nextSwitchLine == lineName && trainController.nextSwitchIndex == index && trainController.nextSwitchDirection == direction ) ) {
                 
-                this.highlightedMaterial.SetColor( "_EmissionColor", Color.Lerp( Color.black, lightColor, Mathf.PingPong( Time.time, lightWaveSpeed ) ) );
-                this.highlightedMaterial.EnableKeyword( "_EMISSION" );
                 this.GetComponent<Renderer>().material = this.highlightedMaterial; 
             }
             else {

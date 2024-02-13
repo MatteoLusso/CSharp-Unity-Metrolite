@@ -23,11 +23,11 @@ public class MapController : MonoBehaviour
     private MetroGenerator metroData;
     private bool ready = false;
 
-    private Dictionary<int, Vector3> lineStarts = new Dictionary<int, Vector3>();
-    private Dictionary<string, List<MapPoint>> linesMap = new Dictionary<string, List<MapPoint>>();
-    private Dictionary<string, Color> linesColors = new Dictionary<string, Color>();
-    private HashSet<Color> usedLinesColors = new HashSet<Color>();
-    private Dictionary<string, LineRenderer> linesRenders = new Dictionary<string, LineRenderer>();
+    private Dictionary<int, Vector3> lineStarts = new();
+    private Dictionary<string, List<MapPoint>> linesMap = new();
+    private Dictionary<string, Color> linesColors = new();
+    private HashSet<Color> usedLinesColors = new();
+    private Dictionary<string, LineRenderer> linesRenders = new();
 
     private GameObject train;
     //private bool zoomingMap = false;
@@ -72,7 +72,7 @@ public class MapController : MonoBehaviour
 
     private void Start() {
         metroData = GameObject.Find( "MetroGenerator" ).GetComponent<MetroGenerator>();
-        uiMapObj =  GameObject.Find( "UIMap" );
+        uiMapObj =  GameObject.Find( "MapController" );
     }
 
     private void LateUpdate()
@@ -84,7 +84,7 @@ public class MapController : MonoBehaviour
             uiStartingPosition = ui.GetComponent<RectTransform>().position;
 
             train = GameObject.Find( "Train" );
-            mapTrain = GameObject.Find( "MapTrain" );
+            mapTrain = GameObject.Find( "TrainIndicator" );
             this.startingMapTrainColor = mapTrain.GetComponent<Renderer>().material.color;
 
             this.startingMapPosition = this.ui.GetComponent<RectTransform>().position;
@@ -205,23 +205,23 @@ public class MapController : MonoBehaviour
                 start = lineStarts[ metroData.lines[ lineName ][ 0 ].fromSection.GetHashCode() ];
                 mainLine = false;
             }
-            Color lineColor = new Color( Random.Range( 0.0f, 1.0f ), Random.Range( 0.0f, 1.0f ), Random.Range( 0.0f, 1.0f ) );
+            Color lineColor = new( Random.Range( 0.0f, 1.0f ), Random.Range( 0.0f, 1.0f ), Random.Range( 0.0f, 1.0f ) );
             while( usedLinesColors.Contains( lineColor ) ) {
                 lineColor = new Color( Random.Range( 0.0f, 1.0f ), Random.Range( 0.0f, 1.0f ), Random.Range( 0.0f, 1.0f ) );
             }
             usedLinesColors.Add( lineColor );
             linesColors.Add( lineName, lineColor );
 
-            List<Vector3> coords = new List<Vector3>();
+            List<Vector3> coords = new();
 
-            GameObject mapLineObj = new GameObject( "Mappa " + lineName );
+            GameObject mapLineObj = new( "Mappa " + lineName );
             mapLineObj.transform.parent = uiMapObj.transform;
             mapLineObj.AddComponent<LineRenderer>();
             mapLineObj.layer = LayerMask.NameToLayer( "Map" );
             LineRenderer lineRender = mapLineObj.GetComponent<LineRenderer>();
             lineRender.useWorldSpace = false;
 
-            GameObject mapLineBackgroundObj = new GameObject( "Mappa Background" + lineName );
+            GameObject mapLineBackgroundObj = new( "Mappa Background" + lineName );
             mapLineBackgroundObj.transform.Translate( 0.0f, 0.0f, 0.05f );
             mapLineBackgroundObj.transform.parent = uiMapObj.transform;
             mapLineBackgroundObj.AddComponent<LineRenderer>();
@@ -237,7 +237,7 @@ public class MapController : MonoBehaviour
 
             for( int i = 0; i < metroData.lines[ lineName ].Count; i++ ) {
 
-                MapPoint mapPoint = new MapPoint();
+                MapPoint mapPoint = new();
                 mapPoint.index = i;
                 mapPoint.lineName = lineName;
 

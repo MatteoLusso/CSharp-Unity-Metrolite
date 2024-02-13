@@ -84,10 +84,10 @@ public static class MeshGenerator
 
     public class ExtrudedMesh{ 
          
-         public Mesh mesh { get; set; }
-         public List<Vector3> lastProfileVertex { get; set; }
-         public GameObject gameObj { get; set; }
-         public Dictionary<int, List<Vector3>> verticesStructure { get; set; }
+        public Mesh mesh { get; set; }
+        public List<Vector3> lastProfileVertex { get; set; }
+        public GameObject gameObj { get; set; }
+        public Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure { get; set; }
     }
 
     public class Wall {
@@ -125,7 +125,7 @@ public static class MeshGenerator
         y /= verticesNumber;
         z /= verticesNumber;
 
-        Vector3 centerPoint = new Vector3( x, y, z );
+        Vector3 centerPoint = new( x, y, z );
 
         return centerPoint;
     }
@@ -162,17 +162,17 @@ public static class MeshGenerator
 
     public static Mesh GenerateSwitchNewBiGround( NewLineSide side, List<Vector3> points0, List<Vector3> points1, int start0, int end0, List<Vector3> points2, int minIndex1, int maxIndex1, Vector3 switchDir, bool clockwiseRotation, Vector2 textureTilting, float tunnelWidth, float centerWidth ) {
         
-        Mesh groundMesh = new Mesh();
+        Mesh groundMesh = new();
 
-        List<Vector3> vertices = new List<Vector3>();
-        List<int> triangles = new List<int>();
-        List<Vector2> uv = new List<Vector2>();
-        List<Vector3> normals = new List<Vector3>();
+        List<Vector3> vertices = new();
+        List<int> triangles = new();
+        List<Vector2> uv = new();
+        List<Vector3> normals = new();
 
         int verticesCounter = 0;
         float u, v;
 
-        List<Vector3> groundLimitPoints0 = new List<Vector3>();
+        List<Vector3> groundLimitPoints0 = new();
         groundLimitPoints0.Add( points0[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) );
 
         for( int i = 0; i <= start0; i++ ) {
@@ -209,12 +209,8 @@ public static class MeshGenerator
             u = MeshGenerator.CalculateDistanceFromPointToLine( groundLimitPoints0[ i ], groundLimitPoints0[ 0 ], Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir.normalized ) / textureTilting.x;
             v = MeshGenerator.CalculateDistanceFromPointToLine( groundLimitPoints0[ i ], groundLimitPoints0[ 0 ], switchDir.normalized ) / textureTilting.y;
             uv.Add( new Vector2( u, v ) );
-            //Debug.Log( ">>> ( u, v ): ( " + u + ", " + v + " )" );
-
-            //Debug.DrawLine( groundLimitPoints0[ i ], groundLimitPoints0[ i + 1 ], Color.magenta, Mathf.Infinity );
-            //Debug.DrawLine( groundLimitPoints0[ i ], groundLimitPoints0[ groundLimitPoints0.Count - 1 ], Color.magenta, Mathf.Infinity );
         }
-        //Debug.DrawLine( groundLimitPoints0[ groundLimitPoints0.Count - 1 ], groundLimitPoints0[ 0 ], Color.magenta, Mathf.Infinity );
+        
         normals.Add( -Vector3.forward );
         u = MeshGenerator.CalculateDistanceFromPointToLine( groundLimitPoints0[ groundLimitPoints0.Count - 1 ], groundLimitPoints0[ 0 ], Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir.normalized ) / textureTilting.x;
         v = MeshGenerator.CalculateDistanceFromPointToLine( groundLimitPoints0[ groundLimitPoints0.Count - 1 ], groundLimitPoints0[ 0 ], switchDir.normalized ) / textureTilting.y;
@@ -224,8 +220,8 @@ public static class MeshGenerator
 
         /////////////////////
 
-        List<Vector3> up1 = new List<Vector3>();
-        List<Vector3> down1 = new List<Vector3>();
+        List<Vector3> up1 = new();
+        List<Vector3> down1 = new();
 
         for( int i = start0; i < points0.Count - end0; i++ ) {
             up1.Add( points0[ i ] );
@@ -270,10 +266,6 @@ public static class MeshGenerator
             u = MeshGenerator.CalculateDistanceFromPointToLine( up1[ i ], groundLimitPoints0[ 0 ], Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir.normalized ) / textureTilting.x;
             v = MeshGenerator.CalculateDistanceFromPointToLine( up1[ i ], groundLimitPoints0[ 0 ], switchDir.normalized ) / textureTilting.y;
             uv.Add( new Vector2( u, v ) );
-
-            // Debug.DrawLine( up1[ i ], up1[ i + 1 ], Color.red, Mathf.Infinity );
-            // Debug.DrawLine( down1[ i ], down1[ i + 1 ], Color.red, Mathf.Infinity );
-            // Debug.DrawLine( down1[ i ], up1[ i + 1 ], Color.red, Mathf.Infinity );
         }
 
         vertices.Add( down1[ down1.Count - 1 ] );
@@ -294,7 +286,7 @@ public static class MeshGenerator
 
         /////////////////////
 
-        List<Vector3> groundLimitPoints2 = new List<Vector3>();
+        List<Vector3> groundLimitPoints2 = new();
 
         for( int i = 0; i <= end0; i++ ) {
             groundLimitPoints2.Add( points1[ i ] );
@@ -329,11 +321,7 @@ public static class MeshGenerator
             u = MeshGenerator.CalculateDistanceFromPointToLine( groundLimitPoints2[ i ], groundLimitPoints0[ 0 ], Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir.normalized ) / textureTilting.x;
             v = MeshGenerator.CalculateDistanceFromPointToLine( groundLimitPoints2[ i ], groundLimitPoints0[ 0 ], switchDir.normalized ) / textureTilting.y;
             uv.Add( new Vector2( u, v ) );
-
-            //Debug.DrawLine( groundLimitPoints2[ i ], groundLimitPoints2[ i + 1 ], Color.magenta, Mathf.Infinity );
-            //Debug.DrawLine( groundLimitPoints2[ i ], groundLimitPoints2[ groundLimitPoints2.Count - 1 ], Color.magenta, Mathf.Infinity );
         }
-        //Debug.DrawLine( groundLimitPoints2[ groundLimitPoints2.Count - 1 ], groundLimitPoints2[ 0 ], Color.magenta, Mathf.Infinity );
 
         normals.Add( -Vector3.forward );
 
@@ -345,8 +333,8 @@ public static class MeshGenerator
 
         /////////////////////
 
-        List<Vector3> up3 = new List<Vector3>();
-        List<Vector3> down3 = new List<Vector3>();
+        List<Vector3> up3 = new();
+        List<Vector3> down3 = new();
 
         for( int i = end0; i < points1.Count - start0; i++ ) {
             up3.Add( points1[ i ] );
@@ -391,10 +379,6 @@ public static class MeshGenerator
             u = MeshGenerator.CalculateDistanceFromPointToLine( up3[ i ], groundLimitPoints0[ 0 ], Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir.normalized ) / textureTilting.x;
             v = MeshGenerator.CalculateDistanceFromPointToLine( up3[ i ], groundLimitPoints0[ 0 ], switchDir.normalized ) / textureTilting.y;
             uv.Add( new Vector2( u, v ) );
-
-            //Debug.DrawLine( up3[ i ], up3[ i + 1 ], Color.red, Mathf.Infinity );
-            //Debug.DrawLine( down3[ i ], down3[ i + 1 ], Color.red, Mathf.Infinity );
-            //Debug.DrawLine( down3[ i ], up3[ i + 1 ], Color.red, Mathf.Infinity );
         }
 
         vertices.Add( down3[ down3.Count - 1 ] );
@@ -415,7 +399,7 @@ public static class MeshGenerator
 
         /////////////////////
 
-        List<Vector3> groundLimitPoints4 = new List<Vector3>();
+        List<Vector3> groundLimitPoints4 = new();
 
         groundLimitPoints4.Add( points2[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 )  ) * switchDir.normalized * tunnelWidth ) );
         groundLimitPoints4.Add( points2[ 0 ] );
@@ -450,11 +434,7 @@ public static class MeshGenerator
             u = MeshGenerator.CalculateDistanceFromPointToLine( groundLimitPoints4[ i ], groundLimitPoints0[ 0 ], Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir.normalized ) / textureTilting.x;
             v = MeshGenerator.CalculateDistanceFromPointToLine( groundLimitPoints4[ i ], groundLimitPoints0[ 0 ], switchDir.normalized ) / textureTilting.y;
             uv.Add( new Vector2( u, v ) );
-
-            //Debug.DrawLine( groundLimitPoints4[ i ], groundLimitPoints4[ i + 1 ], Color.magenta, Mathf.Infinity );
-            //Debug.DrawLine( groundLimitPoints4[ i ], groundLimitPoints4[ groundLimitPoints4.Count - 1 ], Color.magenta, Mathf.Infinity );
         }
-        //Debug.DrawLine( groundLimitPoints4[ groundLimitPoints4.Count - 1 ], groundLimitPoints4[ 0 ], Color.magenta, Mathf.Infinity );
 
         normals.Add( -Vector3.forward );
 
@@ -466,8 +446,8 @@ public static class MeshGenerator
 
         /////////////////////
 
-        List<Vector3> up5 = new List<Vector3>();
-        List<Vector3> down5 = new List<Vector3>();
+        List<Vector3> up5 = new();
+        List<Vector3> down5 = new();
 
         up5.Add( groundLimitPoints0[ groundLimitPoints0.Count - 3 ] );
         up5.Add( groundLimitPoints4[ 2 ] );
@@ -509,10 +489,6 @@ public static class MeshGenerator
             u = CalculateDistanceFromPointToLine( up5[ i ], groundLimitPoints0[ 0 ], Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * switchDir.normalized ) / textureTilting.x;
             v = CalculateDistanceFromPointToLine( up5[ i ], groundLimitPoints0[ 0 ], switchDir.normalized ) / textureTilting.y;
             uv.Add( new Vector2( u, v ) );
-
-            //Debug.DrawLine( up5[ i ], up5[ i + 1 ], Color.red, Mathf.Infinity );
-            //Debug.DrawLine( down5[ i ], down5[ i + 1 ], Color.red, Mathf.Infinity );
-            //Debug.DrawLine( down5[ i ], up5[ i + 1 ], Color.red, Mathf.Infinity );
         }
 
         vertices.Add( down5[ down5.Count - 1 ] );
@@ -550,99 +526,67 @@ public static class MeshGenerator
         return distance;
     }
 
-    public static Floor CalculateBidirectionalWithBothSidesPlatformFloorMeshVertex( LineSection section, float centerWidth, float sideWidth, float railsWidth/*, bool floorParabolic,*/ )
+    public static Floor CalculateBidirectionalWithBothSidesPlatformFloorMeshVertex( LineSection section, float centerWidth, float sideWidth, float railsWidth )
     {
         List<Vector3> curve = section.bezierCurveLimitedAngle;
         List<Vector3> controlPoints = section.controlsPoints;
 
-        List<Vector3> railLeftR = new List<Vector3>();
-        List<Vector3> railLeftL = new List<Vector3>();
-        List<Vector3> railRightR = new List<Vector3>();
-        List<Vector3> railRightL = new List<Vector3>();
+        List<Vector3> railLeftR = new();
+        List<Vector3> railLeftL = new();
+        List<Vector3> railRightR = new();
+        List<Vector3> railRightL = new();
         
-        List<Vector3> leftR = new List<Vector3>();
-        List<Vector3> leftLine = new List<Vector3>();
-        List<Vector3> leftL = new List<Vector3>();
+        List<Vector3> leftLine = new();
+        List<Vector3> leftL = new();
 
-        List<Vector3> centerR = new List<Vector3>();
-        List<Vector3> centerL = new List<Vector3>();
+        List<Vector3> centerR = new();
+        List<Vector3> centerL = new();
 
-        List<Vector3> rightR = new List<Vector3>();
-        List<Vector3> rightLine = new List<Vector3>();
-        List<Vector3> rightL = new List<Vector3>();
-
-        /*float zHeightPrev = 0.0f;
-        float zHeightNext = 0.0f;
-
-        if( floorParabolic )
-        {
-            zHeightPrev = curve[ 0 ].z;
-            zHeightNext = curve[ 1 ].z;
-        }*/
+        List<Vector3> rightR = new();
+        List<Vector3> rightLine = new();
 
         Vector3 dir;
 
         for( int i = 0; i < curve.Count; i++ )
         {
-            /*if( floorParabolic )
-            {
-                zHeightPrev = curve[ i - 1 ].z;
-                zHeightNext = curve[ i + 1 ].z;
-            }*/
-
             if( i == 0 ) { 
-               dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, 0.0f/*zHeightNext*/ ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f/*zHeightPrev*/ ) ).normalized;
+               dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, 0.0f ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f ) ).normalized;
             }
             else {
-                dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i ].x, curve[ i ].y, 0.0f/*zHeightPrev*/ ) - new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, 0.0f/*zHeightNext*/ ) ).normalized;
+                dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i ].x, curve[ i ].y, 0.0f ) - new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, 0.0f ) ).normalized;
             }
 
             leftL.Add( curve[ i ] + ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
-            //Debug.DrawRay( leftL[ i ], -Vector3.forward * 10, Color.yellow, 999 );
             leftLine.Add( curve[ i ] + ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
             
             centerL.Add( curve[ i ] + ( dir * ( centerWidth / 2 ) ) );
-            //Debug.DrawRay( centerL[ i ], -Vector3.forward * 10, Color.blue, 999 );
             centerR.Add( curve[ i ] - ( dir * ( centerWidth / 2 ) ) );
-            //Debug.DrawRay( centerR[ i ], -Vector3.forward * 10, Color.yellow, 999 );
 
             rightLine.Add( curve[ i ] - ( dir * ( ( centerWidth / 2 ) + ( sideWidth / 2 ) ) ) );
             rightR.Add( curve[ i ] - ( dir * ( ( centerWidth / 2 ) + sideWidth ) ) );
-            //Debug.DrawRay( rightR[ i ], -Vector3.forward * 10, Color.blue, 999 );
 
             railLeftL.Add( leftLine[ i ] + ( dir * ( railsWidth / 2 ) ) );
-            //Debug.DrawRay( railLeftL[ i ], -Vector3.forward * 10, Color.red, 999 );
             railLeftR.Add( leftLine[ i ] - ( dir * ( railsWidth / 2 ) ) );
-            //Debug.DrawRay( railLeftR[ i ], -Vector3.forward * 10, Color.green, 999 );
             railRightL.Add( rightLine[ i ] + ( dir * ( railsWidth / 2 ) ) );
-            //Debug.DrawRay( railRightL[ i ], -Vector3.forward * 10, Color.red, 999 );
             railRightR.Add( rightLine[ i ] - ( dir * ( railsWidth / 2 ) ) );
-            //Debug.DrawRay( railRightR[ i ], -Vector3.forward * 10, Color.green, 999 );
         }
 
-        /*if( floorParabolic )
-        {
-            zHeightPrev = curve[ curve.Count - 2 ].z;
-            zHeightNext = curve[ curve.Count - 1 ].z;
-        }*/
+        Floor singleFloor = new() { leftL = leftL,
+                                    leftLine = leftLine,
+                                    leftR = centerL,
 
-        Floor singleFloor = new Floor();
-        singleFloor.leftL = leftL;
-        singleFloor.leftLine = leftLine;
-        singleFloor.leftR = centerL;
+                                    centerL = centerL,
+                                    centerLine = curve,
+                                    centerR = centerR,
 
-        singleFloor.centerL = centerL;
-        singleFloor.centerLine = curve;
-        singleFloor.centerR = centerR;
+                                    rightL = centerR,
+                                    rightLine = rightLine,
+                                    rightR = rightR,
 
-        singleFloor.rightL = centerR;
-        singleFloor.rightLine = rightLine;
-        singleFloor.rightR = rightR;
-
-        singleFloor.railLeftL = railLeftL;
-        singleFloor.railLeftR = railLeftR;
-        singleFloor.railRightL = railRightL;
-        singleFloor.railRightR = railRightR;
+                                    railLeftL = railLeftL,
+                                    railLeftR = railLeftR,
+                                    railRightL = railRightL,
+                                    railRightR = railRightR };
 
         return singleFloor;
     }
@@ -651,16 +595,13 @@ public static class MeshGenerator
     {
         List<Vector3> curve = section.bezierCurveLimitedAngle;
         
-        List<Vector3> leftR = new List<Vector3>();
-        List<Vector3> leftLine = new List<Vector3>();
-        List<Vector3> leftL = new List<Vector3>();
+        List<Vector3> leftR = new();
+        List<Vector3> leftLine = new();
+        List<Vector3> leftL = new();
 
-        List<Vector3> centerR = new List<Vector3>();
-        List<Vector3> centerL = new List<Vector3>();
-
-        List<Vector3> rightR = new List<Vector3>();
-        List<Vector3> rightLine = new List<Vector3>();
-        List<Vector3> rightL = new List<Vector3>();
+        List<Vector3> rightR = new();
+        List<Vector3> rightLine = new();
+        List<Vector3> rightL = new();
 
 
         Vector3 dir = ( new Vector3( curve[ 1 ].x, curve[ 1 ].y, 0.0f ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f ) ).normalized;
@@ -678,14 +619,6 @@ public static class MeshGenerator
         lb1 = lb0 + ( dir * ( stationExtensionLenght / 2 ) );
         lb2 = lb1 + ( orthogonalDir * ( stationExtensionHeight / 2 ) );
         lb3 = lb2 + ( dir * ( stationExtensionLenght / 2 ) );
-
-        //Debug.DrawLine( rb0, rb1, Color.red, Mathf.Infinity );
-        //Debug.DrawLine( rb1, rb2, Color.red, Mathf.Infinity );
-        //Debug.DrawLine( rb2, rb3, Color.red, Mathf.Infinity );
-
-        //Debug.DrawLine( lb0, lb1, Color.red, Mathf.Infinity );
-        //Debug.DrawLine( lb1, lb2, Color.red, Mathf.Infinity );
-        //Debug.DrawLine( lb2, lb3, Color.red, Mathf.Infinity );
 
         leftL.Add( lb0 + ( orthogonalDir * ( sideWidth / 2 ) ) );
         leftLine.AddRange( BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ lb0, lb1, lb2, lb3 }, stationExtensionCurvePoints ) );
@@ -726,14 +659,6 @@ public static class MeshGenerator
         rb2Inv = rb1Inv + ( orthogonalDir * ( stationExtensionHeight / 2 ) );
         rb3Inv = rb2Inv + ( dir * ( stationExtensionLenght / 2 ) );
 
-        //Debug.DrawLine( rb0Inv, rb1Inv, Color.red, Mathf.Infinity );
-        //Debug.DrawLine( rb1Inv, rb2Inv, Color.red, Mathf.Infinity );
-        //Debug.DrawLine( rb2Inv, rb3Inv, Color.red, Mathf.Infinity );
-
-        //Debug.DrawLine( lb0Inv, lb1Inv, Color.red, Mathf.Infinity );
-        //Debug.DrawLine( lb1Inv, lb2Inv, Color.red, Mathf.Infinity );
-        //Debug.DrawLine( lb2Inv, lb3Inv, Color.red, Mathf.Infinity );
-
         leftLine.AddRange( BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ lb0Inv, lb1Inv, lb2Inv, lb3Inv }, stationExtensionCurvePoints ) );
         rightLine.AddRange( BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ rb0Inv, rb1Inv, rb2Inv, rb3Inv }, stationExtensionCurvePoints ) );
 
@@ -753,65 +678,37 @@ public static class MeshGenerator
         rightL.Add( rightLine[ ^1 ] + ( orthogonalDir * ( sideWidth / 2 ) ) );
         rightR.Add( rightLine[ ^1 ] - ( orthogonalDir * ( sideWidth / 2 ) ) );
 
-        /*for( int j = 0; j < ( 2 * stationExtensionCurvePoints ); j++ ) {
-            Debug.DrawLine( rightL[ j - 1 ], rightL[ j ], Color.cyan, Mathf.Infinity );
-            Debug.DrawLine( rightR[ j - 1 ], rightR[ j ], Color.cyan, Mathf.Infinity );
+        Floor singleFloor = new() { leftL = leftL,
+                                    leftLine = leftLine,
+                                    leftR = leftR,
 
-            Debug.DrawLine( leftL[ j - 1 ], leftL[ j ], Color.green, Mathf.Infinity );
-            Debug.DrawLine( leftR[ j - 1 ], leftR[ j ], Color.green, Mathf.Infinity );
+                                    centerL = leftR,
+                                    centerLine = curve,
+                                    centerR = rightL,
 
-            Debug.DrawLine( leftLine[ j - 1 ], leftLine[ j ], Color.green, Mathf.Infinity );
-            Debug.DrawLine( rightLine[ j - 1 ], rightLine[ j ], Color.cyan, Mathf.Infinity );
-        }*/
-
-        Floor singleFloor = new Floor();
-        singleFloor.leftL = leftL;
-        singleFloor.leftLine = leftLine;
-        singleFloor.leftR = leftR;
-
-        singleFloor.centerL = leftR;
-        singleFloor.centerLine = curve;
-        singleFloor.centerR = rightL;
-
-        singleFloor.rightL = rightL;
-        singleFloor.rightLine = rightLine;
-        singleFloor.rightR = rightR;
+                                    rightL = rightL,
+                                    rightLine = rightLine,
+                                    rightR = rightR };
 
         return singleFloor;
     }
 
-    public static Floor CalculateMonodirectionalFloorMeshVertex( List<Vector3> curve, Vector3? startingDir, float floorWidth, bool floorParabolic, float railsWidth )
+    public static Floor CalculateMonodirectionalFloorMeshVertex( List<Vector3> curve, Vector3? startingDir, float floorWidth, float railsWidth )
     {
 
-        List<Vector3> rightPoints = new List<Vector3>();
-        List<Vector3> leftPoints = new List<Vector3>();
+        List<Vector3> rightPoints = new();
+        List<Vector3> leftPoints = new();
 
-        List<Vector3> railCenterR = new List<Vector3>();
-        List<Vector3> railCenterL = new List<Vector3>();
+        List<Vector3> railCenterR = new();
+        List<Vector3> railCenterL = new();
 
-        float zHeightPrev = 0.0f;
-        float zHeightNext = 0.0f;
-
-        /*if( floorParabolic )
-        {
-            zHeightPrev = curve[ 0 ].z;
-            zHeightNext = curve[ 1 ].z;
-        }*/
-
-        //Vector3 dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3(curve[ 0 ].x, curve[ 0 ].y, zHeightPrev) - new Vector3(curve[ 1 ].x, curve[ 1 ].y, zHeightNext ) ).normalized * tunnelWidth;
         Vector3 dir;
 
         for( int i = 0; i < curve.Count; i++ )
         {
-            /*if( floorParabolic )
-            {
-                zHeightPrev = curve[ i - 1 ].z;
-                zHeightNext = curve[ i + 1 ].z;
-            }*/
-
             if( i == 0 ) {
                 if( startingDir == null ) {
-                    dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 1 ].x, curve[ 1 ].y, zHeightNext ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) ).normalized;
+                    dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 1 ].x, curve[ 1 ].y, 0.0f ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f ) ).normalized;
                 }
                 else {
                     dir = ( Vector3 )startingDir;
@@ -819,37 +716,31 @@ public static class MeshGenerator
                 }
             }
             else {
-                dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i ].x, curve[ i ].y, zHeightNext ) - new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) ).normalized;
+                dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i ].x, curve[ i ].y, 0.0f ) - new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, 0.0f ) ).normalized;
             }
 
             leftPoints.Add( curve[ i ] + ( dir * ( floorWidth / 2 ) )  );
-            //Debug.DrawRay( leftPoints[ i ], -Vector3.forward * 10, Color.yellow, 999 );
             rightPoints.Add(curve[ i ] - ( dir * ( floorWidth / 2 ) )  );
-            //Debug.DrawRay( rightPoints[ i ], -Vector3.forward * 10, Color.blue, 999 );
 
             railCenterL.Add( curve[ i ] + ( dir * ( railsWidth / 2 ) ) );
-            //Debug.DrawRay( railCenterL[ i ], -Vector3.forward * 10, Color.red, 999 );
             railCenterR.Add( curve[ i ] - ( dir * ( railsWidth / 2 ) ) );
-            //Debug.DrawRay( railCenterR[ i ], -Vector3.forward * 10, Color.green, 999 );
         }
 
-        Floor singleFloor = new Floor();
-        singleFloor.centerL = leftPoints;
-        singleFloor.centerLine = curve;
-        singleFloor.centerR = rightPoints;
-        singleFloor.railCenterL = railCenterL;
-        singleFloor.railCenterR = railCenterR;
+        Floor singleFloor = new() { centerL = leftPoints,
+                                    centerLine = curve,
+                                    centerR = rightPoints,
+                                    railCenterL = railCenterL,
+                                    railCenterR = railCenterR };
 
         return singleFloor;
     }
 
     public static SpecularBaseLine CalculateBaseLinesFromCurve( List<Vector3> curve, Vector3? startingDir, float distance, float angle ) {
 
-        SpecularBaseLine lines = new SpecularBaseLine();
-        lines.left = new List<Vector3>();
-        lines.right = new List<Vector3>();
+        SpecularBaseLine lines = new() { left = new List<Vector3>(),
+                                         right = new List<Vector3>() };
 
-        Vector3 curveDir = ( curve[ 1 ] - curve[ 0 ] );
+        Vector3 curveDir = curve[ 1 ] - curve[ 0 ];
         if( startingDir != null ) {
             curveDir = ( Vector3 )startingDir;
         }
@@ -876,35 +767,23 @@ public static class MeshGenerator
 
             lines.left.Add( curve[ i ] + leftDir );
             lines.right.Add( curve[ i ] + rightDir );
-
-            //Debug.DrawRay( lines.left[ i ], lines.left[ i - 1 ] - lines.left[ i ], Color.yellow, 999 );
         }
 
         return lines;
     }
 
-    public static Wall CalculateWallsBaseLines( List<Vector3> curve, List<Vector3> controlPoints, float baseWidth, bool floorParabolic, float sideHeight )
+    public static Wall CalculateWallsBaseLines( List<Vector3> curve, List<Vector3> controlPoints, float baseWidth, float sideHeight )
     {
-        Wall walls = new Wall();
-        walls.leftDown = new List<Vector3>();
-        walls.rightDown = new List<Vector3>();
-
-        float zHeightPrev = 0.0f;
-        float zHeightNext = 0.0f;
-
-        if( floorParabolic )
-        {
-            zHeightPrev = curve[ 0 ].z;
-            zHeightNext = curve[ 1 ].z;
-        }
+        Wall walls = new() { leftDown = new List<Vector3>(),
+                             rightDown = new List<Vector3>() };
 
         float alpha = Mathf.Atan( sideHeight / baseWidth ) * Mathf.Rad2Deg;
         float dirLength = Mathf.Sqrt( Mathf.Pow( sideHeight, 2 ) + Mathf.Pow( baseWidth, 2 ) );
 
         Vector3 curveDir = ( curve[ 1 ] - curve[ 0 ] ).normalized;
-        Vector3 leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * dirLength;
+        Vector3 leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, 0.0f ) ).normalized * dirLength;
         leftDir = Quaternion.AngleAxis( alpha, curveDir ) * leftDir;
-        Vector3 rightDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * dirLength;
+        Vector3 rightDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, 0.0f ) ).normalized * dirLength;
         rightDir = Quaternion.AngleAxis( -alpha, curveDir ) * rightDir;
 
         walls.leftDown.Add( curve[ 0 ] + leftDir );
@@ -912,19 +791,14 @@ public static class MeshGenerator
 
         for( int i = 1; i < curve.Count - 1; i++ )
         {
-            if( floorParabolic )
-            {
-                zHeightPrev = curve[ i - 1 ].z;
-                zHeightNext = curve[ i + 1 ].z;
-            }
 
             curveDir = ( curve[ i ] - curve[ i - 1 ] ).normalized;
 
             //Debug.DrawRay( curve[ 0 ], curveDir * 10, Color.cyan, 999 );
 
-            leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * dirLength;
+            leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, 0.0f ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, 0.0f ) ).normalized * dirLength;
             leftDir = Quaternion.AngleAxis( alpha, curveDir ) * leftDir;
-            rightDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * dirLength;
+            rightDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, 0.0f ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, 0.0f ) ).normalized * dirLength;
             rightDir = Quaternion.AngleAxis( -alpha, curveDir ) * rightDir;
 
             //Debug.DrawRay( curve[ i ], leftDir, Color.green, 999 );
@@ -934,17 +808,11 @@ public static class MeshGenerator
             walls.rightDown.Add( curve[ i ] - rightDir );
         }
 
-        if( floorParabolic )
-        {
-            zHeightPrev = curve[ curve.Count - 2 ].z;
-            zHeightNext = curve[ curve.Count - 1 ].z;
-        }
-
         curveDir = ( curve[ curve.Count - 1 ] - curve[ curve.Count - 2 ] ).normalized;
 
-        leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * dirLength;
+        leftDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, 0.0f ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, 0.0f ) ).normalized * dirLength;
         leftDir = Quaternion.AngleAxis( alpha, curveDir ) * leftDir;
-        rightDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * dirLength;
+        rightDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, 0.0f ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, 0.0f ) ).normalized * dirLength;
         rightDir = Quaternion.AngleAxis( -alpha, curveDir ) * rightDir;
 
         walls.leftDown.Add( curve[ curve.Count - 1 ] + leftDir );
@@ -953,28 +821,18 @@ public static class MeshGenerator
         return walls;
     }
 
-    public static Wall CalculateWallsMeshesVertex( List<Vector3> curve, List<Vector3> controlPoints, float baseWidth, bool floorParabolic, float sideHeight, float wallHeight )
+    public static Wall CalculateWallsMeshesVertex( List<Vector3> curve, List<Vector3> controlPoints, float baseWidth, float sideHeight, float wallHeight )
     {
-        Wall walls = new Wall();
-        walls.leftDown = new List<Vector3>();
-        walls.rightDown = new List<Vector3>();
-        walls.leftUp = new List<Vector3>();
-        walls.rightUp = new List<Vector3>();
-
-        float zHeightPrev = 0.0f;
-        float zHeightNext = 0.0f;
-
-        if( floorParabolic )
-        {
-            zHeightPrev = curve[ 0 ].z;
-            zHeightNext = curve[ 1 ].z;
-        }
+        Wall walls = new() { leftDown = new List<Vector3>(),
+                             rightDown = new List<Vector3>(),
+                             leftUp = new List<Vector3>(),
+                             rightUp = new List<Vector3>() };
 
         float alpha = Mathf.Atan( sideHeight / baseWidth ) * Mathf.Rad2Deg;
         float dirLength = Mathf.Sqrt( Mathf.Pow( sideHeight, 2 ) + Mathf.Pow( baseWidth, 2 ) );
 
-        Vector3 leftDir = Quaternion.Euler( alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * dirLength;
-        Vector3 rightDir = Quaternion.Euler( -alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, zHeightNext ) ).normalized * dirLength;
+        Vector3 leftDir = Quaternion.Euler( alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, 0.0f ) ).normalized * dirLength;
+        Vector3 rightDir = Quaternion.Euler( -alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f ) - new Vector3( controlPoints[ 1 ].x, controlPoints[ 1 ].y, 0.0f ) ).normalized * dirLength;
 
         walls.leftDown.Add( curve[ 0 ] - leftDir );
         walls.leftUp.Add( new Vector3( walls.leftDown[ 0 ].x, walls.leftDown[ 0 ].y, walls.leftDown[ 0 ].z - wallHeight ) );
@@ -983,14 +841,9 @@ public static class MeshGenerator
 
         for( int i = 1; i < curve.Count - 1; i++ )
         {
-            if( floorParabolic )
-            {
-                zHeightPrev = curve[ i - 1 ].z;
-                zHeightNext = curve[ i + 1 ].z;
-            }
 
-            leftDir = Quaternion.Euler( alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * dirLength;
-            rightDir = Quaternion.Euler( -alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, zHeightNext ) ).normalized * dirLength;
+            leftDir = Quaternion.Euler( alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, 0.0f ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, 0.0f ) ).normalized * dirLength;
+            rightDir = Quaternion.Euler( -alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, 0.0f ) - new Vector3( curve[ i + 1 ].x, curve[ i + 1 ].y, 0.0f ) ).normalized * dirLength;
 
             walls.leftDown.Add( curve[ i ] - leftDir );
             walls.leftUp.Add( new Vector3( walls.leftDown[ i ].x, walls.leftDown[ i ].y, walls.leftDown[ i ].z - wallHeight ) );
@@ -998,14 +851,8 @@ public static class MeshGenerator
             walls.rightUp.Add( new Vector3( walls.rightDown[ i ].x, walls.rightDown[ i ].y, walls.rightDown[ i ].z - wallHeight ) );
         }
 
-        if( floorParabolic )
-        {
-            zHeightPrev = curve[ curve.Count - 2 ].z;
-            zHeightNext = curve[ curve.Count - 1 ].z;
-        }
-
-        leftDir = Quaternion.Euler( alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * dirLength;
-        rightDir = Quaternion.Euler( -alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, zHeightPrev ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, zHeightNext ) ).normalized * dirLength;
+        leftDir = Quaternion.Euler( alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, 0.0f ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, 0.0f ) ).normalized * dirLength;
+        rightDir = Quaternion.Euler( -alpha, 0.0f, 90.0f ) * ( new Vector3( curve[ curve.Count - 2 ].x, curve[ curve.Count - 2 ].y, 0.0f ) - new Vector3( curve[ curve.Count - 1 ].x, curve[ curve.Count - 1 ].y, 0.0f ) ).normalized * dirLength;
 
         walls.leftDown.Add( curve[ curve.Count - 1 ] - leftDir );
         walls.leftUp.Add( new Vector3( walls.leftDown[ curve.Count - 1 ].x, walls.leftDown[ curve.Count - 1 ].y, walls.leftDown[ curve.Count - 1 ].z - wallHeight ) );
@@ -1017,18 +864,17 @@ public static class MeshGenerator
 
     public static PlatformSide CalculatePlatformSidesMeshesVertex( List<Vector3> curve, Vector3? startingDir, float floorWidth, bool floorParabolic, float sideHeight, float sideWidth )
     {
-        PlatformSide platformSide = new PlatformSide();
-        platformSide.leftDown = new List<Vector3>();
-        platformSide.rightDown = new List<Vector3>();
-        platformSide.leftUp = new List<Vector3>();
-        platformSide.rightUp = new List<Vector3>();
-        platformSide.leftFloorLeft = new List<Vector3>();
-        platformSide.leftFloorRight = new List<Vector3>();
-        platformSide.rightFloorLeft = new List<Vector3>();
-        platformSide.rightFloorRight = new List<Vector3>();
-
-        float zHeightPrev = 0.0f;
-        float zHeightNext = 0.0f;
+        PlatformSide platformSide = new()
+        {
+            leftDown = new List<Vector3>(),
+            rightDown = new List<Vector3>(),
+            leftUp = new List<Vector3>(),
+            rightUp = new List<Vector3>(),
+            leftFloorLeft = new List<Vector3>(),
+            leftFloorRight = new List<Vector3>(),
+            rightFloorLeft = new List<Vector3>(),
+            rightFloorRight = new List<Vector3>()
+        };
 
         Vector3 dir;
 
@@ -1037,7 +883,7 @@ public static class MeshGenerator
 
             if( i == 0 ) {
                 if( startingDir == null ) {
-                    dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 1 ].x, curve[ 1 ].y, zHeightNext ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, zHeightPrev ) ).normalized;
+                    dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ 1 ].x, curve[ 1 ].y, 0.0f ) - new Vector3( curve[ 0 ].x, curve[ 0 ].y, 0.0f ) ).normalized;
                 }
                 else {
                     dir = ( Vector3 )startingDir;
@@ -1045,7 +891,7 @@ public static class MeshGenerator
                 }
             }
             else {
-                dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i ].x, curve[ i ].y, zHeightNext ) - new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, zHeightPrev ) ).normalized;
+                dir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( curve[ i ].x, curve[ i ].y, 0.0f ) - new Vector3( curve[ i - 1 ].x, curve[ i - 1 ].y, 0.0f ) ).normalized;
             }
 
             platformSide.leftDown.Add( curve[ i ] + ( dir * ( floorWidth / 2 ) ) );
@@ -1064,7 +910,7 @@ public static class MeshGenerator
     }
 
     public static List<Vector3> CalculateCircularShape( float radius, int points, Vector2 centerCoords, float eccentricity ) {
-        List<Vector3> shape = new List<Vector3>();
+        List<Vector3> shape = new();
 
         float fixedAngle = 360.0f / points;
 
@@ -1087,33 +933,42 @@ public static class MeshGenerator
         return shape;
     }
 
-    public static ExtrudedMesh GenerateExtrudedMesh( List<Vector3> profileVertices, float profileScale, List<Vector3> previousProfileVertices, List<Vector3> baseVertices, float horPosCorrection, float vertPosCorrection, bool clockwiseRotation, bool closeMesh, float textureHorLenght, float textureVertLenght, float verticalRotationCorrection, float smoothFactor ) {
+    public static ExtrudedMesh GenerateExtrudedMesh( /*Orientation extrusionOrientation,*/ List<Vector3> profileVertices, float profileScale, List<Vector3> previousProfileVertices, List<Vector3> baseVertices, float horPosCorrection, float vertPosCorrection, bool clockwiseRotation, bool closeMesh, float textureHorLenght, float textureVertLenght, float verticalRotationCorrection, float smoothFactor ) {
         
-        ExtrudedMesh extrudedMesh = new ExtrudedMesh();
-
-        // Mappa livello - vertice (ogni livello è un punto del profilo della mesh)
-        Dictionary<int, List<Vector3>> verticesStructure = new Dictionary<int, List<Vector3>>();
-        verticesStructure[ 0 ] = baseVertices;
-        for( int i = 1; i < profileVertices.Count; i++ ) {
-            verticesStructure.Add( i, new List<Vector3>() ); 
-        }
+        // Vector3 worldUp = extrusionOrientation == Orientation.Horizontal ? -Vector3.forward : Vector3.right;
+        // Vector3 worldRight = extrusionOrientation == Orientation.Horizontal ? Vector3.right : -Vector3.forward;
+        
+        ExtrudedMesh extrudedMesh = new();
 
         if( closeMesh ) {
             baseVertices.Add( baseVertices[ 0 ] );
         }
 
-        List<Vector3> lastProfileVertices = new List<Vector3>();
-        List<Vector3> profileVerticesScaled = new List<Vector3>();
+        // Mappa livello - vertice (ogni livello è un punto del profilo della mesh)
+        Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = new();
+        verticesStructure[ Orientation.Horizontal ] = new Dictionary<int, List<Vector3>>();
+        verticesStructure[ Orientation.Vertical ] = new Dictionary<int, List<Vector3>>();
+
+        verticesStructure[ Orientation.Horizontal ][ 0 ] = baseVertices;
+        for( int i = 1; i < profileVertices.Count; i++ ) {
+            verticesStructure[ Orientation.Horizontal ].Add( i, new List<Vector3>() ); 
+        }
+        for( int i = 0; i < baseVertices.Count; i++ ) {
+            verticesStructure[ Orientation.Vertical ].Add( i, new List<Vector3>{ baseVertices[ i ] } );
+        }
+
+        List<Vector3> lastProfileVertices = new();
+        List<Vector3> profileVerticesScaled = new();
         foreach( Vector3 profileVertex in profileVertices ) {
             profileVerticesScaled.Add( profileVertex * profileScale );
         }
         
-        Mesh mesh = new Mesh();
+        Mesh mesh = new();
         mesh.name = "Procedural Mesh";
 
         int h = profileVerticesScaled.Count;
         int trianglesCounter = ( h - 1 ) * ( baseVertices.Count - 1 ) * 6;
-        int verticesCounter = profileVerticesScaled.Count * ( baseVertices.Count );
+        int verticesCounter = profileVerticesScaled.Count * baseVertices.Count;
 
         int[] triangles = new int[ trianglesCounter ];
         Vector3[] vertices = new Vector3[ verticesCounter ];
@@ -1121,12 +976,10 @@ public static class MeshGenerator
         Vector3[] normals = new Vector3[ verticesCounter ];
 
         // Array di supporto con le distanze dei punti del profilo e della base calcolate rispetto allo zero (serve per gestire l'UV mapping ripetuto)
-        List<float> distancesHor = new List<float>();
-        distancesHor.Add( 0.0f );
-        List<float> distancesVert = new List<float>();
-        distancesVert.Add( 0.0f );
+        List<float> distancesHor = new(){ 0.0f };
+        List<float> distancesVert = new(){ 0.0f };
 
-        List<Vector3> profileDirs = new List<Vector3>();
+        List<Vector3> profileDirs = new();
         for( int i = 1; i < h; i++ ) {
             Vector3 profileDir = profileVerticesScaled[ i ] - profileVerticesScaled[ i - 1 ];
             profileDirs.Add( profileDir );
@@ -1134,7 +987,7 @@ public static class MeshGenerator
             distancesVert.Add( distancesVert[ i - 1 ] + profileDir.magnitude );
         }
 
-        List<Vector3> baseDirs = new List<Vector3>();
+        List<Vector3> baseDirs = new();
         for( int i = 1; i < baseVertices.Count; i++ ) { 
             Vector3 baseDir = baseVertices[ i ] - baseVertices[ i - 1 ];
             baseDirs.Add( baseDir );
@@ -1149,25 +1002,25 @@ public static class MeshGenerator
             float alpha = 0.0f;
             if( ( i == 0 || i == baseVertices.Count - 1 ) && closeMesh ) {
                 // Nel caso di mesh chiusa, l'alpha del primo punto e ultimo punto combaciano
-                alpha = Vector3.SignedAngle( Vector3.right, baseDirs[ 0 ], Vector3.forward ) + ( Vector3.SignedAngle( baseDirs[ 0 ], baseDirs[ baseDirs.Count - 1 ], Vector3.forward ) * smoothFactor );
+                alpha = -Vector3.SignedAngle( Vector3.right, baseDirs[ 0 ], -Vector3.forward ) + ( Vector3.SignedAngle( baseDirs[ 0 ], baseDirs[ baseDirs.Count - 1 ], Vector3.forward ) * smoothFactor );
             }
             else {
                 if( i < baseVertices.Count - 1 ) {
-                    alpha = Vector3.SignedAngle( Vector3.right, baseDirs[ i ], Vector3.forward );
+                    alpha = -Vector3.SignedAngle( Vector3.right, baseDirs[ i ], -Vector3.forward );
 
                     // Correzione alpha per punti successivi al primo e precedenti all'ultimo
                     if( i > 0 ) {
-                        alpha += Vector3.SignedAngle( baseDirs[ i ], baseDirs[ i - 1 ], Vector3.forward ) * smoothFactor;
+                        alpha -= Vector3.SignedAngle( baseDirs[ i ], baseDirs[ i - 1 ], -Vector3.forward ) * smoothFactor;
                     }
                 }
                 else {
                     // L'angolo alpha dell'ultimo punto è calcolato sulla baseDir del punto precedente
-                    alpha = Vector3.SignedAngle( Vector3.right, baseDirs[ baseDirs.Count - 1 ], Vector3.forward );
+                    alpha = -Vector3.SignedAngle( Vector3.right, baseDirs[ baseDirs.Count - 1 ], -Vector3.forward );
                 }
             }
 
             if( i == 0 && previousProfileVertices != null && previousProfileVertices.Count == profileVerticesScaled.Count ) {
-                vertices[ 0 ] = previousProfileVertices [ 0 ];
+                vertices[ 0 ] = previousProfileVertices[ 0 ];
             }
             else {
 
@@ -1200,11 +1053,13 @@ public static class MeshGenerator
 
                 if( i == 0 && previousProfileVertices != null && previousProfileVertices.Count == profileVertices.Count ) {
                     vertices[ j + 1 ] = previousProfileVertices[ j + 1 ];
-                    verticesStructure[ j + 1 ].Add( vertices[ j + 1 ] );
+                    verticesStructure[ Orientation.Horizontal ][ j + 1 ].Add( vertices[ j + 1 ] );
+                    verticesStructure[ Orientation.Vertical ][ i ].Add( vertices[ j + 1 ] );
                 }
                 else {
                     vertices[ ( i * h ) + j + 1 ] = ( vertices[ ( i * h ) + j ] + Quaternion.Euler( 0.0f, 0.0f, alpha + verticalRotationCorrection ) * profileDirs[ j ] );
-                    verticesStructure[ j + 1 ].Add( vertices[ ( i * h ) + j + 1 ] );
+                    verticesStructure[ Orientation.Horizontal ][ j + 1 ].Add( vertices[ ( i * h ) + j + 1 ] );
+                    verticesStructure[ Orientation.Vertical ][ i ].Add( vertices[ ( i * h ) + j + 1 ] );
 
                     if( i == baseVertices.Count - 1 ) {
                         lastProfileVertices.Add( vertices[ ( i * h ) + j + 1 ] );
@@ -1254,15 +1109,15 @@ public static class MeshGenerator
         return extrudedMesh;
     }
 
-    public static Mesh GeneratePlanarMesh( List<Vector3> closedLine, Vector3 center, bool clockwiseRotation, Vector3 textureDir, float textureHorLenght, float textureVertLenght ) {
-        Mesh planarMesh = new Mesh();
+    public static Mesh GeneratePlanarMesh( List<Vector3> closedLine, Vector3 center, bool clockwiseRotation, Vector3 planeNormal, Vector3 textureDir, float textureHorLenght, float textureVertLenght ) {
+        Mesh planarMesh = new();
         
-        List<Vector3> perimeter = new List<Vector3>( closedLine );
+        List<Vector3> perimeter = new( closedLine );
         if( perimeter[ 0 ] != perimeter[ closedLine.Count - 1 ] ) {
             perimeter.Add( perimeter[ 0 ] );
         }
 
-        List<Vector3> vertices = new List<Vector3>( perimeter );
+        List<Vector3> vertices = new( perimeter );
         vertices.Insert( 0, center );
 
         int[] triangles = new int[ ( vertices.Count - 1 ) * 3 ];
@@ -1270,7 +1125,8 @@ public static class MeshGenerator
 
         Vector3 dirU = textureDir.normalized;
         Debug.DrawRay( center, dirU * 100, Color.red, Mathf.Infinity );
-        Vector3 dirV = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dirU;
+        //Vector3 dirV = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dirU;
+        Vector3 dirV = Quaternion.AngleAxis( 90.0f, planeNormal ) * dirU;
         Debug.DrawRay( center, dirV * 100, Color.blue, Mathf.Infinity );
         uv[ 0 ] = new Vector2( 0.0f, 0.0f );
 
@@ -1306,11 +1162,11 @@ public static class MeshGenerator
     {
         // In questo modo anche se aggiungo un punto alla lista, è stata copiata per valore e non per riferimento, quindi la
         // modifica non ha effetti fuori dal metodo.
-        List<Vector3> curve = new List<Vector3>( line );
+        List<Vector3> curve = new( line );
 
         if( closeMesh ) {
-            List<Vector3> up = new List<Vector3>();
-            List<Vector3> down = new List<Vector3>();
+            List<Vector3> up = new();
+            List<Vector3> down = new();
             for( int i = 0; i < curve.Count; i++ ) {
                 up.Add( vertMatrix[ 0, i ] );
                 down.Add( vertMatrix[ 1, i ] );
@@ -1323,7 +1179,7 @@ public static class MeshGenerator
             curve.Add( curve[ 0 ] );
         }
 
-        Mesh floorMesh = new Mesh();
+        Mesh floorMesh = new();
 
         Vector3[] vertices = new Vector3[ curve.Count * 2 ];
         int[] edges = new int[( curve.Count - 1 ) * 6 ];
