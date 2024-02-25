@@ -19,10 +19,29 @@ public enum Orientation {
     Vertical,
 }
 
+public enum Position {
+    Start,
+    End,
+}
+
 public enum Direction
 {
     None,
     Forward,
     Backward,
+}
+
+public enum ArrayType
+{
+    Line,
+    Ray,
+    Segment,
+}
+
+public enum ProceduralMeshType {
+    Wall,
+    Ground,
+    PlatformFloor,
+    PlatformSide,
 }
 

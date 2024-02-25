@@ -35,15 +35,15 @@ public class SwitchPath : ScriptableObject
 
     public LineSection GenerateBiToBiSwitch( List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
 
-        LineSection section = new LineSection();
+        LineSection section = new();
         section.type = Type.Switch;
         section.switchType = SwitchType.BiToBi;
         section.bidirectional = true;
 
-        MeshGenerator.Floor switchFloor = new MeshGenerator.Floor();
+        MeshGenerator.Floor switchFloor = new();
         Vector3 switchDir = startingDir.normalized;
 
-        Dictionary<SwitchDirection, List<GameObject>> switchLights = new Dictionary<SwitchDirection, List<GameObject>>();
+        Dictionary<SwitchDirection, List<GameObject>> switchLights = new();
 
         Vector3 c0 = startingPoint;
         Vector3 r0 = c0 + Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * switchDir * ( ( this.centerWidth / 2 ) + ( this.tunnelWidth / 2 ) ); 
@@ -98,11 +98,11 @@ public class SwitchPath : ScriptableObject
         switchFloor.railSwitchRightLeftL = railRightLeftLine.left;
         switchFloor.railSwitchRightLeftR = railRightLeftLine.right;
 
-        List<Vector3> nextStartingDirections = new List<Vector3>();
+        List<Vector3> nextStartingDirections = new();
         nextStartingDirections.Add( startingDir );
         section.nextStartingDirections = nextStartingDirections;
 
-        List<Vector3> nextStartingPoints = new List<Vector3>();
+        List<Vector3> nextStartingPoints = new();
         nextStartingPoints.Add( c1 );
         section.nextStartingPoints = nextStartingPoints;
 
@@ -121,17 +121,17 @@ public class SwitchPath : ScriptableObject
 
     public LineSection GenerateBiToMonoSwitch( List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
 
-        LineSection section = new LineSection();
+        LineSection section = new();
         section.type = Type.Switch;
         section.switchType = SwitchType.BiToMono;
         section.bidirectional = false;
 
-        MeshGenerator.Floor switchFloor = new MeshGenerator.Floor();
+        MeshGenerator.Floor switchFloor = new();
         Vector3 switchDir = startingDir.normalized;
 
-        Dictionary<SwitchDirection, List<GameObject>> switchLights = new Dictionary<SwitchDirection, List<GameObject>>();
+        Dictionary<SwitchDirection, List<GameObject>> switchLights = new();
         Vector3 c0, r0, l0, cb, rb, lb, c1/*, r1, l1*/;
-        List<Vector3> nextStartingPoints = new List<Vector3>();
+        List<Vector3> nextStartingPoints = new();
         c0 = startingPoint;
         cb = c0 + switchDir * ( this.switchLenght / 2 );
         c1 = c0 + switchDir * this.switchLenght;
@@ -235,7 +235,7 @@ public class SwitchPath : ScriptableObject
             section.nextStartingPoints = nextStartingPoints;
         }*/
 
-        List<Vector3> nextStartingDirections = new List<Vector3>();
+        List<Vector3> nextStartingDirections = new();
         nextStartingDirections.Add( startingDir );
         section.nextStartingDirections = nextStartingDirections;
 
@@ -253,17 +253,17 @@ public class SwitchPath : ScriptableObject
 
     public LineSection GenerateMonoToBiSwitch( List<LineSection> sections, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
 
-        LineSection section = new LineSection();
+        LineSection section = new();
         section.type = Type.Switch;
         section.switchType = SwitchType.MonoToBi;
         section.bidirectional =  true;
 
-        MeshGenerator.Floor switchFloor = new MeshGenerator.Floor();
+        MeshGenerator.Floor switchFloor = new();
         Vector3 switchDir = startingDir.normalized;
 
-         Dictionary<SwitchDirection, List<GameObject>> switchLights = new Dictionary<SwitchDirection, List<GameObject>>();
+         Dictionary<SwitchDirection, List<GameObject>> switchLights = new();
         Vector3 c0, /*r0, l0,*/ cb, rb, lb, c1, r1, l1;
-        List<Vector3> nextStartingPoints = new List<Vector3>();
+        List<Vector3> nextStartingPoints = new();
 
         int variant = Random.Range( 0, 3 );
         //if( variant == 0 ) { // Allineamento centrale
@@ -373,7 +373,7 @@ public class SwitchPath : ScriptableObject
             section.nextStartingPoints = nextStartingPoints;
         }*/
 
-        List<Vector3> nextStartingDirections = new List<Vector3>();
+        List<Vector3> nextStartingDirections = new();
         nextStartingDirections.Add( startingDir );
         section.nextStartingDirections = nextStartingDirections;
 
@@ -496,19 +496,19 @@ public class SwitchPath : ScriptableObject
 
     public LineSection GenerateMonoToNewMonoSwitch( LineSection switchSection, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
 
-        LineSection section = new LineSection();
+        LineSection section = new();
         section.type = Type.Switch;
         section.switchType = SwitchType.MonoToNewMono;
         section.bidirectional =  false;
         section.newBidirectional =  false;
 
-        MeshGenerator.Floor switchFloor = new MeshGenerator.Floor();
+        MeshGenerator.Floor switchFloor = new();
         Vector3 switchDir = startingDir.normalized;
 
-        Dictionary<SwitchDirection, List<GameObject>> switchLights = new Dictionary<SwitchDirection, List<GameObject>>();
+        Dictionary<SwitchDirection, List<GameObject>> switchLights = new();
         Vector3 c0, cb, c1, nr1, nl1;
-        List<Vector3> nextStartingPoints = new List<Vector3>();
-        List<Vector3> nextStartingDirections = new List<Vector3>();
+        List<Vector3> nextStartingPoints = new();
+        List<Vector3> nextStartingDirections = new();
 
         c0 = startingPoint;
         cb = c0 + switchDir * ( this.switchLenght / 2 );
@@ -590,21 +590,21 @@ public class SwitchPath : ScriptableObject
 
     public LineSection GenerateBiToNewBiSwitch( LineSection switchSection, Vector3 startingDir, Vector3 startingPoint, GameObject sectionGameObj ) {
 
-        LineSection section = new LineSection();
+        LineSection section = new();
         section.type = Type.Switch;
         section.switchType = SwitchType.BiToNewBi;
         section.bidirectional =  true;
         section.newBidirectional =  true;
 
-        MeshGenerator.Floor switchFloor = new MeshGenerator.Floor();
+        MeshGenerator.Floor switchFloor = new();
         Vector3 switchDir = startingDir.normalized;
 
-        Dictionary<SwitchDirection, List<GameObject>> switchLights = new Dictionary<SwitchDirection, List<GameObject>>();
+        Dictionary<SwitchDirection, List<GameObject>> switchLights = new();
         Vector3 c0, c1, r0, rb0, nr0, l0, lb0, nl0, r1, rb1, nr1, l1, lb1, nl1;
         float dw = ( this.centerWidth / 2 ) + ( this.tunnelWidth / 2 );
         float dl = ( this.switchLenght - this.tunnelWidth - this.centerWidth ) / 2;
-        List<Vector3> nextStartingPoints = new List<Vector3>();
-        List<Vector3> nextStartingDirections = new List<Vector3>();
+        List<Vector3> nextStartingPoints = new();
+        List<Vector3> nextStartingDirections = new();
 
         c0 = startingPoint;
 
