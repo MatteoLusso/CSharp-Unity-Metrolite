@@ -1,8 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
-
-using DLL_MathExt;
 
 public static class MeshGenerator
 {
@@ -82,7 +80,7 @@ public static class MeshGenerator
 
     }
 
-    public class ExtrudedMesh{ 
+    public class ProceduralMesh{ 
          
         public Mesh mesh { get; set; }
         public List<Vector3> lastProfileVertex { get; set; }
@@ -104,6 +102,484 @@ public static class MeshGenerator
         public List<Vector3> left { get; set; }
         public List<Vector3> right { get; set; }
 
+    }
+
+    public class Edge {
+        public int startingPointIndex;
+        public int endingPointIndex;
+        public Vector3 dir;
+        public Vector3 startingPoint;
+        public Vector3 endingPoint;
+
+        public Edge( Vector3 startingPoint, Vector3 endingPoint, int? startingPointIndex, int? endingPointIndex ) {
+            this.startingPoint = startingPoint;
+            this.endingPoint = endingPoint;
+
+            this.dir = endingPoint - startingPoint;
+
+            if( startingPointIndex != null && endingPointIndex != null ) {
+                this.startingPointIndex = ( int )startingPointIndex;
+                this.endingPointIndex = ( int )endingPointIndex;
+            }
+            
+        }
+    }
+
+    public static List<Vector2> Planarize3DPoints( Vector3 normal, Vector3 right, Vector3 linePoint1, Vector3 lineVec1, Vector3 linePoint2, Vector3 lineVec2 ) {
+
+        float angleToPlane = Vector3.SignedAngle( normal, -Vector3.forward, Vector3.right );
+
+        Quaternion rot = Quaternion.AngleAxis( angleToPlane, right );
+
+        Debug.Log( "rot * lineVec1: " + rot * lineVec1 );
+
+        Vector2 lineVec1_2D = rot * lineVec1;
+        Vector2 lineVec2_2D = rot * lineVec2;
+        Vector2 lineVec3_2D = rot * ( linePoint2 - linePoint1 );
+
+        Vector2 linePoint1_2D = new Vector3( linePoint1.x, linePoint1.y, 0.0f );
+        Vector2 linePoint2_2D = linePoint1_2D + lineVec3_2D;
+
+        return new List<Vector2>(){ linePoint1_2D, lineVec1_2D, linePoint2_2D, lineVec2_2D };
+    }
+
+    // public static bool LineLineIntersect( out Vector3 intersection, Vector3 normal, float maxPlanarFactor, float edgeReduction, Vector3 linePoint1, Vector3 lineVec1, Vector3 linePoint2, Vector3 lineVec2, ArrayType line1Type, ArrayType line2Type ) {
+
+    //     Plane plane = new( normal, linePoint1 );
+
+    //     Vector3 linePoint3 = plane.ClosestPointOnPlane( linePoint1 + lineVec1 );
+    //     Vector3 linePoint4 = plane.ClosestPointOnPlane( linePoint2 + lineVec2 );
+
+    //     // Debug.DrawRay( linePoint3, normal, Color.cyan, Time.deltaTime );
+    //     // Debug.DrawRay( linePoint4, normal, Color.cyan, Time.deltaTime );
+
+    //     linePoint1 = plane.ClosestPointOnPlane( linePoint1 );
+    //     linePoint2 = plane.ClosestPointOnPlane( linePoint2 );
+
+    //     // Debug.DrawRay( linePoint1, normal, Color.red, Time.deltaTime );
+    //     // Debug.DrawRay( linePoint2, normal, Color.red, Time.deltaTime );
+
+    //     lineVec1 = linePoint3 - linePoint1;
+    //     lineVec2 = linePoint4 - linePoint2;
+
+    //     // Debug.DrawRay( linePoint1, lineVec1, Color.blue, Time.deltaTime );
+    //     // Debug.DrawRay( linePoint2, lineVec2, Color.blue, Time.deltaTime );
+
+    //     Vector3 lineVec3 = linePoint2 - linePoint1;
+
+    //     Vector3 crossVec1and2 = Vector3.Cross( lineVec1, lineVec2 );
+    //     Vector3 crossVec3and2 = Vector3.Cross( lineVec3, lineVec2 );
+
+    //     float signedAngleVec1and2 = Vector3.SignedAngle( lineVec1, lineVec2, normal );
+
+    //     float planarFactor = Vector3.Dot( lineVec3, crossVec1and2 );
+
+    //     Debug.Log( "planarFactor: " + Mathf.Abs( planarFactor ) + " < " + maxPlanarFactor + "? " + ( Mathf.Abs( planarFactor ) < maxPlanarFactor ) );
+    //     Debug.Log( "crossVec1and2.sqrMagnitude: " + crossVec1and2.sqrMagnitude + " > " + 0.001f + "? " + ( crossVec1and2.sqrMagnitude > 0.001f ) );
+
+    //     Debug.Log( "signedAngleVec1and2: " + signedAngleVec1and2 );
+
+    //     //is coplanar, and not parallel
+    //     if( Mathf.Abs( planarFactor ) < maxPlanarFactor && crossVec1and2.sqrMagnitude > 0.001f ) {
+    //         // Debug.Log( "Linee non parallele" );
+    //         float t = Vector3.Dot( crossVec3and2, crossVec1and2 ) / crossVec1and2.sqrMagnitude;
+    //         intersection = linePoint1 + ( lineVec1 * t );
+
+    //         // Debug.Log( "t: " + t );
+
+    //         bool isInsideLine1 = true, isInsideLine2 = true;
+
+    //         switch( line1Type ) {
+    //             case ArrayType.Line:    isInsideLine1 = true;
+    //                                     break;
+                
+    //             case ArrayType.Ray:     Debug.Log( "Vector3.Dot( lineVec1, intersection - linePoint1 ): " + Vector3.Dot( lineVec1, intersection - linePoint1 ) );
+    //                                     isInsideLine1 = Vector3.Dot( lineVec1, intersection - linePoint1 ) > 0.001f;
+    //                                     break;
+
+    //             case ArrayType.Segment: isInsideLine1 = lineVec1.magnitude - edgeReduction >= ( intersection - linePoint1 ).magnitude && lineVec1.magnitude - edgeReduction >= ( intersection - linePoint3 ).magnitude;
+
+    //                                     Debug.Log( "lineVec1.magnitude: " + lineVec1.magnitude );
+    //                                     Debug.Log( "( intersection - linePoint1 ).magnitude: " + ( intersection - linePoint1 ).magnitude );
+    //                                     Debug.Log( "( intersection - ( linePoint1 + lineVec1 ) ).magnitude: " + ( intersection - ( linePoint1 + lineVec1 ) ).magnitude );
+
+    
+    //                                     break;
+
+    //         }
+
+    //         Debug.Log( ">>>isInsideLine1: " + isInsideLine1 );
+
+    //         switch( line2Type ) {
+    //             case ArrayType.Line:    isInsideLine2 = true;
+    //                                     break;
+                
+    //             case ArrayType.Ray:     isInsideLine2 = Vector3.Dot( lineVec2, intersection - linePoint2 ) > 0.001f;
+    //                                     break;
+
+    //             case ArrayType.Segment: isInsideLine2 = lineVec2.magnitude - edgeReduction >= ( intersection - linePoint2 ).magnitude && lineVec2.magnitude - edgeReduction >= ( intersection - linePoint4 ).magnitude;
+
+    //                                     Debug.Log( "lineVec2.magnitude: " + lineVec2.magnitude );
+    //                                     Debug.Log( "( intersection - linePoint2 ).magnitude: " + ( intersection - linePoint1 ).magnitude );
+    //                                     Debug.Log( "( intersection - ( linePoint2 + lineVec2 ) ).magnitude: " + ( intersection - ( linePoint2 + lineVec2 ) ).magnitude );
+
+                                        
+    //                                     break;
+
+    //         }
+
+    //          Debug.Log( ">>>isInsideLine2: " + isInsideLine2 );
+
+    //         if( !isInsideLine1 || !isInsideLine2 ) {
+    //             intersection = Vector3.zero;
+    //             return false;
+    //         }
+    //         else {
+    //             return true;
+    //         }          
+    //     }
+    //     else
+    //     {
+    //         // Debug.Log( "linee parallele" );
+
+    //         intersection = Vector3.zero;
+
+    //         if( line1Type == ArrayType.Line || line2Type ==  ArrayType.Line ) {
+
+    //             return true;
+    //         }
+    //         else if( line1Type == ArrayType.Ray && line2Type ==  ArrayType.Ray ) {
+    //             if( Vector3.Dot( lineVec1, lineVec2 ) > 0.001f ) {
+
+    //                 return true;
+    //             }
+    //             else {
+
+    //                 return Vector3.Dot( lineVec1, linePoint2 - linePoint1 ) > 0.001f;
+    //             }
+    //         }
+    //         else if( line1Type == ArrayType.Segment && line2Type == ArrayType.Segment ) {
+
+    //             return lineVec1.magnitude - 0.001f  > ( linePoint2 - linePoint1 ).magnitude + ( linePoint2 - ( linePoint1 + lineVec1 ) ).magnitude || 
+    //                    lineVec1.magnitude - 0.001f  > ( linePoint2 + lineVec2 - linePoint1 ).magnitude + ( linePoint2 + lineVec2 - ( linePoint1 + lineVec1 ) ).magnitude ||
+    //                    ( linePoint1 == linePoint2 && linePoint1 + lineVec1 == linePoint2 + lineVec2 ) || ( linePoint1 == linePoint2 + lineVec2 && linePoint1 + lineVec1 == linePoint2 );
+    //         }
+    //         else if( line1Type == ArrayType.Ray && line2Type ==  ArrayType.Segment ) {
+                
+    //             Debug.Log( "signed angle: " + Vector3.SignedAngle( lineVec1, linePoint2 - linePoint1, normal ) );
+                
+    //             return Vector3.SignedAngle( lineVec1, linePoint2 - linePoint1, normal ) < 0.1f && Vector3.SignedAngle( lineVec1, linePoint2 - linePoint1, normal ) > -0.1f;
+    //         }
+            
+    //         return false;
+    //     }
+    // }
+
+    public static bool LineLineIntersect( out Vector3 intersection, Vector3 normal, Vector3 linePoint1, Vector3 lineVec1, Vector3 linePoint2, Vector3 lineVec2, ArrayType line1Type, ArrayType line2Type ) {
+
+        Plane plane = new( normal, linePoint1 );
+
+        Vector3 linePoint3 = plane.ClosestPointOnPlane( linePoint1 + lineVec1 );
+        Vector3 linePoint4 = plane.ClosestPointOnPlane( linePoint2 + lineVec2 );
+
+        // Debug.DrawRay( linePoint3, normal, Color.cyan, Time.deltaTime );
+        // Debug.DrawRay( linePoint4, normal, Color.cyan, Time.deltaTime );
+
+        linePoint1 = plane.ClosestPointOnPlane( linePoint1 );
+        linePoint2 = plane.ClosestPointOnPlane( linePoint2 );
+
+        // Debug.DrawRay( linePoint1, normal, Color.red, Time.deltaTime );
+        // Debug.DrawRay( linePoint2, normal, Color.red, Time.deltaTime );
+
+        lineVec1 = linePoint3 - linePoint1;
+        lineVec2 = linePoint4 - linePoint2;
+
+        // Debug.DrawRay( linePoint1, lineVec1, Color.blue, Time.deltaTime );
+        // Debug.DrawRay( linePoint2, lineVec2, Color.blue, Time.deltaTime );
+
+        Vector3 lineVec3 = linePoint2 - linePoint1;
+
+        Vector3 crossVec1and2 = Vector3.Cross( lineVec1, lineVec2 );
+        Vector3 crossVec3and2 = Vector3.Cross( lineVec3, lineVec2 );
+
+        // float signedAngleVec1and2 = Vector3.SignedAngle( lineVec1, lineVec2, normal );
+
+        // float planarFactor = Vector3.Dot( lineVec3, crossVec1and2 );
+
+        // Debug.Log( "planarFactor: " + Mathf.Abs( planarFactor ) + " < " + maxPlanarFactor + "? " + ( Mathf.Abs( planarFactor ) < maxPlanarFactor ) );
+        // Debug.Log( "crossVec1and2.sqrMagnitude: " + crossVec1and2.sqrMagnitude + " > " + 0.001f + "? " + ( crossVec1and2.sqrMagnitude > 0.001f ) );
+
+        // Debug.Log( "signedAngleVec1and2: " + signedAngleVec1and2 );
+
+        //is coplanar, and not parallel
+        //if( Mathf.Abs( planarFactor ) < maxPlanarFactor && crossVec1and2.sqrMagnitude > 0.001f ) {
+            // Debug.Log( "Linee non parallele" );
+            float t = Vector3.Dot( crossVec3and2, crossVec1and2 ) / crossVec1and2.sqrMagnitude;
+            intersection = linePoint1 + ( lineVec1 * t );
+
+            // Debug.Log( "t: " + t );
+
+            bool isInsideLine1 = true, isInsideLine2 = true;
+
+            switch( line1Type ) {
+                case ArrayType.Line:    isInsideLine1 = true;
+                                        break;
+                
+                case ArrayType.Ray:     // Debug.Log( "Vector3.Dot( lineVec1, intersection - linePoint1 ): " + Vector3.Dot( lineVec1, intersection - linePoint1 ) );
+                                        if( linePoint1 == linePoint2 || linePoint1 == linePoint4 ) {
+                                            isInsideLine1 = false;
+                                        }
+                                        else {
+                                            isInsideLine1 = Vector3.Dot( lineVec1, intersection - linePoint1 ) > 0.0f;
+                                        }
+                                        break;
+
+                case ArrayType.Segment: if( linePoint1 == linePoint2 || linePoint1 == linePoint4 || linePoint3 == linePoint2 || linePoint3 == linePoint4 ) {
+                                            isInsideLine1 = false;
+                                        }
+                                        else {
+                                            isInsideLine1 = lineVec1.magnitude >= ( intersection - linePoint1 ).magnitude && lineVec1.magnitude >= ( intersection - linePoint3 ).magnitude;
+                                        }
+
+                                        // Debug.Log( "lineVec1.magnitude: " + lineVec1.magnitude );
+                                        // Debug.Log( "( intersection - linePoint1 ).magnitude: " + ( intersection - linePoint1 ).magnitude );
+                                        // Debug.Log( "( intersection - ( linePoint1 + lineVec1 ) ).magnitude: " + ( intersection - ( linePoint1 + lineVec1 ) ).magnitude );
+
+    
+                                        break;
+
+            }
+
+            // Debug.Log( ">>>isInsideLine1: " + isInsideLine1 );
+
+            switch( line2Type ) {
+                case ArrayType.Line:    isInsideLine2 = true;
+                                        break;
+                
+                case ArrayType.Ray:     if( linePoint1 == linePoint2 || linePoint3 == linePoint2 ) {
+                                            isInsideLine2 = false;
+                                        }
+                                        else {
+                                            isInsideLine2 = Vector3.Dot( lineVec2, intersection - linePoint2 ) > 0.0f;
+                                        }
+                                        break;
+
+                case ArrayType.Segment: if( linePoint1 == linePoint2 || linePoint1 == linePoint4 || linePoint3 == linePoint2 || linePoint3 == linePoint4 ) {
+                                            isInsideLine2 = false;
+                                        }
+                                        else {
+                                            isInsideLine2 = lineVec2.magnitude >= ( intersection - linePoint2 ).magnitude && lineVec2.magnitude >= ( intersection - linePoint4 ).magnitude;
+                                        }
+                                        // Debug.Log( "lineVec2.magnitude: " + lineVec2.magnitude );
+                                        // Debug.Log( "( intersection - linePoint2 ).magnitude: " + ( intersection - linePoint1 ).magnitude );
+                                        // Debug.Log( "( intersection - ( linePoint2 + lineVec2 ) ).magnitude: " + ( intersection - ( linePoint2 + lineVec2 ) ).magnitude );
+
+                                        
+                                        break;
+
+            }
+
+            // Debug.Log( ">>>isInsideLine2: " + isInsideLine2 );
+
+            if( !isInsideLine1 || !isInsideLine2 ) {
+                intersection = Vector3.zero;
+                return false;
+            }
+            else {
+                return true;
+            }          
+    }
+
+    public static ProceduralMesh GeneratePoligonalMesh( List<Vector3> points, bool clockwiseRotation, Vector3 up, Vector3 right, float textureHorLenght, float textureVertLenght ) {
+
+        List<Edge> perimeterEdges = new();
+        for( int i = 0; i < points.Count; i++ ) { 
+
+            //Debug.Log( ">>> Point[ " + i + " ]: " + points[ i ] );
+
+            if( i < points.Count - 1 ) {
+                perimeterEdges.Add( new Edge( points[ i ], points[ i + 1 ], i, i + 1 ) );
+
+                Debug.DrawLine( points[ i ], points[ i + 1 ], Color.blue, Time.deltaTime );
+            }
+            else {
+                perimeterEdges.Add( new Edge( points[ i ], points[ 0 ], i, 0 ) );
+                Debug.DrawLine( points[ i ], points[ 0 ], Color.green, Time.deltaTime );
+            }
+        }
+        
+        List<Edge> edges = new();
+        edges.AddRange( perimeterEdges );
+
+        List<Edge> internalEdges = new();
+
+        for( int i = 0; i < points.Count; i++ ) {
+
+            HashSet<int> ignorePoints = new() { i };
+            if( i == 0 ) {
+                ignorePoints.Add( points.Count - 1 );
+                ignorePoints.Add( i + 1 );
+            }
+            if( i > 0 && i < points.Count - 1 ) {
+                ignorePoints.Add( i - 1 );
+                ignorePoints.Add( i + 1 );
+            }
+            else if( i == points.Count - 1 ) {
+                ignorePoints.Add( i - 1 );
+                ignorePoints.Add( 0 );
+            }
+
+            //Debug.Log( ">>> i: " + i );
+            for( int j = 0; j < points.Count; j++ ) {
+
+                if( !ignorePoints.Contains( j ) ) {
+
+                    bool existsInverseEdge = false;
+
+                    foreach( Edge internalEdge in internalEdges ) {
+                        if( i == internalEdge.endingPointIndex && j == internalEdge.startingPointIndex ) {
+                            existsInverseEdge = true;
+                            break;
+                        }
+                    }
+
+                    if( !existsInverseEdge ) {
+
+                        bool intersect = false;
+                        foreach( Edge edge in edges ) {
+                            if( edge.startingPointIndex != i ) {
+                                Vector3 internalIntersectionPoint;
+
+                                // Debug.Log( "Verifico le intersezioni fra i " + i + " e j " + j + " con il segmento da " + edge.startingPointIndex + " a " + edge.endingPointIndex );
+
+                                intersect = LineLineIntersect( out internalIntersectionPoint, Quaternion.AngleAxis( -90.0f, right ) * up, points[ i ], points[ j ] - points[ i ], edge.startingPoint, edge.endingPoint - edge.startingPoint, ArrayType.Segment, ArrayType.Segment );
+
+                                if( intersect ) {
+                                    
+                                    //Debug.Log( "Il segmento dal punto i " + i + " al punto j " + j + " interseca la retta fra i punti " + edge.startingPointIndex + " e " + edge.endingPointIndex );
+
+                                    // Debug.Log( ">>> internalIntersectionPoint: " + internalIntersectionPoint );
+
+                                    // Debug.DrawLine( edge.startingPoint, edge.endingPoint, Color.yellow, Time.deltaTime );
+                                    break;
+                                }
+                            }
+                        }
+
+                        //Debug.Log( ">>> intersect: " + intersect );
+                        if( !intersect ) { 
+
+                            float epsilonValue = 0.25f;
+                            Vector3 epsilonPoint = points[ i ] + ( points[ j ] - points[ i ] ).normalized * epsilonValue;
+
+                            int counter = 0;
+                            foreach( Edge perimeterEdge in perimeterEdges ) {
+
+                                int counterOld = counter;
+                                Vector3 perimeterIntersectionPoint;
+                                //Debug.Log( "Verifico raggio ( " + i + " - " + j + " ) con epsilon" + epsilonValue * 100 + "% con segmento perimetro ( " + perimeterEdge.startingPointIndex + " - " + perimeterEdge.endingPointIndex + " ) " );
+                                counter += LineLineIntersect( out perimeterIntersectionPoint, Quaternion.AngleAxis( -90.0f, right ) * up, epsilonPoint, up, perimeterEdge.startingPoint, perimeterEdge.endingPoint - perimeterEdge.startingPoint, ArrayType.Ray, ArrayType.Segment ) ? 1 : 0;
+                                
+                                // if( counterOld != counter ) {
+                                    //Debug.Log( "counter: " + counter );
+                                    //Debug.Log( "Raggio epsilon ( " + i + " - " + j + " ) interseca segmento perimetro ( " + perimeterEdge.startingPointIndex + " - " + perimeterEdge.endingPointIndex + " ) " );
+                                    //Debug.DrawRay( epsilonPoint, up * 10, Color.green, Time.deltaTime );
+                                // }
+                                // else {
+                                //     //Debug.DrawRay( epsilonPoint, up * 10, Color.yellow, Time.deltaTime );
+                                // }
+                                //Debug.DrawRay( perimeterIntersectionPoint, Vector3.right, UnityEngine.Color.yellow, Time.deltaTime );
+                            }
+                            //Debug.Log( "final counter: " + counter );
+                            bool outside = counter % 2 == 0;
+                            
+                            //Debug.Log( ">>> outside: " + outside );
+                            if( !outside ) {
+
+                                edges.Add( new Edge( points[ i ], points[ j ], i, j ) );
+                                internalEdges.Add( new Edge( points[ i ], points[ j ], i, j ) );
+
+                                //Debug.Log( "Aggiunto edge" );
+
+                                Debug.DrawLine( edges[ ^1 ].startingPoint, edges[ ^1 ].endingPoint, Color.red, Time.deltaTime );
+
+
+                                Vector3 halfWay = edges[ ^1 ].startingPoint + ( ( edges[ ^1 ].endingPoint - edges[ ^1 ].startingPoint ).normalized * ( edges[ ^1 ].endingPoint - edges[ ^1 ].startingPoint ).magnitude / 2 );
+                                Vector3 arrow0 = halfWay + Quaternion.AngleAxis( 90.0f, Quaternion.AngleAxis( -90.0f, right ) * up ) * ( edges[ ^1 ].endingPoint - edges[ ^1 ].startingPoint ).normalized * 0.1f;
+                                Vector3 arrow1 = halfWay + Quaternion.AngleAxis( 90.0f, Quaternion.AngleAxis( 90.0f, right ) * up ) * ( edges[ ^1 ].endingPoint - edges[ ^1 ].startingPoint ).normalized * 0.1f;
+                                Vector3 arrow2 = halfWay + ( edges[ ^1 ].endingPoint - edges[ ^1 ].startingPoint ).normalized * 0.2f;
+
+                                Debug.DrawLine( arrow0, arrow1, Color.cyan, Time.deltaTime );
+                                Debug.DrawLine( arrow1, arrow2, Color.cyan, Time.deltaTime );
+                                Debug.DrawLine( arrow2, arrow0, Color.cyan, Time.deltaTime );
+                                Debug.DrawLine( edges[ ^1 ].startingPoint, edges[ ^1 ].endingPoint, Color.cyan, Time.deltaTime );
+                                
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        List<int> triangles = new();
+        List<Vector2> uv = new();
+
+        for( int i = 0; i < points.Count; i++ ) { 
+            List<Edge> vertexEdges = new();
+            foreach( Edge edge in edges ) {
+                if( edge.startingPointIndex == i ) {
+                    vertexEdges.Add( edge );
+                }
+            }
+            if( i == 0 ) {
+                vertexEdges.Add( new Edge( perimeterEdges[ ^1 ].endingPoint, perimeterEdges[ ^1 ].startingPoint, perimeterEdges[ ^1 ].endingPointIndex, perimeterEdges[ ^1 ].startingPointIndex ) );
+            }
+
+            for( int j = 0; j < vertexEdges.Count - 1; j++ ) {
+                
+                foreach( Edge edge in edges ) {
+
+                    if( edge.startingPointIndex == vertexEdges[ j ].endingPointIndex && edge.endingPointIndex == vertexEdges[ j + 1 ].endingPointIndex ) {
+                        
+                        triangles.Add( vertexEdges[ j ].startingPointIndex );
+                        if( clockwiseRotation ) {
+                            triangles.Add( vertexEdges[ j ].endingPointIndex );
+                            triangles.Add( vertexEdges[ j + 1 ].endingPointIndex );
+                        }
+                        else {
+                            triangles.Add( vertexEdges[ j + 1 ].endingPointIndex );
+                            triangles.Add( vertexEdges[ j ].endingPointIndex );
+                        }
+                        break;
+                    }
+                    else if( edge.endingPointIndex == vertexEdges[ j ].endingPointIndex && edge.startingPointIndex == vertexEdges[ j + 1 ].endingPointIndex ) {
+                        triangles.Add( vertexEdges[ j ].startingPointIndex );
+                        if( clockwiseRotation ) {
+                            triangles.Add( vertexEdges[ j + 1 ].endingPointIndex );
+                            triangles.Add( vertexEdges[ j ].endingPointIndex );
+                        }
+                        else {
+                            triangles.Add( vertexEdges[ j ].endingPointIndex );
+                            triangles.Add( vertexEdges[ j + 1 ].endingPointIndex );
+                        }
+                        break;
+                    }
+                }
+            }
+
+            Vector3 r = points[ i ] - points[ 0 ];
+            float dotU = Vector3.Dot( r, right );
+            float dotV = Vector3.Dot( r, up );
+            uv.Add( new Vector3( dotU / textureHorLenght, dotV / textureVertLenght ) );
+        }
+
+        Mesh poligon = new Mesh { vertices = points.ToArray(),
+                                  triangles = triangles.ToArray(),
+                                  uv = uv.ToArray() };
+        poligon.RecalculateNormals();
+
+        return new() { mesh = poligon };
     }
 
     public static Vector3 CalculatePoligonCenterPoint( List<Vector3> vertices )
@@ -591,13 +1067,18 @@ public static class MeshGenerator
         return singleFloor;
     }
 
-    public static Floor CalculateBidirectionalWithCentralPlatformFloorMeshVertex( LineSection section, float centerWidth, float sideWidth, float stationLenght, float stationExtensionLenght, float stationExtensionHeight, int stationExtensionCurvePoints )
+    public static Floor CalculateBidirectionalWithCentralPlatformFloorMeshVertex( LineSection section, float centerWidth, float sideWidth, float railsWidth, float stationLenght, float stationExtensionLenght, float stationExtensionHeight, int stationExtensionCurvePoints )
     {
         List<Vector3> curve = section.bezierCurveLimitedAngle;
         
         List<Vector3> leftR = new();
         List<Vector3> leftLine = new();
         List<Vector3> leftL = new();
+
+        List<Vector3> leftRailR = new();
+        List<Vector3> leftRailL = new();
+        List<Vector3> rightRailL = new();
+        List<Vector3> rightRailR = new();
 
         List<Vector3> rightR = new();
         List<Vector3> rightLine = new();
@@ -620,30 +1101,42 @@ public static class MeshGenerator
         lb2 = lb1 + ( orthogonalDir * ( stationExtensionHeight / 2 ) );
         lb3 = lb2 + ( dir * ( stationExtensionLenght / 2 ) );
 
-        leftL.Add( lb0 + ( orthogonalDir * ( sideWidth / 2 ) ) );
+        leftL.Add( lb0 + ( orthogonalDir * sideWidth / 2 ) );
+        leftRailL.Add( lb0 + ( orthogonalDir * railsWidth / 2 ) );
         leftLine.AddRange( BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ lb0, lb1, lb2, lb3 }, stationExtensionCurvePoints ) );
-        leftR.Add( lb0 - ( orthogonalDir * ( sideWidth / 2 ) ) );
+        leftRailR.Add( lb0 - ( orthogonalDir * railsWidth / 2 ) );
+        leftR.Add( lb0 - ( orthogonalDir * sideWidth / 2 ) );
         
-        rightL.Add( rb0 + ( orthogonalDir * ( sideWidth / 2 ) ) );
+        rightL.Add( rb0 + ( orthogonalDir * sideWidth / 2 ) );
+        rightRailL.Add( rb0 + ( orthogonalDir * railsWidth / 2 ) );
         rightLine.AddRange( BezierCurveCalculator.CalculateBezierCurve( new List<Vector3>{ rb0, rb1, rb2, rb3 }, stationExtensionCurvePoints ) );
-        rightR.Add( rb0 - ( orthogonalDir * ( sideWidth / 2 ) ) );
+        rightRailR.Add( rb0 - ( orthogonalDir * railsWidth / 2 ) );
+        rightR.Add( rb0 - ( orthogonalDir * sideWidth / 2 ) );
 
         for( int i = 1; i < stationExtensionCurvePoints - 1; i++ ) {
 
             Vector3 orthogonalDirLeft = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( leftLine[ i - 1 ].x, leftLine[ i - 1 ].y, 0.0f ) - new Vector3( leftLine[ i + 1 ].x, leftLine[ i + 1 ].y, 0.0f ) ).normalized;
-            leftL.Add( leftLine[ i ] - ( orthogonalDirLeft * ( sideWidth / 2 ) ) );
-            leftR.Add( leftLine[ i ] + ( orthogonalDirLeft * ( sideWidth / 2 ) ) );
+            leftL.Add( leftLine[ i ] - ( orthogonalDirLeft * sideWidth / 2 ) );
+            leftRailL.Add( leftLine[ i ] - ( orthogonalDirLeft * railsWidth / 2 ) );
+            leftR.Add( leftLine[ i ] + ( orthogonalDirLeft * sideWidth / 2 ) );
+            leftRailR.Add( leftLine[ i ] + ( orthogonalDirLeft * railsWidth / 2 ) );
 
             Vector3 orthogonalDirRight = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( rightLine[ i - 1 ].x, rightLine[ i - 1 ].y, 0.0f ) - new Vector3( rightLine[ i + 1 ].x, rightLine[ i + 1 ].y, 0.0f ) ).normalized;
-            rightL.Add( rightLine[ i ] - ( orthogonalDirRight * ( sideWidth / 2 ) ) );
-            rightR.Add( rightLine[ i ] + ( orthogonalDirRight * ( sideWidth / 2 ) ) );
+            rightL.Add( rightLine[ i ] - ( orthogonalDirRight * sideWidth / 2 ) );
+            rightRailL.Add( rightLine[ i ] - ( orthogonalDirRight * railsWidth / 2 ) );
+            rightR.Add( rightLine[ i ] + ( orthogonalDirRight * sideWidth / 2 ) );
+            rightRailR.Add( rightLine[ i ] + ( orthogonalDirRight * railsWidth / 2 ) );
         }
 
-        leftL.Add( leftLine[ ^1 ] + ( orthogonalDir * ( sideWidth / 2 ) ) );
-        leftR.Add( leftLine[ ^1 ] - ( orthogonalDir * ( sideWidth / 2 ) ) );
+        leftL.Add( leftLine[ ^1 ] + ( orthogonalDir * sideWidth / 2 ) );
+        leftRailL.Add( leftLine[ ^1 ] + ( orthogonalDir * railsWidth / 2 ) );
+        leftR.Add( leftLine[ ^1 ] - ( orthogonalDir * sideWidth / 2 ) );
+        leftRailR.Add( leftLine[ ^1 ] - ( orthogonalDir * railsWidth / 2 ) );
         
-        rightL.Add( rightLine[ ^1 ] + ( orthogonalDir * ( sideWidth / 2 ) ) );
-        rightR.Add( rightLine[ ^1 ] - ( orthogonalDir * ( sideWidth / 2 ) ) );
+        rightL.Add( rightLine[ ^1 ] + ( orthogonalDir * sideWidth / 2 ) );
+        rightRailL.Add( rightLine[ ^1 ] + ( orthogonalDir * railsWidth / 2 ) );
+        rightR.Add( rightLine[ ^1 ] - ( orthogonalDir * sideWidth / 2 ) );
+        rightRailR.Add( rightLine[ ^1 ] - ( orthogonalDir * railsWidth / 2 ) );
 
         // Calcolo punti controllo finali
         Vector3 lb0Inv, lb1Inv, lb2Inv, lb3Inv, rb0Inv, rb1Inv, rb2Inv, rb3Inv;
@@ -664,19 +1157,27 @@ public static class MeshGenerator
 
         for( int i = stationExtensionCurvePoints; i < ( 2 * stationExtensionCurvePoints ) - 1; i++ ) {
             Vector3 orthogonalDirLeft = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( leftLine[ i - 1 ].x, leftLine[ i - 1 ].y, 0.0f ) - new Vector3( leftLine[ i + 1 ].x, leftLine[ i + 1 ].y, 0.0f ) ).normalized;
-            leftL.Add( leftLine[ i ] - ( orthogonalDirLeft * ( sideWidth / 2 ) ) );
-            leftR.Add( leftLine[ i ] + ( orthogonalDirLeft * ( sideWidth / 2 ) ) );
+            leftL.Add( leftLine[ i ] - ( orthogonalDirLeft * sideWidth / 2 ) );
+            leftRailL.Add( leftLine[ i ] - ( orthogonalDirLeft * railsWidth/ 2 ) );
+            leftR.Add( leftLine[ i ] + ( orthogonalDirLeft * sideWidth / 2 ) );
+            leftRailR.Add( leftLine[ i ] + ( orthogonalDirLeft * railsWidth/ 2 ) );
 
             Vector3 orthogonalDirRight = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * ( new Vector3( rightLine[ i - 1 ].x, rightLine[ i - 1 ].y, 0.0f ) - new Vector3( rightLine[ i + 1 ].x, rightLine[ i + 1 ].y, 0.0f ) ).normalized;
-            rightL.Add( rightLine[ i ] - ( orthogonalDirRight * ( sideWidth / 2 ) ) );
-            rightR.Add( rightLine[ i ] + ( orthogonalDirRight * ( sideWidth / 2 ) ) );
+            rightL.Add( rightLine[ i ] - ( orthogonalDirRight * sideWidth / 2 ) );
+            rightRailL.Add( rightLine[ i ] - ( orthogonalDirRight * railsWidth / 2 ) );
+            rightR.Add( rightLine[ i ] + ( orthogonalDirRight * sideWidth / 2 ) );
+            rightRailR.Add( rightLine[ i ] + ( orthogonalDirRight * railsWidth / 2 ) );
         }
 
-        leftL.Add( leftLine[ ^1 ] + ( orthogonalDir * ( sideWidth / 2 ) ) );
-        leftR.Add( leftLine[ ^1 ] - ( orthogonalDir * ( sideWidth / 2 ) ) );
+        leftL.Add( leftLine[ ^1 ] + ( orthogonalDir * sideWidth / 2 ) );
+        leftRailL.Add( leftLine[ ^1 ] + ( orthogonalDir * railsWidth / 2 ) );
+        leftR.Add( leftLine[ ^1 ] - ( orthogonalDir * sideWidth / 2 ) );
+        leftRailR.Add( leftLine[ ^1 ] - ( orthogonalDir * railsWidth / 2 ) );
         
-        rightL.Add( rightLine[ ^1 ] + ( orthogonalDir * ( sideWidth / 2 ) ) );
-        rightR.Add( rightLine[ ^1 ] - ( orthogonalDir * ( sideWidth / 2 ) ) );
+        rightL.Add( rightLine[ ^1 ] + ( orthogonalDir * sideWidth / 2 ) );
+        rightRailL.Add( rightLine[ ^1 ] + ( orthogonalDir * railsWidth / 2 ) );
+        rightR.Add( rightLine[ ^1 ] - ( orthogonalDir * sideWidth / 2 ) );
+        rightRailR.Add( rightLine[ ^1 ] - ( orthogonalDir * railsWidth / 2 ) );
 
         Floor singleFloor = new() { leftL = leftL,
                                     leftLine = leftLine,
@@ -688,7 +1189,12 @@ public static class MeshGenerator
 
                                     rightL = rightL,
                                     rightLine = rightLine,
-                                    rightR = rightR };
+                                    rightR = rightR,
+                                    
+                                    railLeftL = leftRailL,
+                                    railLeftR = leftRailR,
+                                    railRightL = rightRailL,
+                                    railRightR = rightRailR };
 
         return singleFloor;
     }
@@ -933,12 +1439,12 @@ public static class MeshGenerator
         return shape;
     }
 
-    public static ExtrudedMesh GenerateExtrudedMesh( /*Orientation extrusionOrientation,*/ List<Vector3> profileVertices, float profileScale, List<Vector3> previousProfileVertices, List<Vector3> baseVertices, float horPosCorrection, float vertPosCorrection, bool clockwiseRotation, bool closeMesh, float textureHorLenght, float textureVertLenght, float verticalRotationCorrection, float smoothFactor ) {
+    public static ProceduralMesh GenerateExtrudedMesh( /*Orientation extrusionOrientation,*/ List<Vector3> profileVertices, float profileScale, List<Vector3> previousProfileVertices, List<Vector3> baseVertices, float horPosCorrection, float vertPosCorrection, bool clockwiseRotation, bool closeMesh, float textureHorLenght, float textureVertLenght, float verticalRotationCorrection, float smoothFactor ) {
         
         // Vector3 worldUp = extrusionOrientation == Orientation.Horizontal ? -Vector3.forward : Vector3.right;
         // Vector3 worldRight = extrusionOrientation == Orientation.Horizontal ? Vector3.right : -Vector3.forward;
         
-        ExtrudedMesh extrudedMesh = new();
+        ProceduralMesh extrudedMesh = new();
 
         if( closeMesh ) {
             baseVertices.Add( baseVertices[ 0 ] );
@@ -1124,10 +1630,10 @@ public static class MeshGenerator
         Vector2[] uv = new Vector2[ vertices.Count ];
 
         Vector3 dirU = textureDir.normalized;
-        Debug.DrawRay( center, dirU * 100, Color.red, Mathf.Infinity );
+        //Debug.DrawRay( center, dirU * 100, UnityEngine.Color.red, Mathf.Infinity );
         //Vector3 dirV = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * dirU;
         Vector3 dirV = Quaternion.AngleAxis( 90.0f, planeNormal ) * dirU;
-        Debug.DrawRay( center, dirV * 100, Color.blue, Mathf.Infinity );
+        //Debug.DrawRay( center, dirV * 100, UnityEngine.Color.blue, Mathf.Infinity );
         uv[ 0 ] = new Vector2( 0.0f, 0.0f );
 
         for( int i = 0; i < perimeter.Count; i++ ) {
@@ -1158,19 +1664,20 @@ public static class MeshGenerator
         return planarMesh;
     }
 
-    public static Mesh GeneratePlanarMesh( List<Vector3> line, Vector3[ , ] vertMatrix, bool clockwiseRotation,  bool closeMesh, bool centerTexture, float textureHorLenght, float textureVertLenght )
+    public static ProceduralMesh GeneratePlanarMesh( List<Vector3> line, Vector3[ , ] vertMatrix, bool clockwiseRotation,  bool closeMesh, bool centerTexture, float textureHorLenght, float textureVertLenght )
     {
         // In questo modo anche se aggiungo un punto alla lista, è stata copiata per valore e non per riferimento, quindi la
         // modifica non ha effetti fuori dal metodo.
         List<Vector3> curve = new( line );
 
+        List<Vector3> up = new();
+        List<Vector3> down = new();
+        for( int i = 0; i < curve.Count; i++ ) {
+            up.Add( vertMatrix[ 0, i ] );
+            down.Add( vertMatrix[ 1, i ] );
+        }
+
         if( closeMesh ) {
-            List<Vector3> up = new();
-            List<Vector3> down = new();
-            for( int i = 0; i < curve.Count; i++ ) {
-                up.Add( vertMatrix[ 0, i ] );
-                down.Add( vertMatrix[ 1, i ] );
-            }
             up.Add( vertMatrix[ 0, 0 ] );
             down.Add( vertMatrix[ 1, 0 ] );
 
@@ -1179,6 +1686,11 @@ public static class MeshGenerator
             curve.Add( curve[ 0 ] );
         }
 
+        Dictionary<int, List<Vector3>> horizontalStructure = new(){ { 0, down },
+                                                                    { 1, up } };
+        Dictionary<Orientation, Dictionary<int, List<Vector3>>> floorStructure = new(){ { Orientation.Horizontal, horizontalStructure },
+                                                                                        { Orientation.Vertical, new Dictionary<int, List<Vector3>>() } };
+ 
         Mesh floorMesh = new();
 
         Vector3[] vertices = new Vector3[ curve.Count * 2 ];
@@ -1189,6 +1701,8 @@ public static class MeshGenerator
         {
             vertices[ i * 2 ] = vertMatrix[ 0, i ];
             vertices[ ( i * 2 ) + 1 ] = vertMatrix[ 1, i ];
+
+            floorStructure[ Orientation.Vertical ].Add( i, new List<Vector3>{ vertMatrix[ 1, i ], vertMatrix[ 0, i ] } );
 
             // deltaLText rappresenta la distanza della curva che una singola ripetizione di texture deve coprire,
             // considerando la lunghezza dell'intera curva e dividendola per il numero di punti ho la 
@@ -1212,13 +1726,13 @@ public static class MeshGenerator
             if( i < curve.Count - 1 )
             {
                 if( clockwiseRotation ) {
-                    edges[ ( i * 6 ) + 0 ] = ( i * 2 );
+                    edges[ ( i * 6 ) + 0 ] = i * 2;
                     edges[ ( i * 6 ) + 1 ] = edges[ ( i * 6 ) + 4 ] = ( i * 2 ) + 1;
                     edges[ ( i * 6 ) + 2 ] = edges[ ( i * 6 ) + 3 ] = ( i * 2 ) + 2;
                     edges[ ( i * 6 ) + 5 ] = ( i * 2 ) + 3;
                 }
                 else {
-                    edges[ ( i * 6 ) + 0 ] = ( i * 2 );
+                    edges[ ( i * 6 ) + 0 ] = i * 2;
                     edges[ ( i * 6 ) + 1 ] = edges[ ( i * 6 ) + 4 ] = ( i * 2 ) + 2;
                     edges[ ( i * 6 ) + 2 ] = edges[ ( i * 6 ) + 3 ] = ( i * 2 ) + 1;
                     edges[ ( i * 6 ) + 5 ] = ( i * 2 ) + 3;
@@ -1233,6 +1747,10 @@ public static class MeshGenerator
 
         floorMesh.RecalculateNormals();
 
-        return floorMesh;
+        ProceduralMesh toReturn = new() { mesh = floorMesh,
+                                          lastProfileVertex = floorStructure[ Orientation.Vertical ][ floorStructure[ Orientation.Vertical ].Count - 1 ],
+                                          verticesStructure = floorStructure };
+
+        return toReturn;
     }
 }
