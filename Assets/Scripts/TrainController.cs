@@ -146,24 +146,24 @@ public class TrainController : MonoBehaviour
         }
 
         this.debugText.text = "DEBUG INFO: \n" +
-                         "Line Name: " + keyLine + "\n" +
-                         "Section: " + indexSection + "\n" +
-                         "Point: " + indexPoint + "\n" +
-                         "\n" +
-                         "Actual Switch Index: " + actualSwitchIndex + "\n" + 
-                         "Actual Switch Type: " + switchType + "\n" +
-                         "Actual Switch Direction: " + switchDir + "\n" +
-                         "Previous Switch Index: " + this.previousSwitchIndex + "\n" + 
-                         //"Previous Switch Type: " + switchType + "\n" +
-                         "Previous Switch Direction: " + this.previousSwitchDirection + "\n" +
-                         "Next Switch Index: " + this.nextSwitchIndex + "\n" + 
-                         //"Next Switch Type: " + switchType + "\n" +
-                         "Next Switch Direction: " + this.nextSwitchDirection + "\n" +
-                         "\n" +
-                         "Speed: " + speed + "\n" +
-                         "Direction: " + actualMovement + "\n" +
-                         "Side: " + railSide + "\n" +
-                         "Inverse: " + inverseLine + "\n";
+                              "Line Name: " + keyLine + "\n" +
+                              "Section: " + indexSection + "\n" +
+                              "Point: " + indexPoint + "\n" +
+                              "\n" +
+                              "Actual Switch Index: " + actualSwitchIndex + "\n" + 
+                              "Actual Switch Type: " + switchType + "\n" +
+                              "Actual Switch Direction: " + switchDir + "\n" +
+                              "Previous Switch Index: " + this.previousSwitchIndex + "\n" + 
+                              //"Previous Switch Type: " + switchType + "\n" +
+                              "Previous Switch Direction: " + this.previousSwitchDirection + "\n" +
+                              "Next Switch Index: " + this.nextSwitchIndex + "\n" + 
+                              //"Next Switch Type: " + switchType + "\n" +
+                              "Next Switch Direction: " + this.nextSwitchDirection + "\n" +
+                              "\n" +
+                              "Speed: " + speed + "\n" +
+                              "Direction: " + actualMovement + "\n" +
+                              "Side: " + railSide + "\n" +
+                              "Inverse: " + inverseLine + "\n";
     }
     
     // private void HandleSwitchesIndicators() {
@@ -240,26 +240,26 @@ public class TrainController : MonoBehaviour
     //                                         iconName = "Mono_To_Bi_Center_To_Right";
     //                                     }
     //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToCenter ) {
-    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Right ) {
+    //                                         if( sections[ actualSwitchIndex ].Side == Side.Right ) {
     //                                             iconName = "Center_To_Center_New_Right";
     //                                         }
-    //                                         else if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Left ) {
+    //                                         else if( sections[ actualSwitchIndex ].Side == Side.Left ) {
     //                                             iconName = "Center_To_Center_New_Left";
     //                                         }
     //                                     }
     //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
-    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Right ) {
+    //                                         if( sections[ actualSwitchIndex ].Side == Side.Right ) {
     //                                             iconName = "Center_To_Entrance_Right";
     //                                         }
-    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Both ) {
+    //                                         if( sections[ actualSwitchIndex ].Side == Side.Both ) {
     //                                             // TODO
     //                                         }
     //                                     }
     //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
-    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Left ) {
+    //                                         if( sections[ actualSwitchIndex ].Side == Side.Left ) {
     //                                             iconName = "Center_To_Entrance_Left";
     //                                         }
-    //                                         if( sections[ actualSwitchIndex ].newLineSide == NewLineSide.Both ) {
+    //                                         if( sections[ actualSwitchIndex ].Side == Side.Both ) {
     //                                             // TODO
     //                                         }
     //                                     }
@@ -372,12 +372,12 @@ public class TrainController : MonoBehaviour
                     int sectionCount = -1;
 
                     Debug.Log( ">>> New line start keys: " );
-                    foreach( NewLineSide nls in sections[ actualSwitchIndex ].newLinesStarts.Keys ) {
+                    foreach( Side nls in sections[ actualSwitchIndex ].newLinesStarts.Keys ) {
                         Debug.Log( ">>> " + nls );
                     }
 
                     // Arriviamo da destra
-                    if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Right ) && sections[ actualSwitchIndex ].newLinesStarts[ NewLineSide.Right ].lineName == keyLine ) {
+                    if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Right ) && sections[ actualSwitchIndex ].newLinesStarts[ Side.Right ].lineName == keyLine ) {
 
                         if( railSide == Rail.Right ) {
                             selectedDir = SwitchDirection.RightToEntranceRight;
@@ -389,7 +389,7 @@ public class TrainController : MonoBehaviour
                         }
                     }
                     // Arriviamo da sinistra
-                    else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Left ) && sections[ actualSwitchIndex ].newLinesStarts[ NewLineSide.Left ].lineName == keyLine ) {
+                    else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Left ) && sections[ actualSwitchIndex ].newLinesStarts[ Side.Left ].lineName == keyLine ) {
 
                         if( railSide == Rail.Right ) {
                             selectedDir = SwitchDirection.LeftToExitLeft;
@@ -477,7 +477,7 @@ public class TrainController : MonoBehaviour
 
                     if( ( actualMovement == Direction.Forward && !inverseLine ) || ( actualMovement == Direction.Backward && inverseLine ) ) {
             
-                        if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Left ) && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+                        if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Left ) && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Right ) ) {
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.CenterToCenter:        selectedDir = SwitchDirection.CenterToEntranceLeft;
                                                                             sectionCount = sections[ actualSwitchIndex ].floorPoints.centerEntranceLeft.Count;
@@ -490,7 +490,7 @@ public class TrainController : MonoBehaviour
                                                                             break;
                             }
                         }
-                        else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Left ) ) {
+                        else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Left ) ) {
                             
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.CenterToCenter:    selectedDir = SwitchDirection.CenterToEntranceLeft;
@@ -501,7 +501,7 @@ public class TrainController : MonoBehaviour
                                                                         break;
                             }
                         }
-                        else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+                        else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Right ) ) {
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.CenterToCenter:    selectedDir = SwitchDirection.CenterToEntranceRight;
                                                                         sectionCount = sections[ actualSwitchIndex ].floorPoints.centerEntranceRight.Count;
@@ -513,7 +513,7 @@ public class TrainController : MonoBehaviour
                         }
                     }
                     else if( ( actualMovement == Direction.Forward && inverseLine ) || ( actualMovement == Direction.Backward && !inverseLine ) ) {
-                        if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Left ) && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+                        if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Left ) && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Right ) ) {
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.CenterToCenter:        selectedDir = SwitchDirection.CenterToExitLeft;
                                                                             sectionCount = sections[ actualSwitchIndex ].floorPoints.centerExitLeft.Count;
@@ -526,7 +526,7 @@ public class TrainController : MonoBehaviour
                                                                             break;
                             }
                         }
-                        else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Left ) ) {
+                        else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Left ) ) {
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.CenterToCenter:    selectedDir = SwitchDirection.CenterToExitLeft;
                                                                         sectionCount = sections[ actualSwitchIndex ].floorPoints.centerExitLeft.Count;
@@ -536,7 +536,7 @@ public class TrainController : MonoBehaviour
                                                                         break;
                             }
                         }
-                        else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+                        else if( sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Right ) ) {
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.CenterToCenter:    selectedDir = SwitchDirection.CenterToExitRight;
                                                                         sectionCount = sections[ actualSwitchIndex ].floorPoints.centerExitRight.Count;
@@ -552,7 +552,7 @@ public class TrainController : MonoBehaviour
 
                     if( ( actualMovement == Direction.Forward && !inverseLine ) || ( actualMovement == Direction.Backward && inverseLine ) ) {
 
-                        if( railSide == Rail.Left && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Left ) ) {
+                        if( railSide == Rail.Left && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Left ) ) {
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.LeftToLeft:    selectedDir = SwitchDirection.LeftToEntranceLeft;
                                                                     sectionCount = sections[ actualSwitchIndex ].floorPoints.leftEntranceLeft.Count;
@@ -562,7 +562,7 @@ public class TrainController : MonoBehaviour
                                                                     break;
                             }
                         }
-                        else if( railSide == Rail.Right && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+                        else if( railSide == Rail.Right && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Right ) ) {
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.RightToRight:  selectedDir = SwitchDirection.RightToEntranceRight;
                                                                     sectionCount = sections[ actualSwitchIndex ].floorPoints.rightEntranceRight.Count;
@@ -575,7 +575,7 @@ public class TrainController : MonoBehaviour
                     }
                     else if( ( actualMovement == Direction.Forward && inverseLine ) || ( actualMovement == Direction.Backward && !inverseLine ) ) {
 
-                        if( railSide == Rail.Left && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Left ) ) {
+                        if( railSide == Rail.Left && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Left ) ) {
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.LeftToLeft:    selectedDir = SwitchDirection.LeftToExitLeft;
                                                                     sectionCount = sections[ actualSwitchIndex ].floorPoints.leftExitLeft.Count;
@@ -585,7 +585,7 @@ public class TrainController : MonoBehaviour
                                                                     break;
                             }
                         }
-                        else if( railSide == Rail.Right && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+                        else if( railSide == Rail.Right && sections[ actualSwitchIndex ].newLinesStarts.ContainsKey( Side.Right ) ) {
                             switch( sections[ actualSwitchIndex ].activeSwitch ) {
                                 case SwitchDirection.RightToRight:  selectedDir = SwitchDirection.RightToExitRight;
                                                                     sectionCount = sections[ actualSwitchIndex ].floorPoints.rightExitRight.Count;
@@ -779,11 +779,11 @@ public class TrainController : MonoBehaviour
 
             section.ignoreSwitch = false;
 
-            if( section.switchType == SwitchType.BiToNewBi && railSide == Rail.Right && !section.newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+            if( section.switchType == SwitchType.BiToNewBi && railSide == Rail.Right && !section.newLinesStarts.ContainsKey( Side.Right ) ) {
                 points = section.floorPoints.rightLine;
                 section.ignoreSwitch = true;
             } 
-            else if( section.switchType == SwitchType.BiToNewBi && railSide == Rail.Left && !section.newLinesStarts.ContainsKey( NewLineSide.Left ) ) {
+            else if( section.switchType == SwitchType.BiToNewBi && railSide == Rail.Left && !section.newLinesStarts.ContainsKey( Side.Left ) ) {
                 points = section.floorPoints.leftLine;
                 section.ignoreSwitch = true;
             }
@@ -1022,7 +1022,7 @@ public class TrainController : MonoBehaviour
                                 this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
                                 if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
                                     this.transform.localRotation = previousRot;
-                                    Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
+                                    //Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
                                 }
 
                                 sumDist += Time.deltaTime * Mathf.Abs( speed );
@@ -1064,9 +1064,9 @@ public class TrainController : MonoBehaviour
 
                                 if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight || sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
 
-                                    NewLineSide newSide = NewLineSide.Left;
+                                    Side newSide = Side.Left;
                                     if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
-                                        newSide = NewLineSide.Right;
+                                        newSide = Side.Right;
                                     }
 
                                     keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
@@ -1084,10 +1084,10 @@ public class TrainController : MonoBehaviour
                                 if( !sections[ i ].ignoreSwitch ) {
                                     if( sections[ i ].activeSwitch == SwitchDirection.LeftToEntranceLeft || sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
 
-                                        NewLineSide newSide = NewLineSide.Left;
+                                        Side newSide = Side.Left;
                                         railSide = Rail.Left;
                                         if( sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
-                                            newSide = NewLineSide.Right;
+                                            newSide = Side.Right;
                                             railSide = Rail.Right;
                                         }
 
@@ -1440,9 +1440,9 @@ public class TrainController : MonoBehaviour
 
                                 if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight || sections[ i ].activeSwitch == SwitchDirection.CenterToExitLeft ) {
 
-                                    NewLineSide newSide = NewLineSide.Left;
+                                    Side newSide = Side.Left;
                                     if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight ) {
-                                        newSide = NewLineSide.Right;
+                                        newSide = Side.Right;
                                     }
 
                                     keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
@@ -1460,10 +1460,10 @@ public class TrainController : MonoBehaviour
                                 if( !sections[ i ].ignoreSwitch ) {
                                     if( sections[ i ].activeSwitch == SwitchDirection.LeftToExitLeft || sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
 
-                                        NewLineSide newSide = NewLineSide.Left;
+                                        Side newSide = Side.Left;
                                         railSide = Rail.Right;
                                         if( sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
-                                            newSide = NewLineSide.Right;
+                                            newSide = Side.Right;
                                             railSide = Rail.Left;
                                         }
 
@@ -1673,7 +1673,7 @@ public class TrainController : MonoBehaviour
                             }
                             else if( sections[ 0 ].fromSection.switchType == SwitchType.BiToNewBi ) {
 
-                                if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( NewLineSide.Right ) && sections[ 0 ].fromSection.newLinesStarts[ NewLineSide.Right ].lineName == sections[ 0 ].lineName ) { 
+                                if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( Side.Right ) && sections[ 0 ].fromSection.newLinesStarts[ Side.Right ].lineName == sections[ 0 ].lineName ) { 
                                     
                                     if( railSide == Rail.Right && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.RightToEntranceRight ) {
                                         inverseSection = false;
@@ -1691,7 +1691,7 @@ public class TrainController : MonoBehaviour
                                         // Implementare logica stop automatico treno qui
                                     }
                                 }
-                                else if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( NewLineSide.Left ) && sections[ 0 ].fromSection.newLinesStarts[ NewLineSide.Left ].lineName == sections[ 0 ].lineName ) { 
+                                else if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( Side.Left ) && sections[ 0 ].fromSection.newLinesStarts[ Side.Left ].lineName == sections[ 0 ].lineName ) { 
                                     if( railSide == Rail.Left && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.LeftToEntranceLeft ) {
                                         inverseSection = false;
                                         inverseLine = true;
@@ -1876,9 +1876,9 @@ public class TrainController : MonoBehaviour
 
                                     if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight || sections[ i ].activeSwitch == SwitchDirection.CenterToExitLeft ) {
 
-                                        NewLineSide newSide = NewLineSide.Left;
+                                        Side newSide = Side.Left;
                                         if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight ) {
-                                            newSide = NewLineSide.Right;
+                                            newSide = Side.Right;
                                         }
 
                                         keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
@@ -1896,10 +1896,10 @@ public class TrainController : MonoBehaviour
                                     if( !sections[ i ].ignoreSwitch ) {
                                         if( sections[ i ].activeSwitch == SwitchDirection.LeftToExitLeft || sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
 
-                                            NewLineSide newSide = NewLineSide.Left;
+                                            Side newSide = Side.Left;
                                             railSide = Rail.Right;
                                             if( sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
-                                                newSide = NewLineSide.Right;
+                                                newSide = Side.Right;
                                                 railSide = Rail.Left;
                                             }
 
@@ -2104,7 +2104,7 @@ public class TrainController : MonoBehaviour
                                 }
                                 else if( sections[ 0 ].fromSection.switchType == SwitchType.BiToNewBi ) {
 
-                                    if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( NewLineSide.Right ) && sections[ 0 ].fromSection.newLinesStarts[ NewLineSide.Right ].lineName == sections[ 0 ].lineName ) { 
+                                    if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( Side.Right ) && sections[ 0 ].fromSection.newLinesStarts[ Side.Right ].lineName == sections[ 0 ].lineName ) { 
                                         
                                         if( railSide == Rail.Right && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.RightToEntranceRight ) {
                                             inverseSection = false;
@@ -2122,7 +2122,7 @@ public class TrainController : MonoBehaviour
                                             // Implementare logica stop automatico treno qui
                                         }
                                     }
-                                    else if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( NewLineSide.Left ) && sections[ 0 ].fromSection.newLinesStarts[ NewLineSide.Left ].lineName == sections[ 0 ].lineName ) { 
+                                    else if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( Side.Left ) && sections[ 0 ].fromSection.newLinesStarts[ Side.Left ].lineName == sections[ 0 ].lineName ) { 
                                         if( railSide == Rail.Left && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.LeftToEntranceLeft ) {
                                             inverseSection = false;
                                             inverseLine = false;
@@ -2292,9 +2292,9 @@ public class TrainController : MonoBehaviour
 
                                     if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight || sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
 
-                                        NewLineSide newSide = NewLineSide.Left;
+                                        Side newSide = Side.Left;
                                         if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
-                                            newSide = NewLineSide.Right;
+                                            newSide = Side.Right;
                                         }
 
                                         keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
@@ -2312,10 +2312,10 @@ public class TrainController : MonoBehaviour
                                     if( !sections[ i ].ignoreSwitch ) {
                                         if( sections[ i ].activeSwitch == SwitchDirection.LeftToEntranceLeft || sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
 
-                                            NewLineSide newSide = NewLineSide.Left;
+                                            Side newSide = Side.Left;
                                             railSide = Rail.Left;
                                             if( sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
-                                                newSide = NewLineSide.Right;
+                                                newSide = Side.Right;
                                                 railSide = Rail.Right;
                                             }
 

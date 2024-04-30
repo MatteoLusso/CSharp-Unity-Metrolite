@@ -10,6 +10,7 @@ public enum CardinalPoint{
 public enum Side{ 
     Left,
     Right,
+    BothLeftAndRight,
     Top,
     Bottom,
 }
@@ -38,10 +39,29 @@ public enum ArrayType
     Segment,
 }
 
-public enum ProceduralMeshType {
-    Wall,
-    Ground,
-    PlatformFloor,
-    PlatformSide,
+public enum Type {
+    Tunnel,
+    Station,
+    Switch,
+    MaintenanceJoint,
+    Terminus,
+}
+
+public enum SwitchType {
+    BiToBi,
+    BiToMono,
+    MonoToBi,
+    MonoToNewMono,
+    BiToNewBi,
+}
+
+public enum StationType {
+    CentralPlatform,
+    LateralPlatform,
+}
+
+public enum MeshType {
+    PerimeterWall,
+    InternalWall,
 }
 
