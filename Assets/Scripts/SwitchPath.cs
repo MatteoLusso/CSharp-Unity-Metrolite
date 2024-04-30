@@ -527,11 +527,11 @@ public class SwitchPath : ScriptableObject
 
         switchFloor.centerLine = new List<Vector3>{ c0, cb, c1 };
 
-        foreach( NewLineSide newSide in switchSection.newLinesStarts.Keys ) {
+        foreach( Side newSide in switchSection.newLinesStarts.Keys ) {
 
             Debug.Log( "newSide: " + newSide );
 
-            if( newSide == NewLineSide.Right ) { // Nuova linea a Destra
+            if( newSide == Side.Right ) { // Nuova linea a Destra
                 
                 nr1 = switchSection.newLinesStarts[ newSide ].pos; 
 
@@ -551,7 +551,7 @@ public class SwitchPath : ScriptableObject
 
                 nextStartingDirections.Add( nr1 - cb );
             }
-            else if( newSide == NewLineSide.Left ) { // Nuova linea a Sinistra
+            else if( newSide == Side.Left ) { // Nuova linea a Sinistra
 
                 nl1 = switchSection.newLinesStarts[ newSide ].pos;
 
@@ -627,9 +627,9 @@ public class SwitchPath : ScriptableObject
         switchFloor.centerLine = new List<Vector3>{ c0, c1 };
         switchFloor.rightLine = new List<Vector3>{ r0, rb0, rb1, r1 };
 
-        foreach( NewLineSide newSide in switchSection.newLinesStarts.Keys ) {
+        foreach( Side newSide in switchSection.newLinesStarts.Keys ) {
 
-            if( newSide == NewLineSide.Right ) { // Nuova linea a Destra
+            if( newSide == Side.Right ) { // Nuova linea a Destra
                 
                 Vector3 ncr = switchSection.newLinesStarts[ newSide ].pos; 
                 nr0 = ncr - switchDir * ( ( tunnelWidth / 2 ) + ( centerWidth / 2 ) );
@@ -658,7 +658,7 @@ public class SwitchPath : ScriptableObject
                 nextStartingPoints.Add( ncr );
                 nextStartingDirections.Add( nr0 - rb0 );
             }
-            else if( newSide == NewLineSide.Left ) { // Nuova linea a Sinistra
+            else if( newSide == Side.Left ) { // Nuova linea a Sinistra
 
                 Vector3 ncl = switchSection.newLinesStarts[ newSide ].pos; 
                 nl0 = ncl - switchDir * ( ( tunnelWidth / 2 ) + ( centerWidth / 2 ) );
@@ -695,10 +695,10 @@ public class SwitchPath : ScriptableObject
         section.nextStartingPoints = nextStartingPoints;
         section.floorPoints = switchFloor;
 
-        if( switchSection.newLinesStarts.ContainsKey( NewLineSide.Right ) ) {
+        if( switchSection.newLinesStarts.ContainsKey( Side.Right ) ) {
             section.activeSwitch = SwitchDirection.RightToRight;
         }
-        else if( switchSection.newLinesStarts.ContainsKey( NewLineSide.Left ) ) {
+        else if( switchSection.newLinesStarts.ContainsKey( Side.Left ) ) {
             section.activeSwitch = SwitchDirection.LeftToLeft;
         }
         section.curvePointsCount = switchFloor.rightLine.Count;

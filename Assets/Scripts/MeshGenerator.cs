@@ -64,6 +64,11 @@ public static class MeshGenerator
         public List<Vector3> switchBiNewGroundLimitPoints0 { get; set; }
     }
 
+    public class BaseLine {
+        public List<Vector3> tunnelWallLeft;
+        public List<Vector3> tunnelWallRight;
+    }
+
     public class PlatformSide {
 
         public List<Vector3> rightDown { get; set; }
@@ -636,7 +641,7 @@ public static class MeshGenerator
         }
     }
 
-    public static Mesh GenerateSwitchNewBiGround( NewLineSide side, List<Vector3> points0, List<Vector3> points1, int start0, int end0, List<Vector3> points2, int minIndex1, int maxIndex1, Vector3 switchDir, bool clockwiseRotation, Vector2 textureTilting, float tunnelWidth, float centerWidth ) {
+    public static Mesh GenerateSwitchNewLineGround( Side side, List<Vector3> points0, List<Vector3> points1, int start0, int end0, List<Vector3> points2, int minIndex1, int maxIndex1, Vector3 switchDir, bool clockwiseRotation, Vector2 textureTilting, float tunnelWidth, float centerWidth ) {
         
         Mesh groundMesh = new();
 
@@ -648,8 +653,7 @@ public static class MeshGenerator
         int verticesCounter = 0;
         float u, v;
 
-        List<Vector3> groundLimitPoints0 = new();
-        groundLimitPoints0.Add( points0[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) );
+        List<Vector3> groundLimitPoints0 = new() { points0[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == Side.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) };
 
         for( int i = 0; i <= start0; i++ ) {
             groundLimitPoints0.Add( points0[ i ] );
@@ -659,7 +663,7 @@ public static class MeshGenerator
             groundLimitPoints0.Add( points2[ i ] );
         }
 
-        groundLimitPoints0.Add( points2[ minIndex1 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) );
+        groundLimitPoints0.Add( points2[ minIndex1 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == Side.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) );
         groundLimitPoints0.Add( groundLimitPoints0[ 0 ] + ( switchDir.normalized * ( groundLimitPoints0[ groundLimitPoints0.Count - 1 ] - groundLimitPoints0[ 0 ] ).magnitude / 2 ) );
 
         vertices.AddRange( groundLimitPoints0 );
@@ -877,7 +881,7 @@ public static class MeshGenerator
 
         List<Vector3> groundLimitPoints4 = new();
 
-        groundLimitPoints4.Add( points2[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 )  ) * switchDir.normalized * tunnelWidth ) );
+        groundLimitPoints4.Add( points2[ 0 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == Side.Left ? -1 : 1 )  ) * switchDir.normalized * tunnelWidth ) );
         groundLimitPoints4.Add( points2[ 0 ] );
 
         for( int i = points2.Count - 1; i > ( points2.Count - 1 ) - maxIndex1 + minIndex1; i-- ) {
@@ -888,7 +892,7 @@ public static class MeshGenerator
             groundLimitPoints4.Add( points1[ i ] );
         }
 
-        groundLimitPoints4.Add( groundLimitPoints4[ groundLimitPoints4.Count - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == NewLineSide.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) );
+        groundLimitPoints4.Add( groundLimitPoints4[ groundLimitPoints4.Count - 1 ] + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f * ( side == Side.Left ? -1 : 1 ) ) * switchDir.normalized * tunnelWidth ) );
         groundLimitPoints4.Add( groundLimitPoints4[ groundLimitPoints4.Count - 1 ] - ( switchDir.normalized * ( groundLimitPoints4[ groundLimitPoints4.Count - 1 ] - groundLimitPoints4[ 0 ] ).magnitude / 2 ) );
 
         vertices.AddRange( groundLimitPoints4 );
@@ -1446,7 +1450,7 @@ public static class MeshGenerator
         
         ProceduralMesh extrudedMesh = new();
 
-        if( closeMesh ) {
+        if( closeMesh && baseVertices[ ^1 ] != baseVertices[ 0 ] ) {
             baseVertices.Add( baseVertices[ 0 ] );
         }
 
@@ -1468,9 +1472,8 @@ public static class MeshGenerator
         foreach( Vector3 profileVertex in profileVertices ) {
             profileVerticesScaled.Add( profileVertex * profileScale );
         }
-        
-        Mesh mesh = new();
-        mesh.name = "Procedural Mesh";
+
+        Mesh mesh = new() { name = "Procedural Mesh" };
 
         int h = profileVerticesScaled.Count;
         int trianglesCounter = ( h - 1 ) * ( baseVertices.Count - 1 ) * 6;
@@ -1531,12 +1534,16 @@ public static class MeshGenerator
             else {
 
                 if( i >= baseDirs.Count ) {
-                    Vector3 baseNormal = Vector3.Cross( baseDirs[ baseDirs.Count - 1 ].normalized, -Vector3.forward ).normalized;
-                    vertices[ i * h ] = baseVertices[ i ] + ( baseNormal * horPosCorrection ) + ( -Vector3.forward * vertPosCorrection );
+                    Vector3 baseNormal = Vector3.Cross( baseDirs[ ( closeMesh && i == baseVertices.Count - 1 ) ? 0 : baseDirs.Count - 1 ].normalized, -Vector3.forward ).normalized;
+                    vertices[ i * h ] = baseVertices[ i ] + ( ( clockwiseRotation ? 1 : -1 ) * horPosCorrection * baseNormal ) + ( -Vector3.forward * vertPosCorrection );
                 }
                 else {
                     Vector3 baseNormal = Vector3.Cross( baseDirs[ i ].normalized, -Vector3.forward ).normalized;
-                    vertices[ i * h ] = baseVertices[ i ] + ( baseNormal * horPosCorrection ) + ( -Vector3.forward * vertPosCorrection );
+                    vertices[ i * h ] = baseVertices[ i ] + ( ( clockwiseRotation ? 1 : -1 ) * horPosCorrection * baseNormal ) + ( -Vector3.forward * vertPosCorrection );
+                }
+
+                if( i > 0 ) {
+                    Debug.DrawLine( vertices[ i * h ], vertices[ ( i - 1 ) * h ], Color.yellow, 9999 );
                 }
 
                 if( i == baseVertices.Count - 1 ) {

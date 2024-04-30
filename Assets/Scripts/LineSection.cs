@@ -2,36 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum Type {
-    Tunnel,
-    Station,
-    Switch,
-    Terminus,
-}
-
-public enum SwitchType {
-    BiToBi,
-    BiToMono,
-    MonoToBi,
-    MonoToNewMono,
-    BiToNewBi,
-}
-
-public enum StationType {
-    CentralPlatform,
-    LeftSidePlatform,
-    RightSidePlatform,
-    BothSidesPlatform,
-}
-
-public enum NewLineSide {
-    Left,
-    Right,
-    Both,
-}
-
 public class LineStart{
-    public NewLineSide newLineSide { get; set; }
+    public Side Side { get; set; }
     public CardinalPoint previousOrientation { get; set; }
     public CardinalPoint orientation { get; set; }
     public Vector3 dir { get; set; }
@@ -39,12 +11,12 @@ public class LineStart{
     public bool generated { get; set; }
     public string lineName { get; set; }
 
-    public LineStart( CardinalPoint inputOrientation, NewLineSide newLineSide, Vector3 inputPos, Vector3 inputDir ) {
+    public LineStart( CardinalPoint inputOrientation, Side Side, Vector3 inputPos, Vector3 inputDir ) {
         this.generated = false;
         this.orientation = inputOrientation;
         this.pos = inputPos;
         this.dir = inputDir;
-        this.newLineSide = newLineSide;
+        this.Side = Side;
     }
 }
 
@@ -73,7 +45,7 @@ public class LineSection
     public CardinalPoint mainDir { get; set; }
     public SwitchType switchType { get; set; }
     public StationType stationType { get; set; }
-    public NewLineSide newLineSide { get; set; }
+    public Side Side { get; set; }
     public bool bidirectional { get; set; }
     public bool newBidirectional { get; set; }
     public Vector3 centerCoords { get; set; }
@@ -98,7 +70,7 @@ public class LineSection
     public LineSection fromSection { get; set; }
     public CardinalPoint orientation { get; set; }
     public string lineName { get; set; }
-    public Dictionary<NewLineSide, LineStart> newLinesStarts { get; set; }
+    public Dictionary<Side, LineStart> newLinesStarts { get; set; }
     public int sectionIndex { get; set; }
     public string sectionName { get; set; }
     public GameObject indicatorObj { get; set; }
@@ -110,4 +82,10 @@ public class LineSection
 
     public List<Vector3> sidePlatformFloorLeftLastProfile { get; set; }
     public List<Vector3> sidePlatformFloorRightLastProfile { get; set; }
+
+    public Dictionary<MeshType, Dictionary<Side, List<MeshGenerator.ProceduralMesh>>> lastProfiles { get; set; }
+
+    public LineSection() {
+        lastProfiles = new();
+    }
 }
