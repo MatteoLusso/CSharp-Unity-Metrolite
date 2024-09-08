@@ -13,7 +13,8 @@ public class CameraController : MonoBehaviour
     public float horizontalAxisRotationSpeed = 1.0f;
     public float horizontalAxisDeadZone = 0.1f;
     public float horizontalButtonRotationSpeed = 1.0f;
-    public float deadZoomSpeed = 5.0f;
+
+    public AnimationCurve zoomCurve;
 
     public float orthographicMinSize = 100;
     public float orthographicMaxSize = 250;
@@ -63,8 +64,8 @@ public class CameraController : MonoBehaviour
 
             newPos = train.transform.position + Quaternion.Euler( rotation.x, rotation.y, rotation.z ) * ( offset + -Vector3.forward );
 
-            //this.transform.position = Vector3.SmoothDamp( this.transform.position, newPos, ref velocity, smoothTime );
-            this.transform.position = newPos;
+            this.transform.position = Vector3.SmoothDamp( this.transform.position, newPos, ref velocity, smoothTime );
+            //this.transform.position = newPos;
             this.transform.LookAt( train.transform, -Vector3.forward );
 
             prevPos = newPos;
@@ -73,12 +74,11 @@ public class CameraController : MonoBehaviour
             if( thisCamera.orthographic ) {
                 
                 TrainController trainController = train.GetComponent<TrainController>();
-                if( Mathf.Abs( trainController.speed ) < deadZoomSpeed ) {
-                    thisCamera.orthographicSize = orthographicMinSize;
-                }
-                else {
-                    thisCamera.orthographicSize = orthographicMinSize + ( ( orthographicMaxSize - orthographicMinSize ) * ( ( Mathf.Abs( trainController.speed ) - deadZoomSpeed ) / ( trainController.maxSpeed - deadZoomSpeed ) ) );
-                }
+
+                float speedPercent = Mathf.Abs( trainController.speed ) / trainController.maxSpeed;
+                float zoomPercent = this.zoomCurve.Evaluate( speedPercent );
+
+                thisCamera.orthographicSize = orthographicMinSize + ( orthographicMaxSize - orthographicMinSize ) * zoomPercent;
             }
         }
 

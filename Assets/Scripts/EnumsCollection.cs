@@ -63,5 +63,12 @@ public enum StationType {
 public enum MeshType {
     PerimeterWall,
     InternalWall,
+    FoundationWall,
+}
+
+public enum Biome {
+    Normal,
+    Nature,
+    Radiactive,
 }
 
