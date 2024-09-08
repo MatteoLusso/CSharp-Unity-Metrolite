@@ -373,8 +373,7 @@ public class SwitchPath : ScriptableObject
             section.nextStartingPoints = nextStartingPoints;
         }*/
 
-        List<Vector3> nextStartingDirections = new();
-        nextStartingDirections.Add( startingDir );
+        List<Vector3> nextStartingDirections = new() { startingDir };
         section.nextStartingDirections = nextStartingDirections;
 
         section.nextStartingDirections = nextStartingDirections; 
@@ -528,8 +527,6 @@ public class SwitchPath : ScriptableObject
         switchFloor.centerLine = new List<Vector3>{ c0, cb, c1 };
 
         foreach( Side newSide in switchSection.newLinesStarts.Keys ) {
-
-            Debug.Log( "newSide: " + newSide );
 
             if( newSide == Side.Right ) { // Nuova linea a Destra
                 

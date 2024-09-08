@@ -42,6 +42,8 @@ public enum SwitchDirection {
 public class LineSection
 {
     public Type type { get; set; }
+    public Biome currentBiome { get; set; }
+    public Biome nextBiome { get; set; }
     public CardinalPoint mainDir { get; set; }
     public SwitchType switchType { get; set; }
     public StationType stationType { get; set; }
@@ -83,9 +85,11 @@ public class LineSection
     public List<Vector3> sidePlatformFloorLeftLastProfile { get; set; }
     public List<Vector3> sidePlatformFloorRightLastProfile { get; set; }
 
-    public Dictionary<MeshType, Dictionary<Side, List<MeshGenerator.ProceduralMesh>>> lastProfiles { get; set; }
+    public Dictionary<MeshType, Dictionary<Side, List<MeshGenerator.ProceduralMesh>>> meshes { get; set; }
 
     public LineSection() {
-        lastProfiles = new();
+        meshes = new();
+
+        currentBiome = nextBiome = Biome.Normal;
     }
 }

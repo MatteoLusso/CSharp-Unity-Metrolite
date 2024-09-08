@@ -605,7 +605,7 @@ public class TrainController : MonoBehaviour
             }
         
 
-            UpdateSwitchLight( sections[ actualSwitchIndex ] );
+            //UpdateSwitchLight( sections[ actualSwitchIndex ] );
         }
     }
 
@@ -668,24 +668,24 @@ public class TrainController : MonoBehaviour
         if( speed > 1.0f && !goFowardActive )
         {
             noise.Play();
-            StartCoroutine( "GoForward" );
+            StartCoroutine( nameof( GoForward ) );
             goFowardActive = true;
         }
         else if( speed <= 1.0f && goFowardActive) {
             noise.Stop();
-            StopCoroutine( "GoForward" );
+            StopCoroutine( nameof( GoForward ) );
             goFowardActive = false;
         }
 
         if( speed < -1.0f && !goBackwardActive )
         {
             noise.Play();
-            StartCoroutine( "GoBackward" );
+            StartCoroutine( nameof( GoBackward ) );
             goBackwardActive = true;
         }
         else if( speed >= -1.0f && goBackwardActive) {
             noise.Stop();
-            StopCoroutine( "GoBackward" );
+            StopCoroutine( nameof( GoBackward ) );
             goBackwardActive = false;
         }
 
@@ -937,7 +937,7 @@ public class TrainController : MonoBehaviour
                             for( int j = startingIndex; j < points.Count; j++ ) {
                                 int indexDiff = j - startingIndex;
                                 //Debug.Log( "j: " + j );
-                                dist = ( ( points[ j ] + ( Vector3.forward * heightCorrection ) ) - this.transform.position ).magnitude;
+                                dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
                                 //Debug.Log( "dist: " + dist );
 
                                 if( j + indexDiff >= points.Count ) {
@@ -1302,7 +1302,7 @@ public class TrainController : MonoBehaviour
                             // il punto successivo verso cui si dirigerà il vagone
                             for( int j = indexPoint; j >= 0; j-- ) {
                                 int indexDiff = startingIndex - j;
-                                dist = ( ( points[ j ] + ( Vector3.forward * heightCorrection ) ) - this.transform.position ).magnitude;
+                                dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
 
                                 if( j - indexDiff < 0 ) {
                                     if( i - 1 >= 0 && sections[ i ].type != Type.Switch && sections[ i - 1 ].type != Type.Switch ) {
@@ -1766,7 +1766,7 @@ public class TrainController : MonoBehaviour
                                 // il punto successivo verso cui si dirigerà il vagone
                                 for( int j = indexPoint; j >= 0; j-- ) {
                                     int indexDiff = startingIndex - j;
-                                    dist = ( ( points[ j ] + ( Vector3.forward * heightCorrection ) ) - this.transform.position ).magnitude;
+                                    dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
 
                                     if( j - indexDiff < 0 ) {
                                         if( i - 1 >= 0 && sections[ i ].type != Type.Switch && sections[ i - 1 ].type != Type.Switch ) {
@@ -2184,7 +2184,7 @@ public class TrainController : MonoBehaviour
                                 for( int j = startingIndex; j < points.Count; j++ ) {
                                     int indexDiff = j - startingIndex;
                                     //Debug.Log( "j: " + j );
-                                    dist = ( ( points[ j ] + ( Vector3.forward * heightCorrection ) ) - this.transform.position ).magnitude;
+                                    dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
                                     //Debug.Log( "dist: " + dist );
 
                                     if( j + indexDiff >= points.Count ) {
