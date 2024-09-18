@@ -137,6 +137,29 @@ public static class MeshGenerator
         public List<Node> nodes;
     }
 
+    public static ProceduralMesh GenerateStair( List<Vector3> front, List<Vector3> up, float stepPercent, bool clockwise, float rotationCorrection, Utils.Texturing texturing ) {
+
+        int steps = Mathf.RoundToInt( 1 / stepPercent );
+        stepPercent = 1.0f / ( float )steps;
+
+        List<Vector3> back = new() { new Vector3( up[ 0 ].x, up[ 0 ].y, front[ 0 ].z ),
+                                     new Vector3( up[ ^1 ].x, up[ ^1 ].y, front[ ^1 ].z ) };
+                                     
+        Vector3 horDir = back[ 0 ] - front[ 0 ]; 
+        Vector3 vertDir = up[ 0 ] - back[ 0 ];
+
+        float width = horDir.magnitude, height = vertDir.magnitude;
+
+        List<Vector3> stairProfile = new() { Vector3.zero }; 
+
+        for( int i = 0; i < steps; i++ ) {
+            stairProfile.Add( stairProfile[ ^1 ] + stepPercent * height * -Vector3.forward );
+            stairProfile.Add( stairProfile[ ^1 ] + stepPercent * width * Vector3.up );
+        }
+
+        return GenerateExtrudedMesh( stairProfile, 1.0f, null, front, 0.0f, 0.0f, clockwise, false, texturing.tiling, Vector2.zero, rotationCorrection, 0.5f );
+    }
+
     public static bool LineLineIntersect( out Vector3 intersection, Vector3 normal, Vector3 linePoint1, Vector3 lineVec1, Vector3 linePoint2, Vector3 lineVec2, ArrayType line1Type, ArrayType line2Type ) {
 
         Plane plane = new( normal, linePoint1 );
@@ -466,7 +489,7 @@ public static class MeshGenerator
         return unifiedProfile;
     }
 
-    public static void InstantiateSwitchNewLineGround( GameObject sectionGameObj, Side side, Floor entrance, Floor exit, Floor central, int bezPoints, Utils.Texturing groundTexturing/*, List<Vector3> points0, List<Vector3> points1, int start0, int end0, List<Vector3> points2, int minIndex1, int maxIndex1, Vector3 switchDir, bool clockwiseRotation, Vector2 textureTilting, float tunnelWidth, float centerWidth*/ ) {
+    public static void InstantiateSwitchNewLineGround( GameObject sectionGameObj, Side side, Floor entrance, Floor exit, Floor central, int bezPoints, Utils.Texturing groundTexturing ) {
         
         Mesh groundMesh = new();
 
@@ -562,6 +585,35 @@ public static class MeshGenerator
         groundObj.AddComponent<MeshRenderer>();
         groundObj.GetComponent<MeshFilter>().sharedMesh = groundMesh;
         groundObj.GetComponent<MeshRenderer>().SetMaterials( groundTexturing.materials ); 
+        groundObj.layer = LayerMask.NameToLayer( "Walkable" );
+    }
+
+    public static List<Vector3> GetFullProfile( List<ProceduralMesh> proceduralMeshes, int index, List<int> ignoreIndexes ) {
+        List<Vector3> fullProfile = new();
+
+        ignoreIndexes ??= new();
+
+        List<ProceduralMesh> filteredProceduralMeshes = new();
+        for( int i = 0; i < proceduralMeshes.Count; i++ ) {
+            if( !ignoreIndexes.Contains( i ) ) {
+                filteredProceduralMeshes.Add( proceduralMeshes[ i ] );
+            }
+        }
+
+        for( int i = 0; i < filteredProceduralMeshes.Count; i++ ) {
+            int finalIndex = index;
+            if( index < 0 ) {
+                finalIndex = filteredProceduralMeshes[ i ].verticesStructure[ Orientation.Vertical ].Count + index;
+            }
+
+            fullProfile.AddRange( filteredProceduralMeshes[ i ].verticesStructure[ Orientation.Vertical ][ finalIndex ] );
+
+            if( i < filteredProceduralMeshes.Count - 1 ) {
+                fullProfile.RemoveAt( fullProfile.Count - 1 );
+            }
+        }
+
+        return fullProfile;
     }
     
     public static Floor CalculateBidirectionalWithBothSidesPlatformFloorMeshVertex( LineSection section, float centerWidth, float sideWidth, float railsWidth )

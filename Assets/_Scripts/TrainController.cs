@@ -65,6 +65,8 @@ public class TrainController : MonoBehaviour
 
     public bool showDebugInfo = false;
 
+    private bool ignoreInputs = false;
+
     void Start()
     {
         if( debugSpeed ) {
@@ -165,116 +167,6 @@ public class TrainController : MonoBehaviour
                               "Side: " + railSide + "\n" +
                               "Inverse: " + inverseLine + "\n";
     }
-    
-    // private void HandleSwitchesIndicators() {
-    //     string lineName = keyLine;
-    //     List<LineSection> sections = lines[ lineName ];
-
-    //     foreach( DynamicIcons dynamicIconsCmp in this.dynamicIconsCmps )
-    //     {
-    //         dynamicIconsCmp.TARGET_MaxVisibleDistance = 0.0f;
-    //     }
-
-    //     if( actualSwitchIndex < sections.Count && actualSwitchIndex > -1 && actualSwitchIndex != indexSection ) {
-
-    //         string iconName = "Wrong_Way";
-
-    //         // Costruiamo i nomi delle icone
-
-    //         //Debug.Log( ">>> Icona scambio: " + sections[ actualSwitchIndex ].switchType.ToString() + '_' + sections[ actualSwitchIndex ].activeSwitch.ToString() + '_' + railSide.ToString() );
-            
-
-    //         if( mainDir == Direction.Forward || ( mainDir == Direction.Backward && inverseLine ) ) {
-                
-    //             // Distinguo lo scambio selezionato
-
-    //             /*switch( sections[ actualSwitchIndex ].switchType ) { 
-
-    //                 case SwitchType.BiToBi:     switch( railSide ) {
-
-    //                                                 case Side.Right:    switch( sections[ actualSwitchIndex ].activeSwitch ) {
-
-    //                                                                         case SwitchDirection.RightToRight:  iconName = "Bi_To_Bi_Right";  
-    //                                                                                                             break;
-    //                                                                     } 
-
-    //                                                                     break; 
-    //                                             }
-
-    //                                             break;
-    //             }*/
-
-
-
-    //             switch( railSide ) {
-
-    //                 case Rail.Right:   
-    //                                     if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToRight ) {
-    //                                         iconName = "Bi_To_Bi_Right";
-    //                                     }
-    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToLeft ) {
-    //                                         iconName = "Bi_To_Bi_Right_To_Left";
-    //                                     }
-    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToCenter ) {
-    //                                         iconName = "Bi_To_Mono_Right_To_Center";
-    //                                     }
-
-    //                                     break;
-
-    //                 case Rail.Left:     if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToLeft ) {
-    //                                         iconName = "Bi_To_Bi_Left";
-    //                                     }
-    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToRight ) {
-    //                                         iconName = "Bi_To_Bi_Left_To_Right";
-    //                                     }
-    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToCenter ) {
-    //                                         iconName = "Bi_To_Mono_Left_To_Center";
-    //                                     }
-
-    //                                     break;
-
-    //                 case Rail.Center:   if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.LeftToCenter ) {
-    //                                         iconName = "Mono_To_Bi_Center_To_Left";
-    //                                     }
-    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.RightToCenter ) {
-    //                                         iconName = "Mono_To_Bi_Center_To_Right";
-    //                                     }
-    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToCenter ) {
-    //                                         if( sections[ actualSwitchIndex ].Side == Side.Right ) {
-    //                                             iconName = "Center_To_Center_New_Right";
-    //                                         }
-    //                                         else if( sections[ actualSwitchIndex ].Side == Side.Left ) {
-    //                                             iconName = "Center_To_Center_New_Left";
-    //                                         }
-    //                                     }
-    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
-    //                                         if( sections[ actualSwitchIndex ].Side == Side.Right ) {
-    //                                             iconName = "Center_To_Entrance_Right";
-    //                                         }
-    //                                         if( sections[ actualSwitchIndex ].Side == Side.Both ) {
-    //                                             // TODO
-    //                                         }
-    //                                     }
-    //                                     else if( sections[ actualSwitchIndex ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
-    //                                         if( sections[ actualSwitchIndex ].Side == Side.Left ) {
-    //                                             iconName = "Center_To_Entrance_Left";
-    //                                         }
-    //                                         if( sections[ actualSwitchIndex ].Side == Side.Both ) {
-    //                                             // TODO
-    //                                         }
-    //                                     }
-
-    //                                     break;
-    //             }
-    //         }
-
-    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Active = true;
-    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().TARGET_MaxVisibleDistance = 2500.0f;
-    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Color = iconName == "Wrong_Way" ? Color.red : Color.green;
-    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Rotation = iconName == "Wrong_Way" ? false : true;
-    //         sections[ actualSwitchIndex ].indicatorObj.GetComponent<DynamicIcons>().ICON_Texture2D = Resources.Load( "Indicatori/Texture2D/" + iconName ) as Texture2D;
-    //     }
-    // }
 
     private void HandleSwitch() {
 
@@ -325,7 +217,7 @@ public class TrainController : MonoBehaviour
         this.actualSwitchLine = lineName;
         
 
-        if( actualSwitchIndex != indexSection && ( Input.GetButtonDown( "RB" ) || Input.GetKeyDown( KeyCode.F ) ) ) {
+        if( !this.ignoreInputs && actualSwitchIndex != indexSection && ( Input.GetButtonDown( "RB" ) || Input.GetKeyDown( KeyCode.F ) ) ) {
 
             sections = lines[ lineName ];
 
@@ -663,6 +555,10 @@ public class TrainController : MonoBehaviour
         }
     }
 
+    public void IgnoreInputs( bool ignore ) {
+        this.ignoreInputs = ignore;
+    } 
+
     private void HandleMovement() {
 
         if( speed > 1.0f && !goFowardActive )
@@ -689,7 +585,7 @@ public class TrainController : MonoBehaviour
             goBackwardActive = false;
         }
 
-        if( Input.GetKey( KeyCode.D ) || Input.GetAxis( "RT" ) > deadZoneTriggerRight ) {
+        if( !this.ignoreInputs && ( Input.GetKey( KeyCode.D ) || Input.GetAxis( "RT" ) > deadZoneTriggerRight ) ) {
 
             float rightTriggerPression = 1.0f;
             if( Input.GetAxis( "RT" ) > deadZoneTriggerRight ) {
@@ -710,7 +606,7 @@ public class TrainController : MonoBehaviour
                 speed = maxSpeed;
             }
         }
-        if( Input.GetKey( KeyCode.A ) || Input.GetAxis( "LT" ) > deadZoneTriggerLeft ) {
+        if( !this.ignoreInputs && ( Input.GetKey( KeyCode.A ) || Input.GetAxis( "LT" ) > deadZoneTriggerLeft ) ) {
 
             float leftTriggerPression = 1.0f;
             if( Input.GetAxis( "LT" ) > deadZoneTriggerLeft ) {
@@ -748,7 +644,7 @@ public class TrainController : MonoBehaviour
 
     private void HandleBrakingNoise() {
 
-        if( ( ( Input.GetKey( KeyCode.D ) || Input.GetAxis( "RT" ) > deadZoneTriggerRight ) && mainDir == Direction.Backward ) || ( ( Input.GetKey( KeyCode.A ) || Input.GetAxis( "LT" ) > deadZoneTriggerLeft ) && mainDir == Direction.Forward ) ) { 
+        if( !this.ignoreInputs && ( ( ( Input.GetKey( KeyCode.D ) || Input.GetAxis( "RT" ) > deadZoneTriggerRight ) && mainDir == Direction.Backward ) || ( ( Input.GetKey( KeyCode.A ) || Input.GetAxis( "LT" ) > deadZoneTriggerLeft ) && mainDir == Direction.Forward ) ) ) { 
 
             ////Debug.Log( "Braking" );
             if( !braking.isPlaying ) {
@@ -757,7 +653,7 @@ public class TrainController : MonoBehaviour
                 braking.Play();
             }
             else {
-                braking.volume = Mathf.Lerp( 0.0f, 1.0f, ( Mathf.Abs( speed ) / maxSpeed ) ) * Time.timeScale;
+                braking.volume = Mathf.Lerp( 0.0f, 1.0f, Mathf.Abs( speed ) / maxSpeed ) * Time.timeScale;
             }
         }
         else{
@@ -894,8 +790,7 @@ public class TrainController : MonoBehaviour
 
         while( !endOfTheLine ) {
         
-        actualMovement = Direction.Forward;
-        //foreach( string lineName in lines.Keys ) {
+            actualMovement = Direction.Forward;
             List<LineSection> sections = lines[ keyLine ];
 
 // >>> STANDARD LINE NAVIGATION
@@ -905,168 +800,189 @@ public class TrainController : MonoBehaviour
                     
                     // Normal line - Normal section
 
-                    //if( !inverseSection ) {
                     
-                        List<Vector3> points = getPoints( sections[ i ] );
-                        actualSectionPoints = points;
-                        
-                        float deltaDist = 0.0f;
-                        float dist = 0.0f;
-                        // Finché non sono abbastanza vicino all'ultimo punto della curva (mi sto muovendo in avanti, quindi "navigo" la lista dei punti in avanti)
-                        // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
-                        while( ( points[ points.Count - 1 ] - this.transform.position ).magnitude > deltaDist ) {
-                            // Distanza che sarà percorsa in un frame
-                            deltaDist = Time.deltaTime * Mathf.Abs( speed );
-                            Vector3 nextPoint = Vector3.zero;
-                            Vector3 nextOrientationPoint = Vector3.zero;
+                    List<Vector3> points = getPoints( sections[ i ] );
+                    actualSectionPoints = points;
+                    
+                    float deltaDist = 0.0f;
+                    float dist = 0.0f;
+                    // Finché non sono abbastanza vicino all'ultimo punto della curva (mi sto muovendo in avanti, quindi "navigo" la lista dei punti in avanti)
+                    // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
+                    while( ( points[ points.Count - 1 ] - this.transform.position ).magnitude > deltaDist ) {
+                        // Distanza che sarà percorsa in un frame
+                        deltaDist = Time.deltaTime * Mathf.Abs( speed );
+                        Vector3 nextPoint = Vector3.zero;
+                        Vector3 nextOrientationPoint = Vector3.zero;
 
-                            // Aggiornamento del movimento attuale del vagone (in questo caso avanti)
-                            if( mainDir == Direction.Backward ) {
+                        // Aggiornamento del movimento attuale del vagone (in questo caso avanti)
+                        if( mainDir == Direction.Backward ) {
 
-                                // Se il vagone stava andando indietro, allora devo puntare all'index successivo, ma se sono
-                                // già all'ultimo punto della curva passo alla sezione succcessiva
-                                if( indexPoint + 1 < points.Count ) {
-                                    indexPoint++;
-                                }
+                            // Se il vagone stava andando indietro, allora devo puntare all'index successivo, ma se sono
+                            // già all'ultimo punto della curva passo alla sezione succcessiva
+                            if( indexPoint + 1 < points.Count ) {
+                                indexPoint++;
                             }
-                            mainDir = Direction.Forward;
+                        }
+                        mainDir = Direction.Forward;
 
-                            int startingIndex = indexPoint;
-                            // Ricerca del punto della curva successivo più lontano della distanza (per frame) percorsa dal vagone, che diventerà
-                            // il punto successivo verso cui si dirigerà il vagone
-                            for( int j = startingIndex; j < points.Count; j++ ) {
-                                int indexDiff = j - startingIndex;
-                                //Debug.Log( "j: " + j );
-                                dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
-                                //Debug.Log( "dist: " + dist );
+                        int startingIndex = indexPoint;
+                        // Ricerca del punto della curva successivo più lontano della distanza (per frame) percorsa dal vagone, che diventerà
+                        // il punto successivo verso cui si dirigerà il vagone
+                        for( int j = startingIndex; j < points.Count; j++ ) {
+                            int indexDiff = j - startingIndex;
+                            //Debug.Log( "j: " + j );
+                            dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
+                            //Debug.Log( "dist: " + dist );
 
-                                if( j + indexDiff >= points.Count ) {
-                                    //Debug.Log( "Cerco punto in sezione successiva" );
-                                    if( i + 1 < sections.Count && sections[ i ].type != Type.Switch && sections[ i + 1 ].type != Type.Switch ) {
-                                        indexDiff = j + indexDiff - ( points.Count - 1 );
+                            if( j + indexDiff >= points.Count ) {
+                                //Debug.Log( "Cerco punto in sezione successiva" );
+                                if( i + 1 < sections.Count && sections[ i ].type != Type.Switch && sections[ i + 1 ].type != Type.Switch ) {
+                                    indexDiff = j + indexDiff - ( points.Count - 1 );
 
-                                        LineSection nextSection = sections[ i + 1 ];
-                                        List<Vector3> navigationPoints = new();
+                                    LineSection nextSection = sections[ i + 1 ];
+                                    List<Vector3> navigationPoints = new();
 
-                                        //if( sections[ i + 1 ].type == Type.Tunnel ) {
-                                            if( sections[ i + 1 ].bidirectional ) {
-                                                if( railSide == Rail.Left ) {
-                                                    navigationPoints = nextSection.floorPoints.leftLine;
-                                                }
-                                                else if( railSide == Rail.Right ) {
-                                                    navigationPoints = nextSection.floorPoints.rightLine;
-                                                }
+                                    //if( sections[ i + 1 ].type == Type.Tunnel ) {
+                                        if( sections[ i + 1 ].bidirectional ) {
+                                            if( railSide == Rail.Left ) {
+                                                navigationPoints = nextSection.floorPoints.leftLine;
                                             }
-                                            else {
-                                                navigationPoints = nextSection.floorPoints.centerLine;
+                                            else if( railSide == Rail.Right ) {
+                                                navigationPoints = nextSection.floorPoints.rightLine;
                                             }
+                                        }
+                                        else {
+                                            navigationPoints = nextSection.floorPoints.centerLine;
+                                        }
 
-                                            if( indexDiff >= navigationPoints.Count ) {
-                                                nextOrientationPoint = navigationPoints[ navigationPoints.Count - 1 ] + ( Vector3.forward * heightCorrection );
-                                            }
-                                            else {
-                                                nextOrientationPoint = navigationPoints[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                            }
+                                        if( indexDiff >= navigationPoints.Count ) {
+                                            nextOrientationPoint = navigationPoints[ navigationPoints.Count - 1 ] + ( Vector3.forward * heightCorrection );
+                                        }
+                                        else {
+                                            nextOrientationPoint = navigationPoints[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                        }
 
-                                        //}
-                                        //else {
-                                            //nextOrientationPoint = sections[ i + 1 ].bezierCurveLimitedAngle[ indexDiff ];
-                                        //}
-                                    }
-                                    else {
-                                        nextOrientationPoint = points[ points.Count - 1 ] + ( Vector3.forward * heightCorrection );
-                                    }
+                                    //}
+                                    //else {
+                                        //nextOrientationPoint = sections[ i + 1 ].bezierCurveLimitedAngle[ indexDiff ];
+                                    //}
                                 }
                                 else {
-                                    nextOrientationPoint = points[ j + indexDiff ] + ( Vector3.forward * heightCorrection );
-                                }
-
-                                if( dist > deltaDist ) {
-                                    indexPoint = j;
-                                    nextPoint = points[ j ] + ( Vector3.forward * heightCorrection );
-                                    //Debug.Log( "Indice nextPoint trovato: " + indexPoint );
-                                    break;
+                                    nextOrientationPoint = points[ points.Count - 1 ] + ( Vector3.forward * heightCorrection );
                                 }
                             }
+                            else {
+                                nextOrientationPoint = points[ j + indexDiff ] + ( Vector3.forward * heightCorrection );
+                            }
 
-                            if( nextPoint == Vector3.zero ) {
-                                ////Debug.Log( "Sezione terminata" );
+                            if( dist > deltaDist ) {
+                                indexPoint = j;
+                                nextPoint = points[ j ] + ( Vector3.forward * heightCorrection );
+                                //Debug.Log( "Indice nextPoint trovato: " + indexPoint );
                                 break;
                             }
-
-                            actualPoint = nextPoint;
-                            actualOrientationPoint = nextOrientationPoint;
-                            
-                            // Posizione e rotazione iniziale del vagone per punto della curva
-                            Vector3 nextDir = nextOrientationPoint - this.transform.position;
-                            Vector3 startDir = this.transform.right;
-                            Vector3 startPos = this.transform.position;
-                            float segmentDist = ( nextPoint - startPos ).magnitude;
-                            float sumDist = 0.0f;
-
-                            Quaternion rot = Quaternion.FromToRotation( startDir, nextDir );
-
-                            //Quaternion startRot = Quaternion.LookRotation( startDir, Vector3.forward );
-                            //Quaternion nextRot = Quaternion.LookRotation( nextDir, Vector3.forward );
-                            
-                            while( sumDist < segmentDist ) {
-                                Debug.DrawLine( this.transform.position, nextPoint, Color.red, Time.deltaTime );
-                                Debug.DrawLine( this.transform.position, nextOrientationPoint, Color.magenta, Time.deltaTime );
-
-                                // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
-                                this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist );
-                                //this.transform.right = Quaternion.Slerp( startRot, nextRot, sumDist / dist ) * startDir; 
-
-                                // Protezione blocco cardanico
-                                Quaternion previousRot = this.transform.localRotation;
-                                this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
-                                if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
-                                    this.transform.localRotation = previousRot;
-                                    //Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
-                                }
-
-                                sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                                if( sumDist < segmentDist ) {
-                                    yield return null;
-                                }
-                                else{
-                                    ////Debug.Log( "Next Point raggiunto" );
-                                    break;
-                                }
-                            }
-
-                            ////Debug.Log( "While segmento terminato" );
                         }
 
-                        if( sections[ i ].type == Type.Switch ) {
-                            if( sections[ i ].switchType == SwitchType.BiToBi ) {
-                                if( railSide == Rail.Right && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                                    railSide = Rail.Left;
-                                }
-                                else if( railSide == Rail.Left && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
-                                    railSide = Rail.Right;
-                                }
-                            }
-                            else if( sections[ i ].switchType == SwitchType.BiToMono ) {
-                                railSide = Rail.Center;
-                            }
-                            else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
-                                if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                    railSide = Rail.Left;
-                                }
-                                else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                    railSide = Rail.Right;
-                                }
-                            }
-                            else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
-                                railSide = Rail.Center;
+                        if( nextPoint == Vector3.zero ) {
+                            ////Debug.Log( "Sezione terminata" );
+                            break;
+                        }
 
-                                if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight || sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
+                        actualPoint = nextPoint;
+                        actualOrientationPoint = nextOrientationPoint;
+                        
+                        // Posizione e rotazione iniziale del vagone per punto della curva
+                        Vector3 nextDir = nextOrientationPoint - this.transform.position;
+                        Vector3 startDir = this.transform.right;
+                        Vector3 startPos = this.transform.position;
+                        float segmentDist = ( nextPoint - startPos ).magnitude;
+                        float sumDist = 0.0f;
+
+                        Quaternion rot = Quaternion.FromToRotation( startDir, nextDir );
+
+                        //Quaternion startRot = Quaternion.LookRotation( startDir, Vector3.forward );
+                        //Quaternion nextRot = Quaternion.LookRotation( nextDir, Vector3.forward );
+                        
+                        while( sumDist < segmentDist ) {
+                            Debug.DrawLine( this.transform.position, nextPoint, Color.red, Time.deltaTime );
+                            Debug.DrawLine( this.transform.position, nextOrientationPoint, Color.magenta, Time.deltaTime );
+
+                            // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
+                            this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist );
+                            //this.transform.right = Quaternion.Slerp( startRot, nextRot, sumDist / dist ) * startDir; 
+
+                            // Protezione blocco cardanico
+                            Quaternion previousRot = this.transform.localRotation;
+                            this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
+                            if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
+                                this.transform.localRotation = previousRot;
+                                //Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
+                            }
+
+                            sumDist += Time.deltaTime * Mathf.Abs( speed );
+
+                            if( sumDist < segmentDist ) {
+                                yield return null;
+                            }
+                            else{
+                                ////Debug.Log( "Next Point raggiunto" );
+                                break;
+                            }
+                        }
+
+                        ////Debug.Log( "While segmento terminato" );
+                    }
+
+                    if( sections[ i ].type == Type.Switch ) {
+                        if( sections[ i ].switchType == SwitchType.BiToBi ) {
+                            if( railSide == Rail.Right && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
+                                railSide = Rail.Left;
+                            }
+                            else if( railSide == Rail.Left && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
+                                railSide = Rail.Right;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.BiToMono ) {
+                            railSide = Rail.Center;
+                        }
+                        else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
+                            if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
+                                railSide = Rail.Left;
+                            }
+                            else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
+                                railSide = Rail.Right;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
+                            railSide = Rail.Center;
+
+                            if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight || sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
+
+                                Side newSide = Side.Left;
+                                if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
+                                    newSide = Side.Right;
+                                }
+
+                                keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
+                                indexPoint = 0;
+                                indexSection = 0;
+                                actualSwitchIndex = -1;
+                                inverseSection = false;
+                                inverseLine = false;
+
+                                break;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.BiToNewBi ) {
+
+                            if( !sections[ i ].ignoreSwitch ) {
+                                if( sections[ i ].activeSwitch == SwitchDirection.LeftToEntranceLeft || sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
 
                                     Side newSide = Side.Left;
-                                    if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
+                                    railSide = Rail.Left;
+                                    if( sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
                                         newSide = Side.Right;
+                                        railSide = Rail.Right;
                                     }
 
                                     keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
@@ -1079,168 +995,9 @@ public class TrainController : MonoBehaviour
                                     break;
                                 }
                             }
-                            else if( sections[ i ].switchType == SwitchType.BiToNewBi ) {
-
-                                if( !sections[ i ].ignoreSwitch ) {
-                                    if( sections[ i ].activeSwitch == SwitchDirection.LeftToEntranceLeft || sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
-
-                                        Side newSide = Side.Left;
-                                        railSide = Rail.Left;
-                                        if( sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
-                                            newSide = Side.Right;
-                                            railSide = Rail.Right;
-                                        }
-
-                                        keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
-                                        indexPoint = 0;
-                                        indexSection = 0;
-                                        actualSwitchIndex = -1;
-                                        inverseSection = false;
-                                        inverseLine = false;
-
-                                        break;
-                                    }
-                                }
-                            }
                         }
-                    //}
-
-                    // Normal line - inverse section
-
-                    /*else {
-                        List<Vector3> points = getPoints( sections[ i ] );
-                        actualSectionPoints = points;
-                        
-                        float deltaDist = 0.0f;
-                        float dist = 0.0f;
-                        // Finché non sono abbastanza vicino al primo punto della curva (mi sto muovendo all'indietro, quindi "navigo" la lista dei punti all'indietro)
-                        // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
-                        while( ( points[ 0 ] - this.transform.position ).magnitude > deltaDist ) {
-                            // Distanza che sarà percorsa in un frame
-                            deltaDist = Time.deltaTime * Mathf.Abs( speed );
-                            Vector3 previousPoint = Vector3.zero;
-                            Vector3 previousOrientationPoint = Vector3.zero;
-
-                            // Aggiornamento del movimento attuale del vagone (in questo caso indietro)
-                            if( mainDir == Direction.Backward ) {
-                                // Se il vagone stava andando avanti, allora devo puntare all'index precedente, ma se sono
-                                // già al primo punto della curva passo alla sezione precedente
-                                if( indexPoint - 1 >= 0 ) {
-                                    indexPoint--;
-                                }
-                            }
-                            mainDir = Direction.Forward;
-
-                            int startingIndex = indexPoint;
-                            // Ricerca del punto della curva precedente più lontano della distanza (per frame) percorsa dal vagone, che diventerà
-                            // il punto successivo verso cui si dirigerà il vagone
-                            for( int j = indexPoint; j >= 0; j-- ) {
-                                int indexDiff = startingIndex - j;
-                                dist = ( ( points[ j ] + ( Vector3.forward * heightCorrection ) ) - this.transform.position ).magnitude;
-
-                                if( j - indexDiff < 0 ) {
-                                    if( i - 1 >= 0 && sections[ i ].type != Type.Switch && sections[ i - 1 ].type != Type.Switch ) {
-                                        //indexDiff = ( sections[ i - 1 ].bezierCurveLimitedAngle.Count - 1 ) + ( j - indexDiff );
-
-                                        //if( sections[ i - 1 ].type == Type.Tunnel ) {
-                                            if( sections[ i - 1 ].bidirectional ) {
-                                                if( railSide == Side.Left ) {
-                                                    indexDiff = ( sections[ i - 1 ].floorPoints.leftLine.Count - 1 ) + ( j - indexDiff );
-                                                    previousOrientationPoint = sections[ i - 1 ].floorPoints.leftLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                }
-                                                else if( railSide == Side.Right ) {
-                                                    indexDiff = ( sections[ i - 1 ].floorPoints.rightLine.Count - 1 ) + ( j - indexDiff );
-                                                    previousOrientationPoint = sections[ i - 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                }
-                                                
-                                            }
-                                            else {
-                                                indexDiff = ( sections[ i - 1 ].floorPoints.centerLine.Count - 1 ) + ( j - indexDiff );
-                                                previousOrientationPoint = sections[ i - 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                            }
-                                        //}
-                                        //else {
-                                            //previousOrientationPoint = sections[ i - 1 ].bezierCurveLimitedAngle[ indexDiff ];
-                                        //}
-                                    }
-                                    else {
-                                        previousOrientationPoint = points[ 0 ] + ( Vector3.forward * heightCorrection );
-                                    }
-                                }
-                                else {
-                                    previousOrientationPoint = points[ j - indexDiff ] + ( Vector3.forward * heightCorrection );
-                                }
-
-                                if( dist > deltaDist ) {
-                                    indexPoint = j;
-                                    previousPoint = points[ j ] + ( Vector3.forward * heightCorrection );
-                                    break;
-                                }
-                            }
-                            
-                            if( previousPoint == Vector3.zero ) {
-                                break;
-                            }
-
-                            actualPoint = previousPoint;
-                            actualOrientationPoint = previousOrientationPoint;
-
-                            // Posizione e rotazione iniziale del vagone per punto della curva
-                            Vector3 previousDir = previousOrientationPoint - this.transform.position;
-                            Vector3 startDir = this.transform.right;
-                            Vector3 startPos = this.transform.position;
-                            float segmentDist = ( previousPoint - startPos ).magnitude;
-                            float sumDist = 0.0f;
-                            while( sumDist < segmentDist ) {
-
-                                Debug.DrawLine( this.transform.position, previousPoint, Color.red, Time.deltaTime );
-                                Debug.DrawLine( this.transform.position, previousOrientationPoint, Color.magenta, Time.deltaTime );
-
-                                // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
-                                this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
-                                this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
-
-                                sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                                if( sumDist < segmentDist ) {
-                                    yield return null;
-                                }
-                                else{
-                                    Debug.Log( "Next Point raggiunto" );
-                                    break;
-                                }
-                            }
-                        }
-
-                        Debug.Log( ">>>>> " + sections[ i ].type + " - " + sections[ i ].activeSwitch );
-
-                        if( sections[ i ].type == Type.Switch ) {
-                            if( sections[ i ].switchType == SwitchType.BiToBi ) {
-                                if( railSide == Side.Right && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
-                                railSide = Side.Left;
-                                }
-                                else if( railSide == Side.Left && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                                    railSide = Side.Right;
-                                }
-                            }
-                            else if( sections[ i ].switchType == SwitchType.BiToMono ) {
-                                if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                    railSide = Side.Left;
-                                }
-                                else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                    railSide = Side.Right;
-                                }
-                            }
-                            else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
-                                railSide = Side.Center;
-                            }
-                            else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
-                                railSide = Side.Center;
-                            }
-                        }
-                    }*/
-
-                    ////Debug.Log( "railSide: " + railSide );
+                    }
+                    
 
                     if( i < sections.Count ) {
                         indexSection++;
@@ -1255,194 +1012,211 @@ public class TrainController : MonoBehaviour
                             inverseSection = true;
                             indexPoint = sections[ indexSection ].curvePointsCount - 1;
                         }
-
-                        //Debug.Log( ">>>>>>> inverseSection: " + inverseSection );
-                        //Debug.Log( ">>>>>>> Previous indexPoint: " + indexPoint );
                     }
                     else {
                         endOfTheLine = true;
                     }
-                    
                 }
             }
 
-// >>>>>>>>>> INVERSE LINE NAVIGATION (FORWARD) <<<<<<<<<<
+    // >>>>>>>>>> INVERSE LINE NAVIGATION (FORWARD) <<<<<<<<<<
 
             else {
                 // Ciclo le sezioni della linea all'indietro
                 for( int i = indexSection; i >= 0; i-- ) {
 
-                    //if( !inverseSection ) {
 
-                        List<Vector3> points = getPoints( sections[ i ] );
-                        actualSectionPoints = points;
-                        
-                        float deltaDist = 0.0f;
-                        float dist = 0.0f;
-                        // Finché non sono abbastanza vicino al primo punto della curva (mi sto muovendo all'indietro, quindi "navigo" la lista dei punti all'indietro)
-                        // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
-                        while( ( points[ 0 ] - this.transform.position ).magnitude > deltaDist ) {
-                            // Distanza che sarà percorsa in un frame
-                            deltaDist = Time.deltaTime * Mathf.Abs( speed );
-                            Vector3 previousPoint = Vector3.zero;
-                            Vector3 previousOrientationPoint = Vector3.zero;
+                    List<Vector3> points = getPoints( sections[ i ] );
+                    actualSectionPoints = points;
+                    
+                    float deltaDist = 0.0f;
+                    float dist = 0.0f;
+                    // Finché non sono abbastanza vicino al primo punto della curva (mi sto muovendo all'indietro, quindi "navigo" la lista dei punti all'indietro)
+                    // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
+                    while( ( points[ 0 ] - this.transform.position ).magnitude > deltaDist ) {
+                        // Distanza che sarà percorsa in un frame
+                        deltaDist = Time.deltaTime * Mathf.Abs( speed );
+                        Vector3 previousPoint = Vector3.zero;
+                        Vector3 previousOrientationPoint = Vector3.zero;
 
-                            // Aggiornamento del movimento attuale del vagone (in questo caso indietro)
-                            if( mainDir == Direction.Backward ) {
-                                // Se il vagone stava andando avanti, allora devo puntare all'index precedente, ma se sono
-                                // già al primo punto della curva passo alla sezione precedente
-                                if( indexPoint - 1 >= 0 ) {
-                                    indexPoint--;
-                                }
+                        // Aggiornamento del movimento attuale del vagone (in questo caso indietro)
+                        if( mainDir == Direction.Backward ) {
+                            // Se il vagone stava andando avanti, allora devo puntare all'index precedente, ma se sono
+                            // già al primo punto della curva passo alla sezione precedente
+                            if( indexPoint - 1 >= 0 ) {
+                                indexPoint--;
                             }
-                            mainDir = Direction.Forward;
+                        }
+                        mainDir = Direction.Forward;
 
-                            int startingIndex = indexPoint;
-                            // Ricerca del punto della curva precedente più lontano della distanza (per frame) percorsa dal vagone, che diventerà
-                            // il punto successivo verso cui si dirigerà il vagone
-                            for( int j = indexPoint; j >= 0; j-- ) {
-                                int indexDiff = startingIndex - j;
-                                dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
+                        int startingIndex = indexPoint;
+                        // Ricerca del punto della curva precedente più lontano della distanza (per frame) percorsa dal vagone, che diventerà
+                        // il punto successivo verso cui si dirigerà il vagone
+                        for( int j = indexPoint; j >= 0; j-- ) {
+                            int indexDiff = startingIndex - j;
+                            dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
 
-                                if( j - indexDiff < 0 ) {
-                                    if( i - 1 >= 0 && sections[ i ].type != Type.Switch && sections[ i - 1 ].type != Type.Switch ) {
-                                        //indexDiff = ( sections[ i - 1 ].bezierCurveLimitedAngle.Count - 1 ) + ( j - indexDiff );
+                            if( j - indexDiff < 0 ) {
+                                if( i - 1 >= 0 && sections[ i ].type != Type.Switch && sections[ i - 1 ].type != Type.Switch ) {
+                                    //indexDiff = ( sections[ i - 1 ].bezierCurveLimitedAngle.Count - 1 ) + ( j - indexDiff );
 
-                                        LineSection previousSection = sections[ i - 1 ];
-                                        List<Vector3> navigationPoints = new();
+                                    LineSection previousSection = sections[ i - 1 ];
+                                    List<Vector3> navigationPoints = new();
 
-                                        if( sections[ i - 1 ].type == Type.Tunnel ) {
-                                            if( sections[ i - 1 ].bidirectional ) {
-                                                if( railSide == Rail.Left ) {
-                                                    indexDiff = ( sections[ i - 1 ].floorPoints.leftLine.Count - 1 ) + ( j - indexDiff );
-                                                    previousOrientationPoint = sections[ i - 1 ].floorPoints.leftLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                }
-                                                else if( railSide == Rail.Right ) {
-                                                    indexDiff = ( sections[ i - 1 ].floorPoints.rightLine.Count - 1 ) + ( j - indexDiff );
-                                                    previousOrientationPoint = sections[ i - 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                }
-                                                
+                                    if( sections[ i - 1 ].type == Type.Tunnel ) {
+                                        if( sections[ i - 1 ].bidirectional ) {
+                                            if( railSide == Rail.Left ) {
+                                                indexDiff = ( sections[ i - 1 ].floorPoints.leftLine.Count - 1 ) + ( j - indexDiff );
+                                                previousOrientationPoint = sections[ i - 1 ].floorPoints.leftLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
                                             }
-                                            else {
-                                                indexDiff = ( sections[ i - 1 ].floorPoints.centerLine.Count - 1 ) + ( j - indexDiff );
-                                                previousOrientationPoint = sections[ i - 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                            else if( railSide == Rail.Right ) {
+                                                indexDiff = ( sections[ i - 1 ].floorPoints.rightLine.Count - 1 ) + ( j - indexDiff );
+                                                previousOrientationPoint = sections[ i - 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
                                             }
+                                            
+                                        }
+                                        else {
+                                            indexDiff = ( sections[ i - 1 ].floorPoints.centerLine.Count - 1 ) + ( j - indexDiff );
+                                            previousOrientationPoint = sections[ i - 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                        }
 
-                                            if( sections[ i + 1 ].bidirectional ) {
-                                                if( railSide == Rail.Left ) {
-                                                    navigationPoints = previousSection.floorPoints.leftLine;
-                                                }
-                                                else if( railSide == Rail.Right ) {
-                                                    navigationPoints = previousSection.floorPoints.rightLine;
-                                                }
+                                        if( sections[ i + 1 ].bidirectional ) {
+                                            if( railSide == Rail.Left ) {
+                                                navigationPoints = previousSection.floorPoints.leftLine;
                                             }
-                                            else {
-                                                navigationPoints = previousSection.floorPoints.centerLine;
-                                            }
-
-                                            if( indexDiff >= navigationPoints.Count ) {
-                                                previousOrientationPoint = navigationPoints[ 0 ] + ( Vector3.forward * heightCorrection );
-                                            }
-                                            else {
-                                                previousOrientationPoint = navigationPoints[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                            else if( railSide == Rail.Right ) {
+                                                navigationPoints = previousSection.floorPoints.rightLine;
                                             }
                                         }
                                         else {
-                                            previousOrientationPoint = sections[ i - 1 ].bezierCurveLimitedAngle[ indexDiff ];
+                                            navigationPoints = previousSection.floorPoints.centerLine;
+                                        }
+
+                                        if( indexDiff >= navigationPoints.Count ) {
+                                            previousOrientationPoint = navigationPoints[ 0 ] + ( Vector3.forward * heightCorrection );
+                                        }
+                                        else {
+                                            previousOrientationPoint = navigationPoints[ indexDiff ] + ( Vector3.forward * heightCorrection );
                                         }
                                     }
                                     else {
-                                        previousOrientationPoint = points[ 0 ] + ( Vector3.forward * heightCorrection );
+                                        previousOrientationPoint = sections[ i - 1 ].bezierCurveLimitedAngle[ indexDiff ];
                                     }
                                 }
                                 else {
-                                    previousOrientationPoint = points[ j - indexDiff ] + ( Vector3.forward * heightCorrection );
-                                }
-
-                                if( dist > deltaDist ) {
-                                    indexPoint = j;
-                                    previousPoint = points[ j ] + ( Vector3.forward * heightCorrection );
-                                    break;
+                                    previousOrientationPoint = points[ 0 ] + ( Vector3.forward * heightCorrection );
                                 }
                             }
-                            
-                            if( previousPoint == Vector3.zero ) {
+                            else {
+                                previousOrientationPoint = points[ j - indexDiff ] + ( Vector3.forward * heightCorrection );
+                            }
+
+                            if( dist > deltaDist ) {
+                                indexPoint = j;
+                                previousPoint = points[ j ] + ( Vector3.forward * heightCorrection );
                                 break;
                             }
-
-                            actualPoint = previousPoint;
-                            actualOrientationPoint = previousOrientationPoint;
-
-                            // Posizione e rotazione iniziale del vagone per punto della curva
-                            Vector3 previousDir = previousOrientationPoint - this.transform.position;
-                            Vector3 startDir = this.transform.right;
-                            Vector3 startPos = this.transform.position;
-                            float segmentDist = ( previousPoint - startPos ).magnitude;
-                            float sumDist = 0.0f;
-                            while( sumDist < segmentDist ) {
-
-                                Debug.DrawLine( this.transform.position, previousPoint, Color.red, Time.deltaTime );
-                                Debug.DrawLine( this.transform.position, previousOrientationPoint, Color.magenta, Time.deltaTime );
-
-                                // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
-                                this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
-
-                                // Protezione blocco cardanico
-                                Quaternion previousRot = this.transform.localRotation;
-                                this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
-                                if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
-                                    this.transform.localRotation = previousRot;
-                                    Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
-                                }
-
-                                sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                                if( sumDist < segmentDist ) {
-                                    yield return null;
-                                }
-                                else{
-                                    Debug.Log( "Next Point raggiunto" );
-                                    break;
-                                }
-                            }
+                        }
+                        
+                        if( previousPoint == Vector3.zero ) {
+                            break;
                         }
 
-                        /* 
-                        >>>>> INIZIO - GESTIONE SWITCH INTERNI ALLA LINEA STESSA
-                        >>>>>
-                        >>>>> FORWARD - INVERSE
-                        >>>>>
-                        >>>>> N.B.: Qui gestiamo anche il cambio di linea dello scambio BiToNewBi
-                        */
+                        actualPoint = previousPoint;
+                        actualOrientationPoint = previousOrientationPoint;
 
-                        if( sections[ i ].type == Type.Switch ) {
-                            if( sections[ i ].switchType == SwitchType.BiToBi ) {
-                                if( railSide == Rail.Right && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
+                        // Posizione e rotazione iniziale del vagone per punto della curva
+                        Vector3 previousDir = previousOrientationPoint - this.transform.position;
+                        Vector3 startDir = this.transform.right;
+                        Vector3 startPos = this.transform.position;
+                        float segmentDist = ( previousPoint - startPos ).magnitude;
+                        float sumDist = 0.0f;
+                        while( sumDist < segmentDist ) {
+
+                            Debug.DrawLine( this.transform.position, previousPoint, Color.red, Time.deltaTime );
+                            Debug.DrawLine( this.transform.position, previousOrientationPoint, Color.magenta, Time.deltaTime );
+
+                            // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
+                            this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
+
+                            // Protezione blocco cardanico
+                            Quaternion previousRot = this.transform.localRotation;
+                            this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
+                            if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
+                                this.transform.localRotation = previousRot;
+                                Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
+                            }
+
+                            sumDist += Time.deltaTime * Mathf.Abs( speed );
+
+                            if( sumDist < segmentDist ) {
+                                yield return null;
+                            }
+                            else{
+                                Debug.Log( "Next Point raggiunto" );
+                                break;
+                            }
+                        }
+                    }
+
+                    /* 
+                    >>>>> INIZIO - GESTIONE SWITCH INTERNI ALLA LINEA STESSA
+                    >>>>>
+                    >>>>> FORWARD - INVERSE
+                    >>>>>
+                    >>>>> N.B.: Qui gestiamo anche il cambio di linea dello scambio BiToNewBi
+                    */
+
+                    if( sections[ i ].type == Type.Switch ) {
+                        if( sections[ i ].switchType == SwitchType.BiToBi ) {
+                            if( railSide == Rail.Right && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
+                            railSide = Rail.Left;
+                            }
+                            else if( railSide == Rail.Left && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
+                                railSide = Rail.Right;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.BiToMono ) {
+                            if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
                                 railSide = Rail.Left;
-                                }
-                                else if( railSide == Rail.Left && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                                    railSide = Rail.Right;
-                                }
                             }
-                            else if( sections[ i ].switchType == SwitchType.BiToMono ) {
-                                if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                    railSide = Rail.Left;
-                                }
-                                else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                    railSide = Rail.Right;
-                                }
+                            else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
+                                railSide = Rail.Right;
                             }
-                            else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
-                                railSide = Rail.Center;
-                            }
-                            else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
-                                railSide = Rail.Center;
+                        }
+                        else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
+                            railSide = Rail.Center;
+                        }
+                        else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
+                            railSide = Rail.Center;
 
-                                if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight || sections[ i ].activeSwitch == SwitchDirection.CenterToExitLeft ) {
+                            if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight || sections[ i ].activeSwitch == SwitchDirection.CenterToExitLeft ) {
+
+                                Side newSide = Side.Left;
+                                if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight ) {
+                                    newSide = Side.Right;
+                                }
+
+                                keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
+                                indexPoint = 0;
+                                indexSection = 0;
+                                actualSwitchIndex = -1;
+                                inverseSection = false;
+                                inverseLine = false;
+
+                                break;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.BiToNewBi ) {
+
+                            if( !sections[ i ].ignoreSwitch ) {
+                                if( sections[ i ].activeSwitch == SwitchDirection.LeftToExitLeft || sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
 
                                     Side newSide = Side.Left;
-                                    if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight ) {
+                                    railSide = Rail.Right;
+                                    if( sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
                                         newSide = Side.Right;
+                                        railSide = Rail.Left;
                                     }
 
                                     keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
@@ -1455,177 +1229,13 @@ public class TrainController : MonoBehaviour
                                     break;
                                 }
                             }
-                            else if( sections[ i ].switchType == SwitchType.BiToNewBi ) {
-
-                                if( !sections[ i ].ignoreSwitch ) {
-                                    if( sections[ i ].activeSwitch == SwitchDirection.LeftToExitLeft || sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
-
-                                        Side newSide = Side.Left;
-                                        railSide = Rail.Right;
-                                        if( sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
-                                            newSide = Side.Right;
-                                            railSide = Rail.Left;
-                                        }
-
-                                        keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
-                                        indexPoint = 0;
-                                        indexSection = 0;
-                                        actualSwitchIndex = -1;
-                                        inverseSection = false;
-                                        inverseLine = false;
-
-                                        break;
-                                    }
-                                }
-                            }
-                            
                         }
-
-                        /* 
-                        >>>>> FINE - GESTIONE SWITCH INTERNI ALLA LINEA STESSA
-                        */
-
-                    /*}
-                    else {
-                        //Debug.Log( ">>>>>>> Navigating inverse" );
-
-
-                        List<Vector3> points = getPoints( sections[ i ] );
-                        actualSectionPoints = points;
                         
-                        float deltaDist = 0.0f;
-                        float dist = 0.0f;
-                        // Finché non sono abbastanza vicino all'ultimo punto della curva (mi sto muovendo in avanti, quindi "navigo" la lista dei punti in avanti)
-                        // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
-                        while( ( points[ points.Count - 1 ] - this.transform.position ).magnitude > deltaDist ) {
-                            // Distanza che sarà percorsa in un frame
-                            deltaDist = Time.deltaTime * Mathf.Abs( speed );
-                            Vector3 nextPoint = Vector3.zero;
-                            Vector3 nextOrientationPoint = Vector3.zero;
+                    }
 
-                            // Aggiornamento del movimento attuale del vagone (in questo caso avanti)
-                            if( mainDir == Direction.Backward ) {
-
-                                // Se il vagone stava andando indietro, allora devo puntare all'index successivo, ma se sono
-                                // già all'ultimo punto della curva passo alla sezione succcessiva
-                                if( indexPoint + 1 < points.Count ) {
-                                    indexPoint++;
-                                }
-                            }
-                            mainDir = Direction.Forward;
-
-                            int startingIndex = indexPoint;
-                            // Ricerca del punto della curva successivo più lontano della distanza (per frame) percorsa dal vagone, che diventerà
-                            // il punto successivo verso cui si dirigerà il vagone
-                            for( int j = startingIndex; j < points.Count; j++ ) {
-                                int indexDiff = j - startingIndex;
-                                //Debug.Log( "j: " + j );
-                                dist = ( ( points[ j ] + ( Vector3.forward * heightCorrection ) ) - this.transform.position ).magnitude;
-                                //Debug.Log( "dist: " + dist );
-
-                                if( j + indexDiff >= points.Count ) {
-                                    //Debug.Log( "Cerco punto in sezione successiva" );
-                                    if( i + 1 < sections.Count && sections[ i ].type != Type.Switch && sections[ i + 1 ].type != Type.Switch ) {
-                                        indexDiff = j + indexDiff - ( points.Count - 1 );
-
-                                        //if( sections[ i + 1 ].type == Type.Tunnel ) {
-                                            if( sections[ i + 1 ].bidirectional ) {
-                                                if( railSide == Side.Left ) {
-                                                    nextOrientationPoint = sections[ i + 1 ].floorPoints.leftLine[ indexDiff ]  + ( Vector3.forward * heightCorrection );
-                                                }
-                                                else if( railSide == Side.Right ) {
-                                                    nextOrientationPoint = sections[ i + 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                }
-                                            }
-                                            else {
-                                                nextOrientationPoint = sections[ i + 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                            }
-                                        //}
-                                        //else {
-                                            //nextOrientationPoint = sections[ i + 1 ].bezierCurveLimitedAngle[ indexDiff ];
-                                        //}
-                                    }
-                                    else {
-                                        nextOrientationPoint = points[ points.Count - 1 ] + ( Vector3.forward * heightCorrection );
-                                    }
-                                }
-                                else {
-                                    nextOrientationPoint = points[ j + indexDiff ] + ( Vector3.forward * heightCorrection );
-                                }
-
-                                if( dist > deltaDist ) {
-                                    indexPoint = j;
-                                    nextPoint = points[ j ] + ( Vector3.forward * heightCorrection );
-                                    //Debug.Log( "Indice nextPoint trovato: " + indexPoint );
-                                    break;
-                                }
-                            }
-
-                            if( nextPoint == Vector3.zero ) {
-                                ////Debug.Log( "Sezione terminata" );
-                                break;
-                            }
-
-                            actualPoint = nextPoint;
-                            actualOrientationPoint = nextOrientationPoint;
-                            
-                            // Posizione e rotazione iniziale del vagone per punto della curva
-                            Vector3 nextDir = nextOrientationPoint - this.transform.position;
-                            Vector3 startDir = this.transform.right;
-                            Vector3 startPos = this.transform.position;
-                            float segmentDist = ( nextPoint - startPos ).magnitude;
-                            float sumDist = 0.0f;
-                            while( sumDist < segmentDist ) {
-                                Debug.DrawLine( this.transform.position, nextPoint, Color.red, Time.deltaTime );
-                                Debug.DrawLine( this.transform.position, nextOrientationPoint, Color.magenta, Time.deltaTime );
-
-                                // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
-                                this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist ); 
-                                this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
-
-                                sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                                if( sumDist < segmentDist ) {
-                                    yield return null;
-                                }
-                                else{
-                                    ////Debug.Log( "Next Point raggiunto" );
-                                    break;
-                                }
-                            }
-
-                            ////Debug.Log( "While segmento terminato" );
-                        }
-
-                        Debug.Log( ">>>>> " + sections[ i ].type + " - " + sections[ i ].activeSwitch );
-
-                        if( sections[ i ].type == Type.Switch ) {
-                            if( sections[ i ].switchType == SwitchType.BiToBi ) {
-                                if( railSide == Side.Right && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                                    railSide = Side.Left;
-                                }
-                                else if( railSide == Side.Left && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
-                                    railSide = Side.Right;
-                                }
-                            }
-                            else if( sections[ i ].switchType == SwitchType.BiToMono ) {
-                                railSide = Side.Center;
-                            }
-                            else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
-                                if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                    railSide = Side.Left;
-                                }
-                                else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                    railSide = Side.Right;
-                                }
-                            }
-                            else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
-                                railSide = Side.Center;
-                            }
-                        }
-                    }*/
-
-                    //Debug.Log( "railSide: " + railSide );
+                    /* 
+                    >>>>> FINE - GESTIONE SWITCH INTERNI ALLA LINEA STESSA
+                    */
 
                     // Aggiornamento index una volta raggiunto il punto iniziale della curva
                     if( i > 0 ) {
@@ -1716,9 +1326,6 @@ public class TrainController : MonoBehaviour
                     }
                 }
             }
-        //}
-
-        ////Debug.Log( "GoFoward ended" );
         }
     }
 
@@ -1729,767 +1336,490 @@ public class TrainController : MonoBehaviour
         while( !endOfTheLine ) {
 
             actualMovement = Direction.Backward;
-            //foreach( string lineName in lines.Keys ) {
-                List<LineSection> sections = lines[ keyLine ];
+            List<LineSection> sections = lines[ keyLine ];
 
-                if( !inverseLine ) {
-                    // Ciclo le sezioni della linea all'indietro
-                    for( int i = indexSection; i >= 0; i-- ) {
+            if( !inverseLine ) {
+                // Ciclo le sezioni della linea all'indietro
+                for( int i = indexSection; i >= 0; i-- ) {
 
-                        //if( !inverseSection ) {
+                    List<Vector3> points = getPoints( sections[ i ] );
+                    actualSectionPoints = points;
+                    
+                    float deltaDist = 0.0f;
+                    float dist = 0.0f;
+                    // Finché non sono abbastanza vicino al primo punto della curva (mi sto muovendo all'indietro, quindi "navigo" la lista dei punti all'indietro)
+                    // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
+                    while( ( points[ 0 ] - this.transform.position ).magnitude > deltaDist ) {
+                        // Distanza che sarà percorsa in un frame
+                        deltaDist = Time.deltaTime * Mathf.Abs( speed );
+                        Vector3 previousPoint = Vector3.zero;
+                        Vector3 previousOrientationPoint = Vector3.zero;
 
-                            List<Vector3> points = getPoints( sections[ i ] );
-                            actualSectionPoints = points;
-                            
-                            float deltaDist = 0.0f;
-                            float dist = 0.0f;
-                            // Finché non sono abbastanza vicino al primo punto della curva (mi sto muovendo all'indietro, quindi "navigo" la lista dei punti all'indietro)
-                            // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
-                            while( ( points[ 0 ] - this.transform.position ).magnitude > deltaDist ) {
-                                // Distanza che sarà percorsa in un frame
-                                deltaDist = Time.deltaTime * Mathf.Abs( speed );
-                                Vector3 previousPoint = Vector3.zero;
-                                Vector3 previousOrientationPoint = Vector3.zero;
-
-                                // Aggiornamento del movimento attuale del vagone (in questo caso indietro)
-                                if( mainDir == Direction.Forward ) {
-                                    // Se il vagone stava andando avanti, allora devo puntare all'index precedente, ma se sono
-                                    // già al primo punto della curva passo alla sezione precedente
-                                    if( indexPoint - 1 >= 0 ) {
-                                        indexPoint--;
-                                    }
-                                }
-                                mainDir = Direction.Backward;
-
-                                int startingIndex = indexPoint;
-                                // Ricerca del punto della curva precedente più lontano della distanza (per frame) percorsa dal vagone, che diventerà
-                                // il punto successivo verso cui si dirigerà il vagone
-                                for( int j = indexPoint; j >= 0; j-- ) {
-                                    int indexDiff = startingIndex - j;
-                                    dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
-
-                                    if( j - indexDiff < 0 ) {
-                                        if( i - 1 >= 0 && sections[ i ].type != Type.Switch && sections[ i - 1 ].type != Type.Switch ) {
-                                            //indexDiff = ( sections[ i - 1 ].bezierCurveLimitedAngle.Count - 1 ) + ( j - indexDiff );
-
-                                            //if( sections[ i - 1 ].type == Type.Tunnel ) {
-                                                if( sections[ i - 1 ].bidirectional ) {
-                                                    if( railSide == Rail.Left ) {
-                                                        indexDiff = ( sections[ i - 1 ].floorPoints.leftLine.Count - 1 ) + ( j - indexDiff );
-                                                        previousOrientationPoint = sections[ i - 1 ].floorPoints.leftLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                    }
-                                                    else if( railSide == Rail.Right ) {
-                                                        indexDiff = ( sections[ i - 1 ].floorPoints.rightLine.Count - 1 ) + ( j - indexDiff );
-                                                        previousOrientationPoint = sections[ i - 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                    }
-                                                    
-                                                }
-                                                else {
-                                                    indexDiff = ( sections[ i - 1 ].floorPoints.centerLine.Count - 1 ) + ( j - indexDiff );
-                                                    previousOrientationPoint = sections[ i - 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                }
-                                            //}
-                                            //else {
-                                                //previousOrientationPoint = sections[ i - 1 ].bezierCurveLimitedAngle[ indexDiff ];
-                                            //}
-                                        }
-                                        else {
-                                            previousOrientationPoint = points[ 0 ] + ( Vector3.forward * heightCorrection );
-                                        }
-                                    }
-                                    else {
-                                        previousOrientationPoint = points[ j - indexDiff ] + ( Vector3.forward * heightCorrection );
-                                    }
-
-                                    if( dist > deltaDist ) {
-                                        indexPoint = j;
-                                        previousPoint = points[ j ] + ( Vector3.forward * heightCorrection );
-                                        break;
-                                    }
-                                }
-                                
-                                if( previousPoint == Vector3.zero ) {
-                                    break;
-                                }
-
-                                actualPoint = previousPoint;
-                                actualOrientationPoint = previousOrientationPoint;
-
-                                // Posizione e rotazione iniziale del vagone per punto della curva
-                                Vector3 previousDir = this.transform.position - previousOrientationPoint;
-                                Vector3 startDir = this.transform.right;
-                                Vector3 startPos = this.transform.position;
-                                float segmentDist = ( previousPoint - startPos ).magnitude;
-                                float sumDist = 0.0f;
-                                while( sumDist < segmentDist ) {
-
-                                    Debug.DrawLine( this.transform.position, previousPoint, Color.red, Time.deltaTime );
-                                    Debug.DrawLine( this.transform.position, previousOrientationPoint, Color.magenta, Time.deltaTime );
-
-                                    // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
-                                    this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
-                                    // Protezione blocco cardanico
-                                    Quaternion previousRot = this.transform.localRotation;
-                                    this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
-                                    if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
-                                        this.transform.localRotation = previousRot;
-                                        Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
-                                    }
-
-                                    sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                                    if( sumDist < segmentDist ) {
-                                        yield return null;
-                                    }
-                                    else{
-                                        ////Debug.Log( "Next Point raggiunto" );
-                                        break;
-                                    }
-                                }
+                        // Aggiornamento del movimento attuale del vagone (in questo caso indietro)
+                        if( mainDir == Direction.Forward ) {
+                            // Se il vagone stava andando avanti, allora devo puntare all'index precedente, ma se sono
+                            // già al primo punto della curva passo alla sezione precedente
+                            if( indexPoint - 1 >= 0 ) {
+                                indexPoint--;
                             }
-
-
-                            // GESTIONE SCAMBI DELLA LINEA STESSA
-                            if( sections[ i ].type == Type.Switch ) {
-                                if( sections[ i ].switchType == SwitchType.BiToBi ) {
-                                    if( railSide == Rail.Right && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
-                                    railSide = Rail.Left;
-                                    }
-                                    else if( railSide == Rail.Left && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                                        railSide = Rail.Right;
-                                    }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.BiToMono ) {
-                                    if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                        railSide = Rail.Left;
-                                    }
-                                    else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                        railSide = Rail.Right;
-                                    }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
-                                    railSide = Rail.Center;
-                                }
-                                // GESTIONE SCAMBIO MONODIREZIONALE DA CUI PARTE UNA NUOVA LINEA MONODIREZIONALE
-                                else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
-                                    railSide = Rail.Center;
-
-                                    if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight || sections[ i ].activeSwitch == SwitchDirection.CenterToExitLeft ) {
-
-                                        Side newSide = Side.Left;
-                                        if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight ) {
-                                            newSide = Side.Right;
-                                        }
-
-                                        keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
-                                        indexPoint = 0;
-                                        indexSection = 0;
-                                        actualSwitchIndex = -1;
-                                        inverseSection = false;
-                                        inverseLine = true;
-
-                                        break;
-                                    }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.BiToNewBi ) {
-
-                                    if( !sections[ i ].ignoreSwitch ) {
-                                        if( sections[ i ].activeSwitch == SwitchDirection.LeftToExitLeft || sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
-
-                                            Side newSide = Side.Left;
-                                            railSide = Rail.Right;
-                                            if( sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
-                                                newSide = Side.Right;
-                                                railSide = Rail.Left;
-                                            }
-
-                                            keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
-                                            indexPoint = 0;
-                                            indexSection = 0;
-                                            actualSwitchIndex = -1;
-                                            inverseSection = false;
-                                            inverseLine = true;
-
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-
-                        /*}
-                        else {
-                            //Debug.Log( ">>>>>>> Navigating inverse" );
-
-
-                            List<Vector3> points = getPoints( sections[ i ] );
-                            actualSectionPoints = points;
-                            
-                            float deltaDist = 0.0f;
-                            float dist = 0.0f;
-                            // Finché non sono abbastanza vicino all'ultimo punto della curva (mi sto muovendo in avanti, quindi "navigo" la lista dei punti in avanti)
-                            // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
-                            while( ( points[ points.Count - 1 ] - this.transform.position ).magnitude > deltaDist ) {
-                                // Distanza che sarà percorsa in un frame
-                                deltaDist = Time.deltaTime * Mathf.Abs( speed );
-                                Vector3 nextPoint = Vector3.zero;
-                                Vector3 nextOrientationPoint = Vector3.zero;
-
-                                // Aggiornamento del movimento attuale del vagone (in questo caso avanti)
-                                if( mainDir == Direction.Forward ) {
-
-                                    // Se il vagone stava andando indietro, allora devo puntare all'index successivo, ma se sono
-                                    // già all'ultimo punto della curva passo alla sezione succcessiva
-                                    if( indexPoint + 1 < points.Count ) {
-                                        indexPoint++;
-                                    }
-                                }
-                                mainDir = Direction.Backward;
-
-                                int startingIndex = indexPoint;
-                                // Ricerca del punto della curva successivo più lontano della distanza (per frame) percorsa dal vagone, che diventerà
-                                // il punto successivo verso cui si dirigerà il vagone
-                                for( int j = startingIndex; j < points.Count; j++ ) {
-                                    int indexDiff = j - startingIndex;
-                                    //Debug.Log( "j: " + j );
-                                    dist = ( ( points[ j ] + ( Vector3.forward * heightCorrection ) ) - this.transform.position ).magnitude;
-                                    //Debug.Log( "dist: " + dist );
-
-                                    if( j + indexDiff >= points.Count ) {
-                                        //Debug.Log( "Cerco punto in sezione successiva" );
-                                        if( i + 1 < sections.Count && sections[ i ].type != Type.Switch && sections[ i + 1 ].type != Type.Switch ) {
-                                            indexDiff = j + indexDiff - ( points.Count - 1 );
-
-                                            //if( sections[ i + 1 ].type == Type.Tunnel ) {
-                                                if( sections[ i + 1 ].bidirectional ) {
-                                                    if( railSide == Side.Left ) {
-                                                        nextOrientationPoint = sections[ i + 1 ].floorPoints.leftLine[ indexDiff ]  + ( Vector3.forward * heightCorrection );
-                                                    }
-                                                    else if( railSide == Side.Right ) {
-                                                        nextOrientationPoint = sections[ i + 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                    }
-                                                }
-                                                else {
-                                                    nextOrientationPoint = sections[ i + 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                }
-                                            //}
-                                            //else {
-                                                //nextOrientationPoint = sections[ i + 1 ].bezierCurveLimitedAngle[ indexDiff ];
-                                            //}
-                                        }
-                                        else {
-                                            nextOrientationPoint = points[ points.Count - 1 ] + ( Vector3.forward * heightCorrection );
-                                        }
-                                    }
-                                    else {
-                                        nextOrientationPoint = points[ j + indexDiff ] + ( Vector3.forward * heightCorrection );
-                                    }
-
-                                    if( dist > deltaDist ) {
-                                        indexPoint = j;
-                                        nextPoint = points[ j ] + ( Vector3.forward * heightCorrection );
-                                        //Debug.Log( "Indice nextPoint trovato: " + indexPoint );
-                                        break;
-                                    }
-                                }
-
-                                if( nextPoint == Vector3.zero ) {
-                                    ////Debug.Log( "Sezione terminata" );
-                                    break;
-                                }
-
-                                actualPoint = nextPoint;
-                                actualOrientationPoint = nextOrientationPoint;
-                                
-                                // Posizione e rotazione iniziale del vagone per punto della curva
-                                Vector3 nextDir = this.transform.position - nextOrientationPoint;
-                                Vector3 startDir = this.transform.right;
-                                Vector3 startPos = this.transform.position;
-                                float segmentDist = ( nextPoint - startPos ).magnitude;
-                                float sumDist = 0.0f;
-                                while( sumDist < segmentDist ) {
-                                    Debug.DrawLine( this.transform.position, nextPoint, Color.red, Time.deltaTime );
-                                    Debug.DrawLine( this.transform.position, nextOrientationPoint, Color.magenta, Time.deltaTime );
-
-                                    // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
-                                    this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist ); 
-                                    this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
-
-                                    sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                                    if( sumDist < segmentDist ) {
-                                        yield return null;
-                                    }
-                                    else{
-                                        ////Debug.Log( "Next Point raggiunto" );
-                                        break;
-                                    }
-                                }
-
-                                ////Debug.Log( "While segmento terminato" );
-                            }
-
-                            if( sections[ i ].type == Type.Switch ) {
-                                if( sections[ i ].switchType == SwitchType.BiToBi ) {
-                                    if( railSide == Side.Right && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                                        railSide = Side.Left;
-                                    }
-                                    else if( railSide == Side.Left && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
-                                        railSide = Side.Right;
-                                    }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.BiToMono ) {
-                                    railSide = Side.Center;
-                                }
-                                else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
-                                    if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                        railSide = Side.Left;
-                                    }
-                                    else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                        railSide = Side.Right;
-                                    }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
-                                    railSide = Side.Center;
-                                }
-                            }
-                        }*/
-
-                        //Debug.Log( "railSide: " + railSide );
-
-                        // Aggiornamento index una volta raggiunto il punto iniziale della curva
-                        if( i > 0 ) {
-
-                            indexSection--;
-                            List<Vector3> nextPoints = getPoints( sections[ indexSection ] );
-                            // Movimento backward: il primo punto della sezione successiva più vicino deve essere quello con indice (Count - 1), altrimenti devo ciclare la lista dei punti al contrario
-                            if( ( this.transform.position - nextPoints[ nextPoints.Count - 1 ] ).magnitude <= ( this.transform.position - nextPoints[ 0 ] ).magnitude ) {
-                                inverseSection = false;
-                                indexPoint = sections[ indexSection ].curvePointsCount - 1;
-                            }
-                            else {
-                                inverseSection = true;
-                                indexPoint = 0;
-                            }
-
-                            //Debug.Log( ">>>>>>> inverseSection: " + inverseSection );
-                            //Debug.Log( ">>>>>>> Previous indexPoint: " + indexPoint );
                         }
-                        else {
-                            // GESTIONE SCAMBIO QUANDO DA UNA LINEA FIGLIA SI TORNA ALLO SCAMBIO DELLA LINEA CHE L'HA GENERATA
-                            if( sections[ 0 ].fromSection != null ) {
-                                keyLine = sections[ 0 ].fromSection.lineName;
-                                indexSection = sections[ 0 ].fromSection.sectionIndex;
+                        mainDir = Direction.Backward;
 
-                                if( sections[ 0 ].fromSection.switchType == SwitchType.MonoToNewMono ) {
+                        int startingIndex = indexPoint;
+                        // Ricerca del punto della curva precedente più lontano della distanza (per frame) percorsa dal vagone, che diventerà
+                        // il punto successivo verso cui si dirigerà il vagone
+                        for( int j = indexPoint; j >= 0; j-- ) {
+                            int indexDiff = startingIndex - j;
+                            dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
 
-                                    switch( sections[ 0 ].fromSection.activeSwitch ) {
-                                        case SwitchDirection.CenterToEntranceRight: inverseSection = false;
-                                                                                    inverseLine = false;
-                                                                                    indexPoint = sections[ 0 ].fromSection.floorPoints.centerEntranceRight.Count - 1;
-                                                                                    break;
-                                        case SwitchDirection.CenterToEntranceLeft:  inverseSection = false;
-                                                                                    inverseLine = false;
-                                                                                    indexPoint = sections[ 0 ].fromSection.floorPoints.centerEntranceLeft.Count - 1;
-                                                                                    break;
+                            if( j - indexDiff < 0 ) {
+                                if( i - 1 >= 0 && sections[ i ].type != Type.Switch && sections[ i - 1 ].type != Type.Switch ) {
+                                    //indexDiff = ( sections[ i - 1 ].bezierCurveLimitedAngle.Count - 1 ) + ( j - indexDiff );
 
-                                        case SwitchDirection.CenterToExitRight:     inverseSection = false;
-                                                                                    inverseLine = true;
-                                                                                    indexPoint = 0;
-                                                                                    break;
-                                        case SwitchDirection.CenterToExitLeft:      inverseSection = false;
-                                                                                    inverseLine = true;
-                                                                                    indexPoint = 0;
-                                                                                    break;
-                                    }
+                                    //if( sections[ i - 1 ].type == Type.Tunnel ) {
+                                        if( sections[ i - 1 ].bidirectional ) {
+                                            if( railSide == Rail.Left ) {
+                                                indexDiff = ( sections[ i - 1 ].floorPoints.leftLine.Count - 1 ) + ( j - indexDiff );
+                                                previousOrientationPoint = sections[ i - 1 ].floorPoints.leftLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                            }
+                                            else if( railSide == Rail.Right ) {
+                                                indexDiff = ( sections[ i - 1 ].floorPoints.rightLine.Count - 1 ) + ( j - indexDiff );
+                                                previousOrientationPoint = sections[ i - 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                            }
+                                            
+                                        }
+                                        else {
+                                            indexDiff = ( sections[ i - 1 ].floorPoints.centerLine.Count - 1 ) + ( j - indexDiff );
+                                            previousOrientationPoint = sections[ i - 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                        }
+                                    //}
+                                    //else {
+                                        //previousOrientationPoint = sections[ i - 1 ].bezierCurveLimitedAngle[ indexDiff ];
+                                    //}
                                 }
-                                else if( sections[ 0 ].fromSection.switchType == SwitchType.BiToNewBi ) {
-
-                                    if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( Side.Right ) && sections[ 0 ].fromSection.newLinesStarts[ Side.Right ].lineName == sections[ 0 ].lineName ) { 
-                                        
-                                        if( railSide == Rail.Right && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.RightToEntranceRight ) {
-                                            inverseSection = false;
-                                            inverseLine = false;
-                                            indexPoint = sections[ 0 ].fromSection.floorPoints.rightEntranceRight.Count - 1;
-                                            railSide = Rail.Right;
-                                        }
-                                        else if( railSide == Rail.Left && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.RightToExitRight ) {
-                                            inverseSection = false;
-                                            inverseLine = true;
-                                            indexPoint = 0;
-                                            railSide = Rail.Right;
-                                        }
-                                        else {
-                                            // Implementare logica stop automatico treno qui
-                                        }
-                                    }
-                                    else if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( Side.Left ) && sections[ 0 ].fromSection.newLinesStarts[ Side.Left ].lineName == sections[ 0 ].lineName ) { 
-                                        if( railSide == Rail.Left && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.LeftToEntranceLeft ) {
-                                            inverseSection = false;
-                                            inverseLine = false;
-                                            indexPoint = sections[ 0 ].fromSection.floorPoints.leftEntranceLeft.Count - 1;
-                                            railSide = Rail.Left;
-                                        }
-                                        else if( railSide == Rail.Right && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.LeftToExitLeft ) {
-                                            inverseSection = false;
-                                            inverseLine = true;
-                                            indexPoint = 0;
-                                            railSide = Rail.Left;
-                                        }
-                                        else {
-                                            // Implementare logica stop automatico treno qui
-                                        }
-                                    }
+                                else {
+                                    previousOrientationPoint = points[ 0 ] + ( Vector3.forward * heightCorrection );
                                 }
                             }
                             else {
-                                endOfTheLine = true;
+                                previousOrientationPoint = points[ j - indexDiff ] + ( Vector3.forward * heightCorrection );
+                            }
+
+                            if( dist > deltaDist ) {
+                                indexPoint = j;
+                                previousPoint = points[ j ] + ( Vector3.forward * heightCorrection );
+                                break;
+                            }
+                        }
+                        
+                        if( previousPoint == Vector3.zero ) {
+                            break;
+                        }
+
+                        actualPoint = previousPoint;
+                        actualOrientationPoint = previousOrientationPoint;
+
+                        // Posizione e rotazione iniziale del vagone per punto della curva
+                        Vector3 previousDir = this.transform.position - previousOrientationPoint;
+                        Vector3 startDir = this.transform.right;
+                        Vector3 startPos = this.transform.position;
+                        float segmentDist = ( previousPoint - startPos ).magnitude;
+                        float sumDist = 0.0f;
+                        while( sumDist < segmentDist ) {
+
+                            Debug.DrawLine( this.transform.position, previousPoint, Color.red, Time.deltaTime );
+                            Debug.DrawLine( this.transform.position, previousOrientationPoint, Color.magenta, Time.deltaTime );
+
+                            // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
+                            this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
+                            // Protezione blocco cardanico
+                            Quaternion previousRot = this.transform.localRotation;
+                            this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
+                            if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
+                                this.transform.localRotation = previousRot;
+                                Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
+                            }
+
+                            sumDist += Time.deltaTime * Mathf.Abs( speed );
+
+                            if( sumDist < segmentDist ) {
+                                yield return null;
+                            }
+                            else{
+                                ////Debug.Log( "Next Point raggiunto" );
+                                break;
                             }
                         }
                     }
-                }
 
-                // >>> INVERSE LINE <<<
-                else {
-                    for( int i = indexSection; i < sections.Count; i++ ) {
 
-                        //if( !inverseSection ) {
-                            // >>> NORMAL SECTION <<<
-                            List<Vector3> points = getPoints( sections[ i ] );
-                            actualSectionPoints = points;
-                            
-                            float deltaDist = 0.0f;
-                            float dist = 0.0f;
-                            // Finché non sono abbastanza vicino all'ultimo punto della curva (mi sto muovendo in avanti, quindi "navigo" la lista dei punti in avanti)
-                            // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
-                            while( ( points[ points.Count - 1 ] - this.transform.position ).magnitude > deltaDist ) {
-                                // Distanza che sarà percorsa in un frame
-                                deltaDist = Time.deltaTime * Mathf.Abs( speed );
-                                Vector3 nextPoint = Vector3.zero;
-                                Vector3 nextOrientationPoint = Vector3.zero;
+                    // GESTIONE SCAMBI DELLA LINEA STESSA
+                    if( sections[ i ].type == Type.Switch ) {
+                        if( sections[ i ].switchType == SwitchType.BiToBi ) {
+                            if( railSide == Rail.Right && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
+                            railSide = Rail.Left;
+                            }
+                            else if( railSide == Rail.Left && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
+                                railSide = Rail.Right;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.BiToMono ) {
+                            if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
+                                railSide = Rail.Left;
+                            }
+                            else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
+                                railSide = Rail.Right;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
+                            railSide = Rail.Center;
+                        }
+                        // GESTIONE SCAMBIO MONODIREZIONALE DA CUI PARTE UNA NUOVA LINEA MONODIREZIONALE
+                        else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
+                            railSide = Rail.Center;
 
-                                // Aggiornamento del movimento attuale del vagone (in questo caso avanti)
-                                if( mainDir == Direction.Forward ) {
+                            if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight || sections[ i ].activeSwitch == SwitchDirection.CenterToExitLeft ) {
 
-                                    // Se il vagone stava andando indietro, allora devo puntare all'index successivo, ma se sono
-                                    // già all'ultimo punto della curva passo alla sezione succcessiva
-                                    if( indexPoint + 1 < points.Count ) {
-                                        indexPoint++;
-                                    }
-                                }
-                                mainDir = Direction.Backward;
-
-                                int startingIndex = indexPoint;
-                                // Ricerca del punto della curva successivo più lontano della distanza (per frame) percorsa dal vagone, che diventerà
-                                // il punto successivo verso cui si dirigerà il vagone
-                                for( int j = startingIndex; j < points.Count; j++ ) {
-                                    int indexDiff = j - startingIndex;
-                                    //Debug.Log( "j: " + j );
-                                    dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
-                                    //Debug.Log( "dist: " + dist );
-
-                                    if( j + indexDiff >= points.Count ) {
-                                        //Debug.Log( "Cerco punto in sezione successiva" );
-                                        if( i + 1 < sections.Count && sections[ i ].type != Type.Switch && sections[ i + 1 ].type != Type.Switch ) {
-                                            indexDiff = j + indexDiff - ( points.Count - 1 );
-
-                                            if( sections[ i + 1 ].type == Type.Tunnel ) {
-                                                if( sections[ i + 1 ].bidirectional ) {
-                                                    if( railSide == Rail.Left ) {
-                                                        nextOrientationPoint = sections[ i + 1 ].floorPoints.leftLine[ indexDiff ]  + ( Vector3.forward * heightCorrection );
-                                                    }
-                                                    else if( railSide == Rail.Right ) {
-                                                        nextOrientationPoint = sections[ i + 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                    }
-                                                }
-                                                else {
-                                                    nextOrientationPoint = sections[ i + 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                }
-                                            }
-                                            else {
-                                                nextOrientationPoint = sections[ i + 1 ].bezierCurveLimitedAngle[ indexDiff ];
-                                            }
-                                        }
-                                        else {
-                                            nextOrientationPoint = points[ points.Count - 1 ] + ( Vector3.forward * heightCorrection );
-                                        }
-                                    }
-                                    else {
-                                        nextOrientationPoint = points[ j + indexDiff ] + ( Vector3.forward * heightCorrection );
-                                    }
-
-                                    if( dist > deltaDist ) {
-                                        indexPoint = j;
-                                        nextPoint = points[ j ] + ( Vector3.forward * heightCorrection );
-                                        //Debug.Log( "Indice nextPoint trovato: " + indexPoint );
-                                        break;
-                                    }
+                                Side newSide = Side.Left;
+                                if( sections[ i ].activeSwitch == SwitchDirection.CenterToExitRight ) {
+                                    newSide = Side.Right;
                                 }
 
-                                if( nextPoint == Vector3.zero ) {
-                                    ////Debug.Log( "Sezione terminata" );
+                                keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
+                                indexPoint = 0;
+                                indexSection = 0;
+                                actualSwitchIndex = -1;
+                                inverseSection = false;
+                                inverseLine = true;
+
+                                break;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.BiToNewBi ) {
+
+                            if( !sections[ i ].ignoreSwitch ) {
+                                if( sections[ i ].activeSwitch == SwitchDirection.LeftToExitLeft || sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
+
+                                    Side newSide = Side.Left;
+                                    railSide = Rail.Right;
+                                    if( sections[ i ].activeSwitch == SwitchDirection.RightToExitRight ) {
+                                        newSide = Side.Right;
+                                        railSide = Rail.Left;
+                                    }
+
+                                    keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
+                                    indexPoint = 0;
+                                    indexSection = 0;
+                                    actualSwitchIndex = -1;
+                                    inverseSection = false;
+                                    inverseLine = true;
+
                                     break;
                                 }
-
-                                actualPoint = nextPoint;
-                                actualOrientationPoint = nextOrientationPoint;
-                                
-                                // Posizione e rotazione iniziale del vagone per punto della curva
-                                Vector3 nextDir = this.transform.position - nextOrientationPoint;
-                                Vector3 startDir = this.transform.right;
-                                Vector3 startPos = this.transform.position;
-                                float segmentDist = ( nextPoint - startPos ).magnitude;
-                                float sumDist = 0.0f;
-                                while( sumDist < segmentDist ) {
-                                    Debug.DrawLine( this.transform.position, nextPoint, Color.red, Time.deltaTime );
-                                    Debug.DrawLine( this.transform.position, nextOrientationPoint, Color.magenta, Time.deltaTime );
-
-                                    // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
-                                    this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist ); 
-                                    // Protezione blocco cardanico
-                                    Quaternion previousRot = this.transform.localRotation;
-                                    this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
-                                    if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
-                                        this.transform.localRotation = previousRot;
-                                        Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
-                                    }
-
-                                    sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                                    if( sumDist < segmentDist ) {
-                                        yield return null;
-                                    }
-                                    else{
-                                        ////Debug.Log( "Next Point raggiunto" );
-                                        break;
-                                    }
-                                }
-
-                                ////Debug.Log( "While segmento terminato" );
                             }
+                        }
+                    }
 
-                            if( sections[ i ].type == Type.Switch ) {
-                                if( sections[ i ].switchType == SwitchType.BiToBi ) {
-                                    if( railSide == Rail.Right && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                                        railSide = Rail.Left;
-                                    }
-                                    else if( railSide == Rail.Left && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
+                    //Debug.Log( "railSide: " + railSide );
+
+                    // Aggiornamento index una volta raggiunto il punto iniziale della curva
+                    if( i > 0 ) {
+
+                        indexSection--;
+                        List<Vector3> nextPoints = getPoints( sections[ indexSection ] );
+                        // Movimento backward: il primo punto della sezione successiva più vicino deve essere quello con indice (Count - 1), altrimenti devo ciclare la lista dei punti al contrario
+                        if( ( this.transform.position - nextPoints[ nextPoints.Count - 1 ] ).magnitude <= ( this.transform.position - nextPoints[ 0 ] ).magnitude ) {
+                            inverseSection = false;
+                            indexPoint = sections[ indexSection ].curvePointsCount - 1;
+                        }
+                        else {
+                            inverseSection = true;
+                            indexPoint = 0;
+                        }
+
+                        //Debug.Log( ">>>>>>> inverseSection: " + inverseSection );
+                        //Debug.Log( ">>>>>>> Previous indexPoint: " + indexPoint );
+                    }
+                    else {
+                        // GESTIONE SCAMBIO QUANDO DA UNA LINEA FIGLIA SI TORNA ALLO SCAMBIO DELLA LINEA CHE L'HA GENERATA
+                        if( sections[ 0 ].fromSection != null ) {
+                            keyLine = sections[ 0 ].fromSection.lineName;
+                            indexSection = sections[ 0 ].fromSection.sectionIndex;
+
+                            if( sections[ 0 ].fromSection.switchType == SwitchType.MonoToNewMono ) {
+
+                                switch( sections[ 0 ].fromSection.activeSwitch ) {
+                                    case SwitchDirection.CenterToEntranceRight: inverseSection = false;
+                                                                                inverseLine = false;
+                                                                                indexPoint = sections[ 0 ].fromSection.floorPoints.centerEntranceRight.Count - 1;
+                                                                                break;
+                                    case SwitchDirection.CenterToEntranceLeft:  inverseSection = false;
+                                                                                inverseLine = false;
+                                                                                indexPoint = sections[ 0 ].fromSection.floorPoints.centerEntranceLeft.Count - 1;
+                                                                                break;
+
+                                    case SwitchDirection.CenterToExitRight:     inverseSection = false;
+                                                                                inverseLine = true;
+                                                                                indexPoint = 0;
+                                                                                break;
+                                    case SwitchDirection.CenterToExitLeft:      inverseSection = false;
+                                                                                inverseLine = true;
+                                                                                indexPoint = 0;
+                                                                                break;
+                                }
+                            }
+                            else if( sections[ 0 ].fromSection.switchType == SwitchType.BiToNewBi ) {
+
+                                if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( Side.Right ) && sections[ 0 ].fromSection.newLinesStarts[ Side.Right ].lineName == sections[ 0 ].lineName ) { 
+                                    
+                                    if( railSide == Rail.Right && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.RightToEntranceRight ) {
+                                        inverseSection = false;
+                                        inverseLine = false;
+                                        indexPoint = sections[ 0 ].fromSection.floorPoints.rightEntranceRight.Count - 1;
                                         railSide = Rail.Right;
                                     }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.BiToMono ) {
-                                    railSide = Rail.Center;
-                                }
-                                else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
-                                    if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                        railSide = Rail.Left;
-                                    }
-                                    else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                        railSide = Rail.Right;
-                                    }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
-                                    railSide = Rail.Center;
-
-                                    if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight || sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
-
-                                        Side newSide = Side.Left;
-                                        if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
-                                            newSide = Side.Right;
-                                        }
-
-                                        keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
-                                        indexPoint = 0;
-                                        indexSection = 0;
-                                        actualSwitchIndex = -1;
+                                    else if( railSide == Rail.Left && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.RightToExitRight ) {
                                         inverseSection = false;
                                         inverseLine = true;
-
-                                        break;
-                                    }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.BiToNewBi ) {
-
-                                    if( !sections[ i ].ignoreSwitch ) {
-                                        if( sections[ i ].activeSwitch == SwitchDirection.LeftToEntranceLeft || sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
-
-                                            Side newSide = Side.Left;
-                                            railSide = Rail.Left;
-                                            if( sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
-                                                newSide = Side.Right;
-                                                railSide = Rail.Right;
-                                            }
-
-                                            keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
-                                            indexPoint = 0;
-                                            indexSection = 0;
-                                            actualSwitchIndex = -1;
-                                            inverseSection = false;
-                                            inverseLine = true;
-
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        /*}
-                        else {
-                            List<Vector3> points = getPoints( sections[ i ] );
-                            actualSectionPoints = points;
-                            
-                            float deltaDist = 0.0f;
-                            float dist = 0.0f;
-                            // Finché non sono abbastanza vicino al primo punto della curva (mi sto muovendo all'indietro, quindi "navigo" la lista dei punti all'indietro)
-                            // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
-                            while( ( points[ 0 ] - this.transform.position ).magnitude > deltaDist ) {
-                                // Distanza che sarà percorsa in un frame
-                                deltaDist = Time.deltaTime * Mathf.Abs( speed );
-                                Vector3 previousPoint = Vector3.zero;
-                                Vector3 previousOrientationPoint = Vector3.zero;
-
-                                // Aggiornamento del movimento attuale del vagone (in questo caso indietro)
-                                if( mainDir == Direction.Forward ) {
-                                    // Se il vagone stava andando avanti, allora devo puntare all'index precedente, ma se sono
-                                    // già al primo punto della curva passo alla sezione precedente
-                                    if( indexPoint - 1 >= 0 ) {
-                                        indexPoint--;
-                                    }
-                                }
-                                mainDir = Direction.Backward;
-
-                                int startingIndex = indexPoint;
-                                // Ricerca del punto della curva precedente più lontano della distanza (per frame) percorsa dal vagone, che diventerà
-                                // il punto successivo verso cui si dirigerà il vagone
-                                for( int j = indexPoint; j >= 0; j-- ) {
-                                    int indexDiff = startingIndex - j;
-                                    dist = ( ( points[ j ] + ( Vector3.forward * heightCorrection ) ) - this.transform.position ).magnitude;
-
-                                    if( j - indexDiff < 0 ) {
-                                        if( i - 1 >= 0 && sections[ i ].type != Type.Switch && sections[ i - 1 ].type != Type.Switch ) {
-                                            //indexDiff = ( sections[ i - 1 ].bezierCurveLimitedAngle.Count - 1 ) + ( j - indexDiff );
-
-                                            //if( sections[ i - 1 ].type == Type.Tunnel ) {
-                                                if( sections[ i - 1 ].bidirectional ) {
-                                                    if( railSide == Side.Left ) {
-                                                        indexDiff = ( sections[ i - 1 ].floorPoints.leftLine.Count - 1 ) + ( j - indexDiff );
-                                                        previousOrientationPoint = sections[ i - 1 ].floorPoints.leftLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                    }
-                                                    else if( railSide == Side.Right ) {
-                                                        indexDiff = ( sections[ i - 1 ].floorPoints.rightLine.Count - 1 ) + ( j - indexDiff );
-                                                        previousOrientationPoint = sections[ i - 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                    }
-                                                    
-                                                }
-                                                else {
-                                                    indexDiff = ( sections[ i - 1 ].floorPoints.centerLine.Count - 1 ) + ( j - indexDiff );
-                                                    previousOrientationPoint = sections[ i - 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
-                                                }
-                                            //}
-                                            //else {
-                                                //previousOrientationPoint = sections[ i - 1 ].bezierCurveLimitedAngle[ indexDiff ];
-                                            //}
-                                        }
-                                        else {
-                                            previousOrientationPoint = points[ 0 ] + ( Vector3.forward * heightCorrection );
-                                        }
+                                        indexPoint = 0;
+                                        railSide = Rail.Right;
                                     }
                                     else {
-                                        previousOrientationPoint = points[ j - indexDiff ] + ( Vector3.forward * heightCorrection );
-                                    }
-
-                                    if( dist > deltaDist ) {
-                                        indexPoint = j;
-                                        previousPoint = points[ j ] + ( Vector3.forward * heightCorrection );
-                                        break;
+                                        // Implementare logica stop automatico treno qui
                                     }
                                 }
-                                
-                                if( previousPoint == Vector3.zero ) {
-                                    break;
-                                }
-
-                                actualPoint = previousPoint;
-                                actualOrientationPoint = previousOrientationPoint;
-
-                                // Posizione e rotazione iniziale del vagone per punto della curva
-                                Vector3 previousDir = this.transform.position - previousOrientationPoint;
-                                Vector3 startDir = this.transform.right;
-                                Vector3 startPos = this.transform.position;
-                                float segmentDist = ( previousPoint - startPos ).magnitude;
-                                float sumDist = 0.0f;
-                                while( sumDist < segmentDist ) {
-
-                                    Debug.DrawLine( this.transform.position, previousPoint, Color.red, Time.deltaTime );
-                                    Debug.DrawLine( this.transform.position, previousOrientationPoint, Color.magenta, Time.deltaTime );
-
-                                    // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
-                                    this.transform.position = Vector3.Lerp( startPos, previousPoint, sumDist / dist ); 
-                                    this.transform.right = Vector3.Slerp( startDir, previousDir, sumDist / dist );
-
-                                    sumDist += Time.deltaTime * Mathf.Abs( speed );
-
-                                    if( sumDist < segmentDist ) {
-                                        yield return null;
+                                else if( sections[ 0 ].fromSection.newLinesStarts.ContainsKey( Side.Left ) && sections[ 0 ].fromSection.newLinesStarts[ Side.Left ].lineName == sections[ 0 ].lineName ) { 
+                                    if( railSide == Rail.Left && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.LeftToEntranceLeft ) {
+                                        inverseSection = false;
+                                        inverseLine = false;
+                                        indexPoint = sections[ 0 ].fromSection.floorPoints.leftEntranceLeft.Count - 1;
+                                        railSide = Rail.Left;
                                     }
-                                    else{
-                                        ////Debug.Log( "Next Point raggiunto" );
-                                        break;
+                                    else if( railSide == Rail.Right && sections[ 0 ].fromSection.activeSwitch == SwitchDirection.LeftToExitLeft ) {
+                                        inverseSection = false;
+                                        inverseLine = true;
+                                        indexPoint = 0;
+                                        railSide = Rail.Left;
+                                    }
+                                    else {
+                                        // Implementare logica stop automatico treno qui
                                     }
                                 }
                             }
-                            if( sections[ i ].type == Type.Switch ) {
-                                if( sections[ i ].switchType == SwitchType.BiToBi ) {
-                                    if( railSide == Side.Right && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
-                                    railSide = Side.Left;
-                                    }
-                                    else if( railSide == Side.Left && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
-                                        railSide = Side.Right;
-                                    }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.BiToMono ) {
-                                    if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
-                                        railSide = Side.Left;
-                                    }
-                                    else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
-                                        railSide = Side.Right;
-                                    }
-                                }
-                                else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
-                                    railSide = Side.Center;
-                                }
-                                else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
-                                    railSide = Side.Center;
-                                }
-                            }
-                        }*/
-
-                        //Debug.Log( "railSide: " + railSide );
-
-                        if( i < sections.Count ) {
-                            indexSection++;
-                            List<Vector3> nextPoints = getPoints( sections[ indexSection ] );
-
-                            // Movimento forward: il primo punto della sezione successiva più vicino deve essere quello con indice 0, altrimenti devo ciclare la lista dei punti al contrario
-                            if( ( this.transform.position - nextPoints[ 0 ] ).magnitude <= ( this.transform.position - nextPoints[ nextPoints.Count - 1 ] ).magnitude ) {
-                                inverseSection = false;
-                                indexPoint = 0;
-                            }
-                            else {
-                                inverseSection = true;
-                                indexPoint = sections[ indexSection ].curvePointsCount - 1;
-                            }
-
-                            //Debug.Log( ">>>>>>> inverseSection: " + inverseSection );
-                            //Debug.Log( ">>>>>>> Previous indexPoint: " + indexPoint );
                         }
                         else {
                             endOfTheLine = true;
                         }
                     }
-            
                 }
-            //}
+            }
 
-            ////Debug.Log( "GoFoward ended" );
+            // >>> INVERSE LINE <<<
+            else {
+                for( int i = indexSection; i < sections.Count; i++ ) {
+
+                    // >>> NORMAL SECTION <<<
+                    List<Vector3> points = getPoints( sections[ i ] );
+                    actualSectionPoints = points;
+                    
+                    float deltaDist = 0.0f;
+                    float dist = 0.0f;
+                    // Finché non sono abbastanza vicino all'ultimo punto della curva (mi sto muovendo in avanti, quindi "navigo" la lista dei punti in avanti)
+                    // continuo a cercare il punto sufficientemente lontano dal vagone per raggiungerlo
+                    while( ( points[ points.Count - 1 ] - this.transform.position ).magnitude > deltaDist ) {
+                        // Distanza che sarà percorsa in un frame
+                        deltaDist = Time.deltaTime * Mathf.Abs( speed );
+                        Vector3 nextPoint = Vector3.zero;
+                        Vector3 nextOrientationPoint = Vector3.zero;
+
+                        // Aggiornamento del movimento attuale del vagone (in questo caso avanti)
+                        if( mainDir == Direction.Forward ) {
+
+                            // Se il vagone stava andando indietro, allora devo puntare all'index successivo, ma se sono
+                            // già all'ultimo punto della curva passo alla sezione succcessiva
+                            if( indexPoint + 1 < points.Count ) {
+                                indexPoint++;
+                            }
+                        }
+                        mainDir = Direction.Backward;
+
+                        int startingIndex = indexPoint;
+                        // Ricerca del punto della curva successivo più lontano della distanza (per frame) percorsa dal vagone, che diventerà
+                        // il punto successivo verso cui si dirigerà il vagone
+                        for( int j = startingIndex; j < points.Count; j++ ) {
+                            int indexDiff = j - startingIndex;
+                            //Debug.Log( "j: " + j );
+                            dist = ( points[ j ] + ( Vector3.forward * heightCorrection ) - this.transform.position ).magnitude;
+                            //Debug.Log( "dist: " + dist );
+
+                            if( j + indexDiff >= points.Count ) {
+                                //Debug.Log( "Cerco punto in sezione successiva" );
+                                if( i + 1 < sections.Count && sections[ i ].type != Type.Switch && sections[ i + 1 ].type != Type.Switch ) {
+                                    indexDiff = j + indexDiff - ( points.Count - 1 );
+
+                                    if( sections[ i + 1 ].type == Type.Tunnel ) {
+                                        if( sections[ i + 1 ].bidirectional ) {
+                                            if( railSide == Rail.Left ) {
+                                                nextOrientationPoint = sections[ i + 1 ].floorPoints.leftLine[ indexDiff ]  + ( Vector3.forward * heightCorrection );
+                                            }
+                                            else if( railSide == Rail.Right ) {
+                                                nextOrientationPoint = sections[ i + 1 ].floorPoints.rightLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                            }
+                                        }
+                                        else {
+                                            nextOrientationPoint = sections[ i + 1 ].floorPoints.centerLine[ indexDiff ] + ( Vector3.forward * heightCorrection );
+                                        }
+                                    }
+                                    else {
+                                        nextOrientationPoint = sections[ i + 1 ].bezierCurveLimitedAngle[ indexDiff ];
+                                    }
+                                }
+                                else {
+                                    nextOrientationPoint = points[ points.Count - 1 ] + ( Vector3.forward * heightCorrection );
+                                }
+                            }
+                            else {
+                                nextOrientationPoint = points[ j + indexDiff ] + ( Vector3.forward * heightCorrection );
+                            }
+
+                            if( dist > deltaDist ) {
+                                indexPoint = j;
+                                nextPoint = points[ j ] + ( Vector3.forward * heightCorrection );
+                                //Debug.Log( "Indice nextPoint trovato: " + indexPoint );
+                                break;
+                            }
+                        }
+
+                        if( nextPoint == Vector3.zero ) {
+                            ////Debug.Log( "Sezione terminata" );
+                            break;
+                        }
+
+                        actualPoint = nextPoint;
+                        actualOrientationPoint = nextOrientationPoint;
+                        
+                        // Posizione e rotazione iniziale del vagone per punto della curva
+                        Vector3 nextDir = this.transform.position - nextOrientationPoint;
+                        Vector3 startDir = this.transform.right;
+                        Vector3 startPos = this.transform.position;
+                        float segmentDist = ( nextPoint - startPos ).magnitude;
+                        float sumDist = 0.0f;
+                        while( sumDist < segmentDist ) {
+                            Debug.DrawLine( this.transform.position, nextPoint, Color.red, Time.deltaTime );
+                            Debug.DrawLine( this.transform.position, nextOrientationPoint, Color.magenta, Time.deltaTime );
+
+                            // Interpolazione lineare (sulla distanza) per gestire posizione e rotazione frame successivo
+                            this.transform.position = Vector3.Lerp( startPos, nextPoint, sumDist / dist ); 
+                            // Protezione blocco cardanico
+                            Quaternion previousRot = this.transform.localRotation;
+                            this.transform.right = Vector3.Slerp( startDir, nextDir, sumDist / dist );
+                            if( ( this.transform.localEulerAngles.z < ( -180.0f + gimbalLockProtectionDegs ) && this.transform.localEulerAngles.z > ( 180.0f - gimbalLockProtectionDegs ) ) || ( this.transform.localEulerAngles.z > -gimbalLockProtectionDegs && this.transform.localEulerAngles.z < gimbalLockProtectionDegs ) ) {
+                                this.transform.localRotation = previousRot;
+                                Debug.Log( ">>>>>> Protezione blocco cardanico attiva" );
+                            }
+
+                            sumDist += Time.deltaTime * Mathf.Abs( speed );
+
+                            if( sumDist < segmentDist ) {
+                                yield return null;
+                            }
+                            else{
+                                ////Debug.Log( "Next Point raggiunto" );
+                                break;
+                            }
+                        }
+
+                        ////Debug.Log( "While segmento terminato" );
+                    }
+
+                    if( sections[ i ].type == Type.Switch ) {
+                        if( sections[ i ].switchType == SwitchType.BiToBi ) {
+                            if( railSide == Rail.Right && sections[ i ].activeSwitch == SwitchDirection.RightToLeft ) {
+                                railSide = Rail.Left;
+                            }
+                            else if( railSide == Rail.Left && sections[ i ].activeSwitch == SwitchDirection.LeftToRight ) {
+                                railSide = Rail.Right;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.BiToMono ) {
+                            railSide = Rail.Center;
+                        }
+                        else if( sections[ i ].switchType == SwitchType.MonoToBi ) {
+                            if( sections[ i ].activeSwitch == SwitchDirection.LeftToCenter ) {
+                                railSide = Rail.Left;
+                            }
+                            else if( sections[ i ].activeSwitch == SwitchDirection.RightToCenter ) {
+                                railSide = Rail.Right;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.MonoToNewMono ) {
+                            railSide = Rail.Center;
+
+                            if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight || sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
+
+                                Side newSide = Side.Left;
+                                if( sections[ i ].activeSwitch == SwitchDirection.CenterToEntranceRight ) {
+                                    newSide = Side.Right;
+                                }
+
+                                keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
+                                indexPoint = 0;
+                                indexSection = 0;
+                                actualSwitchIndex = -1;
+                                inverseSection = false;
+                                inverseLine = true;
+
+                                break;
+                            }
+                        }
+                        else if( sections[ i ].switchType == SwitchType.BiToNewBi ) {
+
+                            if( !sections[ i ].ignoreSwitch ) {
+                                if( sections[ i ].activeSwitch == SwitchDirection.LeftToEntranceLeft || sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
+
+                                    Side newSide = Side.Left;
+                                    railSide = Rail.Left;
+                                    if( sections[ i ].activeSwitch == SwitchDirection.RightToEntranceRight ) {
+                                        newSide = Side.Right;
+                                        railSide = Rail.Right;
+                                    }
+
+                                    keyLine = sections[ i ].newLinesStarts[ newSide ].lineName;
+                                    indexPoint = 0;
+                                    indexSection = 0;
+                                    actualSwitchIndex = -1;
+                                    inverseSection = false;
+                                    inverseLine = true;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if( i < sections.Count ) {
+                        indexSection++;
+                        List<Vector3> nextPoints = getPoints( sections[ indexSection ] );
+
+                        // Movimento forward: il primo punto della sezione successiva più vicino deve essere quello con indice 0, altrimenti devo ciclare la lista dei punti al contrario
+                        if( ( this.transform.position - nextPoints[ 0 ] ).magnitude <= ( this.transform.position - nextPoints[ nextPoints.Count - 1 ] ).magnitude ) {
+                            inverseSection = false;
+                            indexPoint = 0;
+                        }
+                        else {
+                            inverseSection = true;
+                            indexPoint = sections[ indexSection ].curvePointsCount - 1;
+                        }
+
+                        //Debug.Log( ">>>>>>> inverseSection: " + inverseSection );
+                        //Debug.Log( ">>>>>>> Previous indexPoint: " + indexPoint );
+                    }
+                    else {
+                        endOfTheLine = true;
+                    }
+                }
+        
+            }
         }
     }
 

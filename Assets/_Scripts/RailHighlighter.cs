@@ -15,6 +15,8 @@ public class RailHighlighter : MonoBehaviour
     public string lineName;
     public int index;
 
+    public bool ready = false;
+
     void Start()
     {
         lineName = section.lineName;
@@ -24,22 +26,24 @@ public class RailHighlighter : MonoBehaviour
         originalMaterial = this.GetComponent<Renderer>().material;
     }
 
-    void LateUpdate()
-    {
-        if( train == null ) {
-            train = GameObject.Find( "Train" );
-        }
-        else { 
-            TrainController trainController = train.GetComponent<TrainController>();
-            
-            if( ( trainController.actualSwitchLine == lineName && trainController.actualSwitchIndex == index && trainController.actualSwitchDirection == direction ) || 
-                ( trainController.previousSwitchLine == lineName && trainController.previousSwitchIndex == index && trainController.previousSwitchDirection == direction ) || 
-                ( trainController.nextSwitchLine == lineName && trainController.nextSwitchIndex == index && trainController.nextSwitchDirection == direction ) ) {
-                
-                this.GetComponent<Renderer>().material = this.highlightedMaterial; 
+    void LateUpdate() {
+
+        if( this.ready ) {
+            if( train == null ) {
+                train = GameObject.Find( "Train" );
             }
-            else {
-                this.GetComponent<Renderer>().sharedMaterial = this.originalMaterial;
+            else { 
+                TrainController trainController = train.GetComponent<TrainController>();
+                
+                if( ( trainController.actualSwitchLine == lineName && trainController.actualSwitchIndex == index && trainController.actualSwitchDirection == direction ) || 
+                    ( trainController.previousSwitchLine == lineName && trainController.previousSwitchIndex == index && trainController.previousSwitchDirection == direction ) || 
+                    ( trainController.nextSwitchLine == lineName && trainController.nextSwitchIndex == index && trainController.nextSwitchDirection == direction ) ) {
+                    
+                    this.GetComponent<Renderer>().material = this.highlightedMaterial; 
+                }
+                else {
+                    this.GetComponent<Renderer>().sharedMaterial = this.originalMaterial;
+                }
             }
         }
     }

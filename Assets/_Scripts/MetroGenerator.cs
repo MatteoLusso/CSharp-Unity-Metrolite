@@ -6,6 +6,7 @@ using System.Threading;
 using UnityEngine.U2D;
 using Unity.VisualScripting;
 using UnityEngine.Rendering;
+using TMPro;
 
 public class MetroGenerator : MonoBehaviour
 {
@@ -186,21 +187,13 @@ public class MetroGenerator : MonoBehaviour
     public int beamPillarsNumber = 5;
     
     [ Header ( "Texture" ) ]
-    public Material platformFloorTexture;
-    public Vector2 platformFloorTextureTiling;
-    public Material tunnelWallTexture;
-    public Vector2 tunnelWallTextureTiling;
-    public Material centralStationPlatformWallTexture;
-    public Vector2 centralStationPlatformWallTextureTiling;
-    public Material railTexture;
-    public Vector2 railTextureTiling;
-    public Material tubeTexture;
-    public Vector2 tubeTextureTiling;
-    public Material wireTexture;
-    public Vector2 wireTextureTiling;
-    public Material beamTexture;
-    public Vector2 beamTextureTiling;
-
+    public Utils.Texturing platformFloorTexturing;
+    public Utils.Texturing tunnelWallTexturing;
+    public Utils.Texturing centralStationPlatformWallTexturing;
+    public Utils.Texturing railTexturing;
+    public Utils.Texturing tubeTexturing;
+    public Utils.Texturing wireTexturing;
+    public Utils.Texturing beamTexturing;
     public Utils.Texturing grateTexturing;
     public Utils.Texturing yellowLineTexturing;
     public Utils.Texturing fullRailsGroundTexturing;
@@ -210,7 +203,6 @@ public class MetroGenerator : MonoBehaviour
     public Utils.Texturing platformSideTexturing;
     public Utils.Texturing ceilingTexturing;
     public Utils.Texturing stationWallTexturing;
-    public Utils.Texturing tunnelWallTexturing;
 
     [ Header ( "Semafori scambi" ) ]
     public GameObject switchLight;
@@ -237,13 +229,13 @@ public class MetroGenerator : MonoBehaviour
 
     public List<( Vector3, Vector3 )> maintenanceTunnelsStart = new();
 
+    public List<GameObject> switchRails = new();
 
-    // void Start()
-    // {
-    //     GenerateMetro();
-    // }
+    public float lineLoadingPercent = 0.45f;
+    public float meshLoadingPercent = 0.80f;
+    public float propsLoadingPercent = 1.0f;
 
-    public void GenerateMetro( /*GameManager gameManager*/ ) {
+    public IEnumerator GenerateMetro( GameManager gm ) {
 
         this.ready = false;
 
@@ -254,6 +246,17 @@ public class MetroGenerator : MonoBehaviour
         PrintElapsedTime( "Generazione seed " + this.seed );
 
         GenerateLine( "Linea " + lineCounter, CardinalPoint.None, CardinalPoint.Random, sectionsNumber, Vector3.zero, Vector3.zero, newLineFromSwitch, null );
+        int newLinesCounter = 0;
+        foreach( LineSection section in lines[ "Linea " + ( lineCounter - 1 ) ] ) {
+            if( section.newLinesStarts != null && section.newLinesStarts.Count > 0 ) { 
+                newLinesCounter += section.newLinesStarts.Count;
+            }
+        }
+
+        gm.metroGenerationPercent = this.lineLoadingPercent * 1.0f / newLinesCounter;
+        
+         yield return new WaitForEndOfFrame();
+
         foreach( LineSection section in lines[ "Linea " + ( lineCounter - 1 ) ] ) {
             if( section.newLinesStarts != null && section.newLinesStarts.Count > 0 ) {
                 if( section.newLinesStarts != null ) {
@@ -263,6 +266,7 @@ public class MetroGenerator : MonoBehaviour
 
                         if( !start.generated ) {
                             GenerateLine( "Linea " + lineCounter, start.previousOrientation, start.orientation, sectionsNumber/ 2, start.pos, start.dir, false, section );
+
                             start.generated = true;
                             start.lineName = "Linea " + ( lineCounter - 1 );
 
@@ -270,6 +274,9 @@ public class MetroGenerator : MonoBehaviour
                                 section.newLinesStarts.Remove( sides[ i ] );
                             }
                         }
+
+                        gm.metroGenerationPercent = this.lineLoadingPercent * lineCounter / newLinesCounter;
+                        yield return new WaitForEndOfFrame();
                     }
                 }
             }
@@ -279,8 +286,14 @@ public class MetroGenerator : MonoBehaviour
         GenerateMeshes();
         PrintElapsedTime( "Generazione Mesh" );
 
+        gm.metroGenerationPercent = this.meshLoadingPercent;
+        yield return new WaitForEndOfFrame();
+
         AddProps();
         PrintElapsedTime( "Istanziamento Props" );
+
+        gm.metroGenerationPercent = this.propsLoadingPercent;
+        yield return new WaitForEndOfFrame();
 
         // InstantiateTrain();
         // PrintElapsedTime( "Istanziamento Treno" );
@@ -942,20 +955,20 @@ public class MetroGenerator : MonoBehaviour
             floorVertexPoints = MeshGenerator.CalculateBidirectionalWithBothSidesPlatformFloorMeshVertex( section, this.centerWidth, this.tunnelWidth, this.railsWidth );
 
             // Generazione mesh planari pavimento tunnel
-            InstantiatePlane( sectionGameObj.transform, "Tunnel - Pavimento binari - Sinistra", section.bezierCurveLimitedAngle, floorVertexPoints.leftL, floorVertexPoints.leftR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
-            InstantiatePlane( sectionGameObj.transform, "Tunnel - Pavimento divisore - Centro", section.bezierCurveLimitedAngle, floorVertexPoints.centerL, floorVertexPoints.centerR, 0.0f, false, false, false, this.separatorGroundTexturing );
-            InstantiatePlane( sectionGameObj.transform, "Tunnel - Pavimento binari - Destra", section.bezierCurveLimitedAngle, floorVertexPoints.rightL, floorVertexPoints.rightR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
+            InstantiatePlane( sectionGameObj.transform, "Tunnel - Pavimento binari - Sinistra", section.bezierCurveLimitedAngle, floorVertexPoints.leftL, floorVertexPoints.leftR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
+            InstantiatePlane( sectionGameObj.transform, "Tunnel - Pavimento divisore - Centro", section.bezierCurveLimitedAngle, floorVertexPoints.centerL, floorVertexPoints.centerR, 0.0f, false, false, false, this.separatorGroundTexturing, true );
+            InstantiatePlane( sectionGameObj.transform, "Tunnel - Pavimento binari - Destra", section.bezierCurveLimitedAngle, floorVertexPoints.rightL, floorVertexPoints.rightR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
 
             // Generazione mesh extruded binari
-            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Sinistra", floorVertexPoints.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Sinistra", floorVertexPoints.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Destra", floorVertexPoints.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Destra", floorVertexPoints.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Sinistra", floorVertexPoints.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Sinistra", floorVertexPoints.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Destra", floorVertexPoints.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Destra", floorVertexPoints.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
 
             //InstantiateGroundWires( sectionGameObj.transform, "Filo pavimento - Sinistra", Random.Range( this.groundWiresMinNumber, this.groundWiresMaxNumber + 1 ), this.groundWiresFuseBox, floorVertexPoints.leftLine, wireShape, this.groundWireShapeScale, this.groundWireRotationCorrection, this.groundWireSmoothFactor, this.groundWireMinLenght, this.groundWireMaxLenght, this.groundWireFloating, true, false, this.wireTexture, this.wireTextureTiling );
-            InstantiateGroundWires2( sectionGameObj.transform, "Filo pavimento - Sinistra", Random.Range( this.groundWiresMinNumber, this.groundWiresMaxNumber + 1 ), this.groundWiresFuseBox, floorVertexPoints.leftLine, this.wireShape, this.groundWireShapeScale, this.groundWireRotationCorrection, this.groundWireSmoothFactor, this.groundWireControlPointsNumber, this.groundWireBezierPointsNumber, this.groundWireFloating, true, false, this.wireTexture, this.wireTextureTiling );
+            InstantiateGroundWires2( sectionGameObj.transform, "Filo pavimento - Sinistra", Random.Range( this.groundWiresMinNumber, this.groundWiresMaxNumber + 1 ), this.groundWiresFuseBox, floorVertexPoints.leftLine, this.wireShape, this.groundWireShapeScale, this.groundWireRotationCorrection, this.groundWireSmoothFactor, this.groundWireControlPointsNumber, this.groundWireBezierPointsNumber, this.groundWireFloating, true, false, this.wireTexturing );
             //InstantiateGroundWires( sectionGameObj.transform, "Filo pavimento - Destra", Random.Range( this.groundWiresMinNumber, this.groundWiresMaxNumber + 1 ), this.groundWiresFuseBox, floorVertexPoints.rightLine, wireShape, this.groundWireShapeScale, this.groundWireRotationCorrection, this.groundWireSmoothFactor, this.groundWireMinLenght, this.groundWireMaxLenght, this.groundWireFloating, true, false, this.wireTexture, this.wireTextureTiling );
-            InstantiateGroundWires2( sectionGameObj.transform, "Filo pavimento - Destra", Random.Range( this.groundWiresMinNumber, this.groundWiresMaxNumber + 1 ), this.groundWiresFuseBox, floorVertexPoints.rightLine, this.wireShape, this.groundWireShapeScale, this.groundWireRotationCorrection, this.groundWireSmoothFactor, this.groundWireControlPointsNumber, this.groundWireBezierPointsNumber, this.groundWireFloating, true, false, this.wireTexture, this.wireTextureTiling );
+            InstantiateGroundWires2( sectionGameObj.transform, "Filo pavimento - Destra", Random.Range( this.groundWiresMinNumber, this.groundWiresMaxNumber + 1 ), this.groundWiresFuseBox, floorVertexPoints.rightLine, this.wireShape, this.groundWireShapeScale, this.groundWireRotationCorrection, this.groundWireSmoothFactor, this.groundWireControlPointsNumber, this.groundWireBezierPointsNumber, this.groundWireFloating, true, false, this.wireTexturing );
 
 
             section.bidirectional = true;
@@ -965,14 +978,14 @@ public class MetroGenerator : MonoBehaviour
             floorVertexPoints = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.bezierCurveLimitedAngle, section.controlsPoints[ 1 ] - section.bezierCurveLimitedAngle[ 0 ], tunnelWidth, this.railsWidth );
 
             // Generazione mesh planari pavimento tunnel
-            InstantiatePlane( sectionGameObj.transform, "Tunnel - Pavimento binari - Centro", section.bezierCurveLimitedAngle, floorVertexPoints.centerL, floorVertexPoints.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
+            InstantiatePlane( sectionGameObj.transform, "Tunnel - Pavimento binari - Centro", section.bezierCurveLimitedAngle, floorVertexPoints.centerL, floorVertexPoints.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
 
             // Generazione mesh extruded binari
-            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Centro", floorVertexPoints.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Centro", floorVertexPoints.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Centro", floorVertexPoints.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+            InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Centro", floorVertexPoints.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
 
             //InstantiateGroundWires( sectionGameObj.transform, "Filo pavimento - Centro", Random.Range( this.groundWiresMinNumber, this.groundWiresMaxNumber + 1 ), this.groundWiresFuseBox, floorVertexPoints.centerLine, wireShape, this.groundWireShapeScale, this.groundWireRotationCorrection, this.groundWireSmoothFactor, this.groundWireMinLenght, this.groundWireMaxLenght, this.groundWireFloating, true, false, this.wireTexture, this.wireTextureTiling );
-            InstantiateGroundWires2( sectionGameObj.transform, "Filo pavimento - Centro", Random.Range( this.groundWiresMinNumber, this.groundWiresMaxNumber + 1 ), this.groundWiresFuseBox, floorVertexPoints.centerLine, this.wireShape, this.groundWireShapeScale, this.groundWireRotationCorrection, this.groundWireSmoothFactor, this.groundWireControlPointsNumber, this.groundWireBezierPointsNumber, this.groundWireFloating, true, false, this.wireTexture, this.wireTextureTiling );
+            InstantiateGroundWires2( sectionGameObj.transform, "Filo pavimento - Centro", Random.Range( this.groundWiresMinNumber, this.groundWiresMaxNumber + 1 ), this.groundWiresFuseBox, floorVertexPoints.centerLine, this.wireShape, this.groundWireShapeScale, this.groundWireRotationCorrection, this.groundWireSmoothFactor, this.groundWireControlPointsNumber, this.groundWireBezierPointsNumber, this.groundWireFloating, true, false, this.wireTexturing );
 
             section.bidirectional = false;
         }
@@ -994,11 +1007,11 @@ public class MetroGenerator : MonoBehaviour
         InstantiateComposedExtrudedMesh( section, MeshType.FoundationWall, section.type.ToString(), left[ this.tunnelFoundationsWallShapeIndex ].verticesStructure[ Orientation.Horizontal ][ 0 ], Side.Left, this.tunnelFoundationsShapes, null, null, 0.0f, true, false, true, false, Vector2.zero );
         InstantiateComposedExtrudedMesh( section, MeshType.FoundationWall, section.type.ToString(), right[ this.tunnelFoundationsWallShapeIndex ].verticesStructure[ Orientation.Horizontal ][ 0 ], Side.Right, this.tunnelFoundationsShapes, null, null, 180.0f, false, false, true, false, Vector2.zero );
 
-        InstantiateWallWires( sectionGameObj.transform, section.type.ToString() + " - Filo - " + Side.Left.ToString(), Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformSidesVertexPoints.leftDown, this.wireShape, this.wallWireShapeScale, 0.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, true, false, this.wireTexture, this.wireTextureTiling );
-        InstantiateWallWires( sectionGameObj.transform, section.type.ToString() + " - Filo - " + Side.Right.ToString(), Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformSidesVertexPoints.rightDown, this.wireShape, this.wallWireShapeScale, 180.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, false, false, this.wireTexture, this.wireTextureTiling );
+        InstantiateWallWires( sectionGameObj.transform, section.type.ToString() + " - Filo - " + Side.Left.ToString(), Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformSidesVertexPoints.leftDown, this.wireShape, this.wallWireShapeScale, 0.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, true, false, this.wireTexturing );
+        InstantiateWallWires( sectionGameObj.transform, section.type.ToString() + " - Filo - " + Side.Right.ToString(), Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformSidesVertexPoints.rightDown, this.wireShape, this.wallWireShapeScale, 180.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, false, false, this.wireTexturing );
         
-        InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexture, this.tubeTextureTiling );
-        InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexture, this.tubeTextureTiling );
+        InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexturing );
+        InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexturing );
     }
 
     private void GenerateSwitchMeshes( string lineName, int i, LineSection section, GameObject sectionGameObj ) {
@@ -1059,14 +1072,14 @@ public class MetroGenerator : MonoBehaviour
                                             MeshGenerator.Floor centerToLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftCenterLine, null, tunnelWidth, this.railsWidth );
                                             MeshGenerator.Floor centerToRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.rightCenterLine, null, tunnelWidth, this.railsWidth );
 
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Centro", section.floorPoints.leftCenterLine, centerToLeftFloor.centerL, centerToLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Centro", section.floorPoints.rightCenterLine, centerToRightFloor.centerL, centerToRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Centro", section.floorPoints.leftCenterLine, centerToLeftFloor.centerL, centerToLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Centro", section.floorPoints.rightCenterLine, centerToRightFloor.centerL, centerToRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
 
                                             // Generazione mesh extruded binari
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra/Centro", centerToLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToCenter );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra/Centro", centerToLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToCenter );
-                                            InstantiateRail( sectionGameObj.transform, "Scammbio - Binario L - Destra/Centro", centerToRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToCenter );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Centro", centerToRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToCenter );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra/Centro", centerToLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToCenter );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra/Centro", centerToLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToCenter );
+                                            InstantiateRail( sectionGameObj.transform, "Scammbio - Binario L - Destra/Centro", centerToRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToCenter );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Centro", centerToRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToCenter );
 
                                             // Generazione mesh piattaforma laterale
                                             MeshGenerator.PlatformSide platformSidesLeftVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( centerToLeftFloor.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
@@ -1075,11 +1088,11 @@ public class MetroGenerator : MonoBehaviour
                                             InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesLeftVertexPoints.leftDown, Side.Left, this.tunnelWallShapes, null, null, 0.0f, true, false, true, false, Vector2.zero );
                                             InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesRightVertexPoints.rightDown, Side.Right, this.tunnelWallShapes, null, null, 180.0f, false, false, true, false, Vector2.zero );
 
-                                            InstantiateWallWires( sectionGameObj.transform, section.type.ToString() + " - Filo - " + Side.Left.ToString(), Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformSidesLeftVertexPoints.leftDown, this.wireShape, this.wallWireShapeScale, 0.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, true, false, this.wireTexture, this.wireTextureTiling );
-                                            InstantiateWallWires( sectionGameObj.transform, section.type.ToString() + " - Filo - " + Side.Right.ToString(), Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformSidesRightVertexPoints.rightDown, this.wireShape, this.wallWireShapeScale, 180.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, false, false, this.wireTexture, this.wireTextureTiling );
+                                            InstantiateWallWires( sectionGameObj.transform, section.type.ToString() + " - Filo - " + Side.Left.ToString(), Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformSidesLeftVertexPoints.leftDown, this.wireShape, this.wallWireShapeScale, 0.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, true, false, this.wireTexturing );
+                                            InstantiateWallWires( sectionGameObj.transform, section.type.ToString() + " - Filo - " + Side.Right.ToString(), Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformSidesRightVertexPoints.rightDown, this.wireShape, this.wallWireShapeScale, 180.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, false, false, this.wireTexturing );
                                             
-                                            InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexture, this.tubeTextureTiling );
-                                            InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexture, this.tubeTextureTiling );
+                                            InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexturing );
+                                            InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexturing );
 
                                             // Generazione mesh tombini
                                             Vector3 dirLeft0_BiToMono_MonoToBi = ( platformSidesLeftVertexPoints.leftFloorLeft[ 1 ] - platformSidesLeftVertexPoints.leftFloorLeft[ 0 ] ).normalized;
@@ -1103,7 +1116,7 @@ public class MetroGenerator : MonoBehaviour
                                             groundUp_BiToMono_MonoToBi.Add( endingGrateVertices_BiToMono_MonoToBi[ Side.Top ][ 1 ] );
                                             groundDown_BiToMono_MonoToBi.Add( endingGrateVertices_BiToMono_MonoToBi[ Side.Top ][ 0 ] );
 
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimentazione base", groundUp_BiToMono_MonoToBi, groundUp_BiToMono_MonoToBi, groundDown_BiToMono_MonoToBi, 0.01f, false, false, true, this.onlyGroundTexturing );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimentazione base", groundUp_BiToMono_MonoToBi, groundUp_BiToMono_MonoToBi, groundDown_BiToMono_MonoToBi, 0.01f, false, false, true, this.onlyGroundTexturing, true );
                                             
                                             break;
 
@@ -1112,20 +1125,20 @@ public class MetroGenerator : MonoBehaviour
                                             MeshGenerator.Floor leftToRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftRightLine, null, tunnelWidth, this.railsWidth );
                                             MeshGenerator.Floor rightToLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.rightLeftLine, null, tunnelWidth, this.railsWidth );
 
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Sinistra", section.floorPoints.leftLine, leftToLeftFloor.centerL, leftToLeftFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Destra", section.floorPoints.leftRightLine, leftToRightFloor.centerL, leftToRightFloor.centerR, -0.01f, false, false, false, this.onlyRailsGroundTexturing );
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Destra", section.floorPoints.rightLine, rightToRightFloor.centerL, rightToRightFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Sinistra", section.floorPoints.rightLeftLine, rightToLeftFloor.centerL, rightToLeftFloor.centerR, -0.01f, false, false, false, this.onlyRailsGroundTexturing );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Sinistra", section.floorPoints.leftLine, leftToLeftFloor.centerL, leftToLeftFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing, false );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Destra", section.floorPoints.leftRightLine, leftToRightFloor.centerL, leftToRightFloor.centerR, -0.01f, false, false, false, this.onlyRailsGroundTexturing, false );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Destra", section.floorPoints.rightLine, rightToRightFloor.centerL, rightToRightFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing, false );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Sinistra", section.floorPoints.rightLeftLine, rightToLeftFloor.centerL, rightToLeftFloor.centerR, -0.01f, false, false, false, this.onlyRailsGroundTexturing, false );
 
                                             // Generazione mesh extruded binari
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra/Sinistra", section.floorPoints.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToLeft );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra/Sinistra", section.floorPoints.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToLeft );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra/Destra", section.floorPoints.railSwitchLeftRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToRight );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra/Destra", section.floorPoints.railSwitchLeftRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToRight );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra/Sinistra", section.floorPoints.railSwitchRightLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToLeft );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Sinistra", section.floorPoints.railSwitchRightLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToLeft );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra/Destra", section.floorPoints.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToRight);
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Destra", section.floorPoints.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToRight);
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra/Sinistra", section.floorPoints.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToLeft );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra/Sinistra", section.floorPoints.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToLeft );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra/Destra", section.floorPoints.railSwitchLeftRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToRight );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra/Destra", section.floorPoints.railSwitchLeftRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToRight );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra/Sinistra", section.floorPoints.railSwitchRightLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToLeft );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Sinistra", section.floorPoints.railSwitchRightLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToLeft );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra/Destra", section.floorPoints.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToRight);
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Destra", section.floorPoints.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToRight);
 
 
                                             Vector3 switchDir = ( section.floorPoints.leftLine[ section.floorPoints.leftLine.Count - 1 ] - section.floorPoints.leftLine[ section.floorPoints.leftLine.Count - 2 ] ).normalized;
@@ -1133,7 +1146,7 @@ public class MetroGenerator : MonoBehaviour
                                             Dictionary<Side, List<Vector3>> startingGrateVertices = InstantiateGrate( sectionGameObj.transform, "Scambio - Tombino iniziale", new List<Vector3>{ rightToRightFloor.centerR[ 0 ], leftToLeftFloor.centerL[ 0 ] }, new List<Vector3>{ switchDir, switchDir }, this.grateWidth, false, grateTexturing );
                                             Dictionary<Side, List<Vector3>> endingGrateVertices = InstantiateGrate( sectionGameObj.transform, "Scambio - Tombino finale", new List<Vector3>{ rightToRightFloor.centerR[ rightToRightFloor.centerR.Count - 1 ], leftToLeftFloor.centerL[ leftToLeftFloor.centerL.Count - 1 ] }, new List<Vector3>{ -switchDir, -switchDir }, this.grateWidth, true, grateTexturing );
 
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimentazione base", new List<Vector3>{ startingGrateVertices[ Side.Bottom ][ 1 ], endingGrateVertices[ Side.Top ][ 1 ] }, new List<Vector3>{ startingGrateVertices[ Side.Bottom ][ 1 ], endingGrateVertices[ Side.Top ][ 1 ] }, new List<Vector3>{ startingGrateVertices[ Side.Bottom ][ 0 ], endingGrateVertices[ Side.Top ][ 0 ] }, 0.01f, false, false, false, this.onlyGroundTexturing );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimentazione base", new List<Vector3>{ startingGrateVertices[ Side.Bottom ][ 1 ], endingGrateVertices[ Side.Top ][ 1 ] }, new List<Vector3>{ startingGrateVertices[ Side.Bottom ][ 1 ], endingGrateVertices[ Side.Top ][ 1 ] }, new List<Vector3>{ startingGrateVertices[ Side.Bottom ][ 0 ], endingGrateVertices[ Side.Top ][ 0 ] }, 0.01f, false, false, false, this.onlyGroundTexturing, true );
 
                                             GenerateTunnelWallMesh( section, sectionGameObj );
                                             
@@ -1141,9 +1154,9 @@ public class MetroGenerator : MonoBehaviour
 
             case SwitchType.MonoToNewMono:  MeshGenerator.Floor centerToCenterFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerLine, null, tunnelWidth, this.railsWidth );
                                             
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Centro", section.floorPoints.centerLine, centerToCenterFloor.centerL, centerToCenterFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Sinistra", centerToCenterFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToCenter );
-                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Sinistra", centerToCenterFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToCenter );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Centro", section.floorPoints.centerLine, centerToCenterFloor.centerL, centerToCenterFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing, false );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Sinistra", centerToCenterFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToCenter );
+                                            InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Sinistra", centerToCenterFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToCenter );
 
                                             dirSwitch = ( section.bezierCurveLimitedAngle[ 1 ] - section.bezierCurveLimitedAngle[ 0 ] ).normalized;
 
@@ -1155,17 +1168,17 @@ public class MetroGenerator : MonoBehaviour
                                                 MeshGenerator.Floor centerToEntranceLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerEntranceLeft, null, tunnelWidth, this.railsWidth );
                                                 MeshGenerator.Floor centerToExitLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerExitLeft, null, tunnelWidth, this.railsWidth );
 
-                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Ingresso (Sinistra)", section.floorPoints.centerEntranceLeft, centerToEntranceLeftFloor.centerL, centerToEntranceLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
-                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Uscita (Sinistra)", section.floorPoints.centerExitLeft, centerToExitLeftFloor.centerL, centerToExitLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
+                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Ingresso (Sinistra)", section.floorPoints.centerEntranceLeft, centerToEntranceLeftFloor.centerL, centerToEntranceLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
+                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Uscita (Sinistra)", section.floorPoints.centerExitLeft, centerToExitLeftFloor.centerL, centerToExitLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
 
                                                 // Generazione mesh planari tombini
                                                 InstantiateGrate( sectionGameObj.transform, "Scambio - Tombino nuova linea (Sinistra)", new List<Vector3>{ section.newLinesStarts[ Side.Left ].pos + dirSwitch * ( this.tunnelWidth / 2 ), section.newLinesStarts[ Side.Left ].pos - dirSwitch * ( this.tunnelWidth / 2 ) }, new List<Vector3>{ centerToExitLeftFloor.centerL[ 1 ] - centerToExitLeftFloor.centerL[ 0 ], centerToEntranceLeftFloor.centerL[ centerToEntranceLeftFloor.centerL.Count - 2 ] - centerToEntranceLeftFloor.centerL[ centerToEntranceLeftFloor.centerL.Count - 1 ] }, this.grateWidth, true, grateTexturing );
 
                                                 // Generazione mesh extruded binari
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Ingresso", centerToEntranceLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToEntranceLeft );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Ingresso", centerToEntranceLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToEntranceLeft );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Uscita", centerToExitLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToExitLeft );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Uscita", centerToExitLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToExitLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Ingresso", centerToEntranceLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToEntranceLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Ingresso", centerToEntranceLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToEntranceLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Uscita", centerToExitLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToExitLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Uscita", centerToExitLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToExitLeft );
                                             
                                                 // Generazione mesh planare terreno (destra)                                                
                                                 MeshGenerator.Floor centralWallsBaseline = GenerateSwitchNewLine( centerToEntranceLeftFloor.centerR, centerToExitLeftFloor.centerR, centerToCenterFloor.centerL, true, false, switchNewLineLength, switchNewLineReduction, switchNewLineRadius, switchNewLineBezPoints );
@@ -1183,24 +1196,24 @@ public class MetroGenerator : MonoBehaviour
                                                 
                                                 // Generazione mesh piattaforma e muro centrale (sinistra)                                                
                                                 Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateComposedExtrudedMesh( section, MeshType.InternalWall, section.type.ToString(), centralWallsBaseline.switchNewBaseLine, Side.Left, this.tunnelWallShapes, null, null, 180.0f, false, true, false, true, Vector2.zero )[ this.tunnelWallShapes.Count - 1 ].verticesStructure;
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), centralWallsBaseline.switchNewBaseLine, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, true, this.tubeTexture, this.tubeTextureTiling );
-                                                InstantiatePoligon( sectionGameObj.transform, "Scambio - Soffitto - Centrale (Sinistra)", verticesStructure[ Orientation.Horizontal ][ this.tunnelWallShape.Count - 1 ], true, -Vector3.forward, dirSwitch, Vector2.zero, ceilingTexturing );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), centralWallsBaseline.switchNewBaseLine, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, true, this.tubeTexturing );
+                                                InstantiatePoligon( sectionGameObj.transform, "Scambio - Soffitto - Centrale (Sinistra)", verticesStructure[ Orientation.Horizontal ][ this.tunnelWallShape.Count - 1 ], true, -Vector3.forward, dirSwitch, Vector2.zero, ceilingTexturing, false );
                                             
                                                 // Generazione mesh piattaforme e muri ingresso e uscita (sinistra)
                                                 MeshGenerator.PlatformSide platformSidesLeftEntranceVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( centerToEntranceLeftFloor.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
                                                 MeshGenerator.PlatformSide platformSidesLeftExitVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( centerToExitLeftFloor.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
                                             
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesLeftEntranceVertexPoints.leftDown, Side.Left, this.tunnelWallShapes, null, null, 0.0f, true, false, false, false, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftEntranceVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftEntranceVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexturing );
                                                 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesLeftExitVertexPoints.leftDown, Side.Left, this.tunnelWallShapes, null, null, 0.0f, true, false, true, true, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftExitVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftExitVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexturing );
                                             }
                                             else {
                                                 MeshGenerator.PlatformSide platformSidesSwitchLeftVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( section.floorPoints.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
                                                 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesSwitchLeftVertexPoints.leftDown, Side.Left, this.tunnelWallShapes, null, null, 0.0f, true, false, true, false, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesSwitchLeftVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesSwitchLeftVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexturing );
                                             }
 
                                             if( section.newLinesStarts.ContainsKey( Side.Right ) ) {
@@ -1208,17 +1221,17 @@ public class MetroGenerator : MonoBehaviour
                                                 MeshGenerator.Floor centerToEntranceRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerEntranceRight, null, tunnelWidth, this.railsWidth );
                                                 MeshGenerator.Floor centerToExitRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerExitRight, null, tunnelWidth, this.railsWidth );
 
-                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Ingresso (Destra)", section.floorPoints.centerEntranceRight, centerToEntranceRightFloor.centerL, centerToEntranceRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
-                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Uscita (Destra)", section.floorPoints.centerExitRight, centerToExitRightFloor.centerL, centerToExitRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
+                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Ingresso (Destra)", section.floorPoints.centerEntranceRight, centerToEntranceRightFloor.centerL, centerToEntranceRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
+                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Centro/Uscita (Destra)", section.floorPoints.centerExitRight, centerToExitRightFloor.centerL, centerToExitRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
                                             
                                                 // Generazione mesh planari tombini
                                                 InstantiateGrate( sectionGameObj.transform, "Scambio - Tombino nuova linea (Destra)", new List<Vector3>{ section.newLinesStarts[ Side.Right ].pos + dirSwitch * ( this.tunnelWidth / 2 ), section.newLinesStarts[ Side.Right ].pos - dirSwitch * ( tunnelWidth / 2 ) }, new List<Vector3>{ centerToExitRightFloor.centerL[ 1 ] - centerToExitRightFloor.centerL[ 0 ], centerToEntranceRightFloor.centerL[ centerToEntranceRightFloor.centerL.Count - 2 ] - centerToEntranceRightFloor.centerL[ centerToEntranceRightFloor.centerL.Count - 1 ] }, this.grateWidth, false, grateTexturing );
                                                 
                                                 // Generazione mesh extruded binari
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra-Ingresso", centerToEntranceRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToEntranceRight );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra-Ingresso", centerToEntranceRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToEntranceRight );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra-Uscita", centerToExitRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToExitRight );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra-Uscita", centerToExitRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.CenterToExitRight );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra-Ingresso", centerToEntranceRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToEntranceRight );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra-Ingresso", centerToEntranceRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToEntranceRight );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra-Uscita", centerToExitRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToExitRight );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra-Uscita", centerToExitRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.CenterToExitRight );
                                             
                                                 /// Generazione mesh planare terreno (destra)
                                                 MeshGenerator.Floor centralWallsBaseline = GenerateSwitchNewLine( centerToEntranceRightFloor.centerL, centerToExitRightFloor.centerL, centerToCenterFloor.centerR, true, false, switchNewLineLength, switchNewLineReduction, switchNewLineRadius, switchNewLineBezPoints );
@@ -1236,24 +1249,24 @@ public class MetroGenerator : MonoBehaviour
 
                                                 // Generazione mesh piattaforma e muro centrale (destra)
                                                 Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateComposedExtrudedMesh( section, MeshType.InternalWall, section.type.ToString(), centralWallsBaseline.switchNewBaseLine, Side.Right, this.tunnelWallShapes, null, null, 0.0f, true, true, false, true, Vector2.zero )[ this.tunnelWallShapes.Count - 1 ].verticesStructure;
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), centralWallsBaseline.switchNewBaseLine, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, true, this.tubeTexture, this.tubeTextureTiling );
-                                                InstantiatePoligon( sectionGameObj.transform, "Scambio - Soffitto Centrale - Destra", verticesStructure[ Orientation.Horizontal ][ this.tunnelWallShape.Count - 1 ], false, -Vector3.forward, dirSwitch, Vector2.zero, ceilingTexturing );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), centralWallsBaseline.switchNewBaseLine, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, true, this.tubeTexturing );
+                                                InstantiatePoligon( sectionGameObj.transform, "Scambio - Soffitto Centrale - Destra", verticesStructure[ Orientation.Horizontal ][ this.tunnelWallShape.Count - 1 ], false, -Vector3.forward, dirSwitch, Vector2.zero, ceilingTexturing, false );
                                             
                                                 // Generazione mesh piattaforme e muri ingresso e uscita (destra)
                                                 MeshGenerator.PlatformSide platformSidesRightEntranceVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( centerToEntranceRightFloor.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
                                                 MeshGenerator.PlatformSide platformSidesRightExitVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( centerToExitRightFloor.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
                                             
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesRightEntranceVertexPoints.rightDown, Side.Right, this.tunnelWallShapes, null, null, 180.0f, false, false, false, false, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightEntranceVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightEntranceVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexturing );
                                                 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesRightExitVertexPoints.rightDown, Side.Right, this.tunnelWallShapes, null, null, 180.0f, false, false, true, true, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightExitVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightExitVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexturing );
                                             }
                                             else {
                                                 MeshGenerator.PlatformSide platformSidesSwitchRightVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( section.floorPoints.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesSwitchRightVertexPoints.rightDown, Side.Right, this.tunnelWallShapes, null, null, 180.0f, false, false, true, false, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesSwitchRightVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesSwitchRightVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexturing );
                                             }
                                             
                                             break;
@@ -1262,9 +1275,9 @@ public class MetroGenerator : MonoBehaviour
                                             MeshGenerator.Floor centerFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.centerLine, null, centerWidth, this.railsWidth );
                                             MeshGenerator.Floor rightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.rightLine, null, tunnelWidth, this.railsWidth );
 
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Sinistra", section.floorPoints.leftLine, leftFloor.centerL, leftFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento Divisore - Centro", section.floorPoints.centerLine, centerFloor.centerL, centerFloor.centerR, 0.0f, false, false, false, this.separatorGroundTexturing );
-                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Destra", section.floorPoints.leftLine, rightFloor.centerL, rightFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Sinistra", section.floorPoints.leftLine, leftFloor.centerL, leftFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento Divisore - Centro", section.floorPoints.centerLine, centerFloor.centerL, centerFloor.centerR, 0.0f, false, false, false, this.separatorGroundTexturing, true );
+                                            InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Destra", section.floorPoints.leftLine, rightFloor.centerL, rightFloor.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
 
                                             if( section.newLinesStarts.ContainsKey( Side.Left ) ) {
                                                 
@@ -1272,9 +1285,9 @@ public class MetroGenerator : MonoBehaviour
                                                 MeshGenerator.Floor leftToEntranceLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftEntranceLeft, null, tunnelWidth, this.railsWidth );
                                                 MeshGenerator.Floor leftToExitLeftFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.leftExitLeft, null, tunnelWidth, this.railsWidth );
 
-                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Sinistra", section.floorPoints.leftLine, leftFloor.centerL, leftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
-                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Ingresso (Sinistra)", section.floorPoints.leftEntranceLeft, leftToEntranceLeftFloor.centerL, leftToEntranceLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
-                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Uscita (Sinistra)", section.floorPoints.leftExitLeft, leftToExitLeftFloor.centerL, leftToExitLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
+                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Sinistra", section.floorPoints.leftLine, leftFloor.centerL, leftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
+                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Ingresso (Sinistra)", section.floorPoints.leftEntranceLeft, leftToEntranceLeftFloor.centerL, leftToEntranceLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
+                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Sinistra/Uscita (Sinistra)", section.floorPoints.leftExitLeft, leftToExitLeftFloor.centerL, leftToExitLeftFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
 
                                                 // Generazione mesh planari tombini
                                                 dirSwitch = ( section.bezierCurveLimitedAngle[ 1 ] - section.bezierCurveLimitedAngle[ 0 ] ).normalized;
@@ -1287,12 +1300,12 @@ public class MetroGenerator : MonoBehaviour
                                                 InstantiateGrate( sectionGameObj.transform, "Scambio - Tombino nuova linea (Sinistra)", new List<Vector3>{ section.newLinesStarts[ Side.Left ].pos + dirSwitch * ( ( this.centerWidth / 2 ) + tunnelWidth ), section.newLinesStarts[ Side.Left ].pos - dirSwitch * ( ( this.centerWidth / 2 ) + tunnelWidth ) }, new List<Vector3>{ leftToExitLeftFloor.centerL[ 1 ] - leftToExitLeftFloor.centerL[ 0 ], leftToEntranceLeftFloor.centerL[ leftToEntranceLeftFloor.centerL.Count - 2 ] - leftToEntranceLeftFloor.centerL[ leftToEntranceLeftFloor.centerL.Count - 1 ] }, this.grateWidth, true, grateTexturing );
 
                                                 // Generazione mesh extruded binari
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Sinistra", leftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToLeft );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Sinistra", leftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToLeft );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Ingresso", leftToEntranceLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToEntranceLeft );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Ingresso", leftToEntranceLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToEntranceLeft );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Uscita", leftToExitLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToExitLeft );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Uscita", leftToExitLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.LeftToExitLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Sinistra", leftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Sinistra", leftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Ingresso", leftToEntranceLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToEntranceLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Ingresso", leftToEntranceLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToEntranceLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Sinistra-Uscita", leftToExitLeftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToExitLeft );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Sinistra-Uscita", leftToExitLeftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.LeftToExitLeft );
 
                                                 // Generazione mesh planare terreno (sinistra)
                                                 MeshGenerator.Floor centralWallsBaseline = GenerateSwitchNewLine( leftToEntranceLeftFloor.centerR, leftToExitLeftFloor.centerR, leftFloor.centerL, true, false, switchNewLineLength, switchNewLineReduction, switchNewLineRadius, switchNewLineBezPoints );
@@ -1310,69 +1323,28 @@ public class MetroGenerator : MonoBehaviour
 
                                                 // Generazione mesh piattaforma e muro centrale (sinistra)                                                
                                                 Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateComposedExtrudedMesh( section, MeshType.InternalWall, section.type.ToString(), centralWallsBaseline.switchNewBaseLine, Side.Left, this.tunnelWallShapes, null, null, 180.0f, false, true, false, true, Vector2.zero )[ this.tunnelWallShapes.Count - 1 ].verticesStructure;
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), centralWallsBaseline.switchNewBaseLine, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, true, this.tubeTexture, this.tubeTextureTiling );
-                                                InstantiatePoligon( sectionGameObj.transform, "Scambio - Soffitto - Centrale (Sinistra)", verticesStructure[ Orientation.Horizontal ][ this.tunnelWallShape.Count - 1 ], true, -Vector3.forward, dirSwitch, Vector2.zero, ceilingTexturing );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), centralWallsBaseline.switchNewBaseLine, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, true, this.tubeTexturing );
+                                                InstantiatePoligon( sectionGameObj.transform, "Scambio - Soffitto - Centrale (Sinistra)", verticesStructure[ Orientation.Horizontal ][ this.tunnelWallShape.Count - 1 ], true, -Vector3.forward, dirSwitch, Vector2.zero, ceilingTexturing, false );
                                                 
                                                 // Generazione mesh piattaforme e muri ingresso e uscita (sinistra)
                                                 MeshGenerator.PlatformSide platformSidesLeftEntranceVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( leftToEntranceLeftFloor.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
                                                 MeshGenerator.PlatformSide platformSidesLeftExitVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( leftToExitLeftFloor.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesLeftEntranceVertexPoints.leftDown, Side.Left, this.tunnelWallShapes, null, null, 0.0f, true, false, false, false, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftEntranceVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftEntranceVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexturing );
                                                 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesLeftExitVertexPoints.leftDown, Side.Left, this.tunnelWallShapes, null, null, 0.0f, true, false, true, true, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftExitVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexture, this.tubeTextureTiling );
-
-                                                
-                                                // GameObject switch_BiNew_Ground_Left_GameObj = new( "Scambio - Terreno (Sinistra)" );
-                                                // switch_BiNew_Ground_Left_GameObj.transform.parent = sectionGameObj.transform;
-                                                // switch_BiNew_Ground_Left_GameObj.transform.position = new Vector3( 0.0f, 0.0f, 0.01f );
-                                                // switch_BiNew_Ground_Left_GameObj.AddComponent<MeshFilter>();
-                                                // switch_BiNew_Ground_Left_GameObj.AddComponent<MeshRenderer>();
-                                                // switch_BiNew_Ground_Left_GameObj.GetComponent<MeshFilter>().sharedMesh = MeshGenerator.GenerateSwitchNewLineGround( Side.Left, platformSidesLeftEntranceVertexPoints.leftDown, platformSidesLeftExitVertexPoints.leftDown, this.switchCentralWallSkipDown, this.switchCentralWallSkipUp, platformSidesLeftSideVertexPoints.rightDown, 1, this.switchCentralWallBezierPoints, section.nextStartingDirections[ 0 ], true, this.switchGroundTextureTiling, this.tunnelWidth, this.centerWidth );
-                                                // switch_BiNew_Ground_Left_GameObj.GetComponent<MeshRenderer>().material = this.switchGroundTexture; 
-
-                                                // //section.sidePlatformFloorLeftLastProfile = platformFloorLeftMesh.lastProfileVertex;
-                                                // //section.sidePlatformFloorRightLastProfile = platformFloorRightMesh.lastProfileVertex;
-
-                                                // List<Vector3> groundBiNewUp = new List<Vector3>();
-                                                // groundBiNewUp.Add( grate0LeftDown[ 0 ] );
-                                                // groundBiNewUp.Add( grate0LeftDown[ 1 ] );
-                                                // for( int k = 1; k < leftToEntranceLeftFloor.centerL.Count - 1; k++ ) {
-                                                //     groundBiNewUp.Add( leftToEntranceLeftFloor.centerL[ k ] );
-                                                //     //Debug.DrawLine( groundBiNewDown[ k ], groundBiNewDown[ k - 1 ], Color.magenta, 9999 );
-                                                // }
-                                                // groundBiNewUp.Add( grate2LeftUp[ 1 ] );
-                                                // //Debug.DrawLine( groundBiNewDown[ groundBiNewDown.Count - 1 ], groundBiNewDown[ groundBiNewDown.Count - 2 ], Color.magenta, 9999 );
-
-                                                // List<Vector3> groundBiNewDown = new List<Vector3>();
-                                                // groundBiNewDown.Add( grate1LeftUp[ 0 ] );
-                                                // groundBiNewDown.Add( grate1LeftUp[ 1 ] );
-                                                // for( int k = leftToExitLeftFloor.centerL.Count - 2; k > 0; k-- ) {
-                                                //     groundBiNewDown.Add( leftToExitLeftFloor.centerL[ k ] );
-
-                                                //     //Debug.DrawLine( groundBiNewUp[ leftToExitLeftFloor.centerL.Count - 2 - k ], groundBiNewUp[ leftToExitLeftFloor.centerL.Count - 2 - k + 1 ], Color.cyan, 9999 );
-                                                // }
-                                                // groundBiNewDown.Add( grate2LeftUp[ 0 ] );
-                                                // //Debug.DrawLine( groundBiNewUp[ groundBiNewUp.Count - 1 ], groundBiNewUp[ groundBiNewUp.Count - 2 ], Color.cyan, 9999 );
-                                                // Mesh groundBiNewMesh = MeshGenerator.GeneratePlanarMesh( groundBiNewDown, MeshGenerator.ConvertListsToMatrix_2xM( groundBiNewUp, groundBiNewDown ), false, false, this.switchGroundTextureTiling.x, this.switchGroundTextureTiling.y );
-                                                // GameObject groundBiNewGameObj = new GameObject( "Pavimentazione base scambio sinistra" );
-                                                // groundBiNewGameObj.transform.parent = sectionGameObj.transform;
-                                                // groundBiNewGameObj.transform.position = new Vector3( 0.0f, 0.0f, 0.01f );
-                                                // groundBiNewGameObj.AddComponent<MeshFilter>();
-                                                // groundBiNewGameObj.AddComponent<MeshRenderer>();
-                                                // groundBiNewGameObj.GetComponent<MeshFilter>().sharedMesh = groundBiNewMesh;
-                                                // groundBiNewGameObj.GetComponent<MeshRenderer>().material = this.switchGroundTexture;
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesLeftExitVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexturing );
 
                                             }
                                             else {
-                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Sinistra/Sinistra", leftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Sinistra/Sinistra", leftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
+                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Sinistra/Sinistra", leftFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Sinistra/Sinistra", leftFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
                                             
                                                 MeshGenerator.PlatformSide platformSidesSwitchLeftVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( section.floorPoints.leftLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesSwitchLeftVertexPoints.leftDown, Side.Left, this.tunnelWallShapes, null, null, 0.0f, true, false, true, false, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesSwitchLeftVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Left.ToString(), platformSidesSwitchLeftVertexPoints.leftDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexturing );
                                             }
 
                                             if( section.newLinesStarts.ContainsKey( Side.Right ) ) {
@@ -1381,8 +1353,8 @@ public class MetroGenerator : MonoBehaviour
                                                 MeshGenerator.Floor rightToEntranceRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.rightEntranceRight, null, tunnelWidth, this.railsWidth );
                                                 MeshGenerator.Floor rightToExitRightFloor = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( section.floorPoints.rightExitRight, null, tunnelWidth, this.railsWidth );
 
-                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Ingresso", section.floorPoints.rightEntranceRight, rightToEntranceRightFloor.centerL, rightToEntranceRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
-                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Uscita", section.floorPoints.rightExitRight, rightToExitRightFloor.centerL, rightToExitRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing );
+                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Ingresso", section.floorPoints.rightEntranceRight, rightToEntranceRightFloor.centerL, rightToEntranceRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
+                                                InstantiatePlane( sectionGameObj.transform, "Scambio - Pavimento binari - Destra/Uscita", section.floorPoints.rightExitRight, rightToExitRightFloor.centerL, rightToExitRightFloor.centerR, 0.0f, false, false, false, this.onlyRailsGroundTexturing, false );
                                             
                                                 // Generazione mesh planari tombini
                                                 dirSwitch = ( section.bezierCurveLimitedAngle[ 1 ] - section.bezierCurveLimitedAngle[ 0 ] ).normalized;
@@ -1395,57 +1367,70 @@ public class MetroGenerator : MonoBehaviour
                                                 InstantiateGrate( sectionGameObj.transform, "Scambio - Tombino nuova linea (Destra)", new List<Vector3>{ section.newLinesStarts[ Side.Right ].pos + dirSwitch * ( ( this.centerWidth / 2 ) + tunnelWidth ), section.newLinesStarts[ Side.Right ].pos - dirSwitch * ( ( this.centerWidth / 2 ) + tunnelWidth ) }, new List<Vector3>{ rightToExitRightFloor.centerR[ 1 ] - rightToExitRightFloor.centerR[ 0 ], rightToEntranceRightFloor.centerR[ rightToEntranceRightFloor.centerR.Count - 2 ] - rightToEntranceRightFloor.centerR[ rightToEntranceRightFloor.centerR.Count - 1 ] }, this.grateWidth, false, grateTexturing );
                                             
                                                 // Generazione mesh extruded binari
-                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Destra-Destra", rightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToRight );
-                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Destra-Destra", rightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToRight );
-                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Destra-Ingresso", rightToEntranceRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToEntranceRight );
-                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Destra-Ingresso", rightToEntranceRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToEntranceRight );
-                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Destra-Uscita", rightToExitRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToExitRight );
-                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Destra-Uscita", rightToExitRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, section, SwitchDirection.RightToExitRight );
+                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Destra-Destra", rightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToRight );
+                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Destra-Destra", rightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToRight );
+                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Destra-Ingresso", rightToEntranceRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToEntranceRight );
+                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Destra-Ingresso", rightToEntranceRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToEntranceRight );
+                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario L - Destra-Uscita", rightToExitRightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToExitRight );
+                                                InstantiateRail( sectionGameObj.transform, "Tunnel - Binario R - Destra-Uscita", rightToExitRightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, section, SwitchDirection.RightToExitRight );
                                             
                                                 /// Generazione mesh planare terreno (destra)
                                                 MeshGenerator.Floor centralWallsBaseline = GenerateSwitchNewLine( rightToEntranceRightFloor.centerL, rightToExitRightFloor.centerL, rightFloor.centerR, true, false, switchNewLineLength, switchNewLineReduction, switchNewLineRadius, switchNewLineBezPoints );
-                                                
-                                                // List<Vector3> groundPerimeter = new();
-                                                // groundPerimeter.AddRange( rightToEntranceRightFloor.centerR );
-                                                // groundPerimeter.AddRange( rightToExitRightFloor.centerR );
-                                                // List<Vector3> reverseGroundBaseLine = new( centralWallsBaselineRight.switchNewBaseLine );
-                                                // reverseGroundBaseLine.Reverse();
-                                                // groundPerimeter.AddRange( reverseGroundBaseLine );
-
-                                                // InstantiateJointMesh( sectionGameObj.transform, "Scambio - Pavimento - Destra", groundPerimeter, -Vector3.forward, dirSwitch, false, -92.5f, this.onlyGroundTexturing );
 
                                                 MeshGenerator.InstantiateSwitchNewLineGround( section.sectionObj, Side.Right, rightToEntranceRightFloor, rightToExitRightFloor, centralWallsBaseline, this.switchNewLineBezPoints, this.onlyGroundTexturing );
 
                                                 // Generazione mesh piattaforma e muro centrale (destra)
                                                 
                                                 Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateComposedExtrudedMesh( section, MeshType.InternalWall, section.type.ToString(), centralWallsBaseline.switchNewBaseLine, Side.Right, this.tunnelWallShapes, null, null, 0.0f, true, true, false, true, Vector2.zero )[ this.tunnelWallShapes.Count - 1 ].verticesStructure;
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), centralWallsBaseline.switchNewBaseLine, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, true, this.tubeTexture, this.tubeTextureTiling );
-                                                InstantiatePoligon( sectionGameObj.transform, "Scambio - Soffitto - Centrale (Destra)", verticesStructure[ Orientation.Horizontal ][ this.tunnelWallShape.Count - 1 ], false, -Vector3.forward, dirSwitch, Vector2.zero, ceilingTexturing );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), centralWallsBaseline.switchNewBaseLine, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, true, this.tubeTexturing );
+                                                InstantiatePoligon( sectionGameObj.transform, "Scambio - Soffitto - Centrale (Destra)", verticesStructure[ Orientation.Horizontal ][ this.tunnelWallShape.Count - 1 ], false, -Vector3.forward, dirSwitch, Vector2.zero, ceilingTexturing, false );
 
                                                 // Generazione mesh piattaforme e muri ingresso e uscita (destra)
                                                 MeshGenerator.PlatformSide platformSidesRightEntranceVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( rightToEntranceRightFloor.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
                                                 MeshGenerator.PlatformSide platformSidesRightExitVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( rightToExitRightFloor.centerLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesRightEntranceVertexPoints.rightDown, Side.Right, this.tunnelWallShapes, null, null, 180.0f, false, false, false, false, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightEntranceVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightEntranceVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexturing );
                                                 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesRightExitVertexPoints.rightDown, Side.Right, this.tunnelWallShapes, null, null, 180.0f, false, false, true, true, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightExitVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesRightExitVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexturing );
 
                                             }
                                             else {
                                                                                             
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra/Destra", rightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Destra", rightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario L - Destra/Destra", rightFloor.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+                                                InstantiateRail( sectionGameObj.transform, "Scambio - Binario R - Destra/Destra", rightFloor.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
 
                                                 MeshGenerator.PlatformSide platformSidesSwitchRightVertexPoints = MeshGenerator.CalculatePlatformSidesMeshesVertex( section.floorPoints.rightLine, null, tunnelWidth, tunnelParabolic, platformHeight, platformWidth );
 
                                                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), platformSidesSwitchRightVertexPoints.rightDown, Side.Right, this.tunnelWallShapes, null, null, 180.0f, false, false, true, false, Vector2.zero );
-                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesSwitchRightVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexture, this.tubeTextureTiling );
+                                                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), platformSidesSwitchRightVertexPoints.rightDown, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexturing );
                                             }
                                             
                                             break;
         }
+    }
+
+
+    private void InstantiateStair( string gameObjName, Transform parent, List<Vector3> front, List<Vector3> up, float stepPercent, bool clockwise, float rotationCorrection, Utils.Texturing texturing ) {
+        MeshGenerator.ProceduralMesh stairLeft = MeshGenerator.GenerateStair( front, up, stepPercent, clockwise, rotationCorrection, texturing );
+        GameObject stairObj = new( gameObjName );
+        stairObj.transform.parent = parent;
+        stairObj.transform.position = Vector3.zero;
+        stairObj.AddComponent<MeshFilter>();
+        stairObj.GetComponent<MeshFilter>().sharedMesh = stairLeft.mesh;
+        stairObj.AddComponent<MeshRenderer>();
+        stairObj.GetComponent<MeshRenderer>().SetMaterials( this.tunnelWallTexturing.materials );
+
+        GameObject rampObj = new( gameObjName + " - Rampa Invisibile" );
+        rampObj.transform.parent = stairObj.transform;
+        rampObj.transform.position = Vector3.zero;
+        rampObj.AddComponent<MeshFilter>();
+        rampObj.GetComponent<MeshFilter>().sharedMesh = MeshGenerator.GeneratePlanarMesh( front, MeshGenerator.ConvertListsToMatrix_2xM( front, up ), clockwise, false, false, texturing.tiling ).mesh;
+        rampObj.AddComponent<MeshRenderer>();
+        rampObj.GetComponent<MeshRenderer>().SetMaterials( this.tunnelWallTexturing.materials );
+        rampObj.layer = LayerMask.NameToLayer( "Walkable" );
+
     }
 
     private void GenerateMaintenanceJointMeshes( LineSection section, GameObject sectionGameObj ) {  
@@ -1470,6 +1455,7 @@ public class MetroGenerator : MonoBehaviour
         }
 
         Vector3 dir = leftBaseLine[ ^1 ] - leftBaseLine[ 0 ];
+        Vector3 orthoDir = Quaternion.AngleAxis( 90.0f, -Vector3.forward ) * dir;
 
         List<Vector3> startLeftExtensionBaseLine = new(){ leftBaseLine[ 0 ], leftBaseLine[ 0 ] + dir.normalized * this.maintenanceJointTunnelWallExtension };
         List<Vector3> startRightExtensionBaseLine = new(){ rightBaseLine[ 0 ], rightBaseLine[ 0 ] + dir.normalized * this.maintenanceJointTunnelWallExtension };
@@ -1483,11 +1469,28 @@ public class MetroGenerator : MonoBehaviour
         List<MeshGenerator.ProceduralMesh> endLeft = InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), endLeftExtensionBaseLine, Side.Left, this.tunnelWallShapes, null, null, 0.0f, true, false, true, true, Vector2.zero );
         List<MeshGenerator.ProceduralMesh> endRight = InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), endRightExtensionBaseLine, Side.Right, this.tunnelWallShapes, null, null, 180.0f, false, false, true, true, Vector2.zero );
 
-        InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), new List<Vector3>() { startLeftExtensionBaseLine[ ^1 ], endLeftExtensionBaseLine[ 0 ] }, Side.Left, this.tunnelWallShapes, new List<int>() { 0, 1 }, null, 0.0f, true, false, false, true, Vector2.zero );
-        InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), new List<Vector3>() { startRightExtensionBaseLine[ ^1 ], endRightExtensionBaseLine[ 0 ] }, Side.Right, this.tunnelWallShapes, new List<int>() { 0, 1 }, null, 180.0f, false, false, false, true, Vector2.zero );
-        
-        Vector3 orthoDir = Quaternion.AngleAxis( 90.0f, -Vector3.forward ) * dir;
+        List<Vector3> extensionStartLeftSide = MeshGenerator.GetFullProfile( InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), new List<Vector3>() { startLeftExtensionBaseLine[ ^1 ], startLeftExtensionBaseLine[ ^1 ] + dir.normalized * this.maintenanceJointTunnelWallExtension }, Side.Left, this.tunnelWallShapes, new List<int>() { 0, 1 }, null, 0.0f, true, false, false, true, Vector2.zero ), -1, new List<int>{ 2 } );
+        extensionStartLeftSide.Add( new Vector3( extensionStartLeftSide[ ^1 ].x, extensionStartLeftSide[ ^1 ].y, extensionStartLeftSide[ 0 ].z ) );
+        InstantiateJointMesh( sectionGameObj.transform, "Manutenzione - Muro Banchina Iniziale - Sinistra", extensionStartLeftSide, -Vector3.forward, -orthoDir.normalized, true, this.tunnelWallTexturing );
 
+        List<Vector3> extensionEndLeftSide = MeshGenerator.GetFullProfile( InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), new List<Vector3>() { endLeftExtensionBaseLine[ 0 ] - dir.normalized * this.maintenanceJointTunnelWallExtension, endLeftExtensionBaseLine[ 0 ] }, Side.Right, this.tunnelWallShapes, new List<int>() { 0, 1 }, null, 0.0f, true, false, false, true, Vector2.zero ), 0, new List<int>{ 2 } );
+        extensionEndLeftSide.Add( new Vector3( extensionEndLeftSide[ ^1 ].x, extensionEndLeftSide[ ^1 ].y, extensionEndLeftSide[ 0 ].z ) );
+        InstantiateJointMesh( sectionGameObj.transform, "Manutenzione - Muro Banchina Finale - Sinistra", extensionEndLeftSide, -Vector3.forward, -orthoDir.normalized, false, this.tunnelWallTexturing );
+
+        InstantiateStair( "Manutenzione - Scala - Sinistra", section.sectionObj.transform.transform, new List<Vector3>() { extensionStartLeftSide[ 0 ], extensionEndLeftSide[ 0 ] }, new List<Vector3>() { extensionStartLeftSide[ ^2 ], extensionEndLeftSide[ ^2 ] }, 0.2f, true, 0.0f, this.tunnelWallTexturing );
+
+        // ----- //
+
+        List<Vector3> extensionStartRightSide = MeshGenerator.GetFullProfile( InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), new List<Vector3>() { startRightExtensionBaseLine[ ^1 ], startRightExtensionBaseLine[ ^1 ] + dir.normalized * this.maintenanceJointTunnelWallExtension }, Side.Left, this.tunnelWallShapes, new List<int>() { 0, 1 }, null, 180.0f, false, false, false, true, Vector2.zero ), -1, new List<int>{ 2 } );
+        extensionStartRightSide.Add( new Vector3( extensionStartRightSide[ ^1 ].x, extensionStartRightSide[ ^1 ].y, extensionStartRightSide[ 0 ].z ) );
+        InstantiateJointMesh( sectionGameObj.transform, "Manutenzione - Muro Banchina Iniziale - Destra", extensionStartRightSide, -Vector3.forward, -orthoDir.normalized, false, this.tunnelWallTexturing );
+
+        List<Vector3> extensionEndRightSide = MeshGenerator.GetFullProfile( InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), new List<Vector3>() { endRightExtensionBaseLine[ 0 ] - dir.normalized * this.maintenanceJointTunnelWallExtension, endRightExtensionBaseLine[ 0 ] }, Side.Right, this.tunnelWallShapes, new List<int>() { 0, 1 }, null, 180.0f, false, false, false, true, Vector2.zero ), 0, new List<int>{ 2 } );
+        extensionEndRightSide.Add( new Vector3( extensionEndRightSide[ ^1 ].x, extensionEndRightSide[ ^1 ].y, extensionEndRightSide[ 0 ].z ) );
+        InstantiateJointMesh( sectionGameObj.transform, "Manutenzione - Muro Banchina Finale - Destra", extensionEndRightSide, -Vector3.forward, -orthoDir.normalized, true, this.tunnelWallTexturing );
+
+        InstantiateStair( "Manutenzione - Scala - Destra", section.sectionObj.transform.transform, new List<Vector3>() { extensionStartRightSide[ 0 ], extensionEndRightSide[ 0 ] }, new List<Vector3>() { extensionStartRightSide[ ^2 ], extensionEndRightSide[ ^2 ] }, 0.2f, false, 180.0f, this.tunnelWallTexturing );
+        
         // ----- //
 
         float doorPos = Random.Range( 0.1f, 0.9f );
@@ -1516,7 +1519,7 @@ public class MetroGenerator : MonoBehaviour
                                                     lw1,
                                                     endLeftFirstProfile[ ^1 ],
                                                     startLeftLastProfile [ ^1 ] };
-        InstantiatePoligon( sectionGameObj.transform, "Manutenzione - Pavimento - Sinistra", groundLeftPerimeter, true, -Vector3.forward, dir, Vector2.zero, onlyGroundTexturing );
+        InstantiatePoligon( sectionGameObj.transform, "Manutenzione - Pavimento - Sinistra", groundLeftPerimeter, true, -Vector3.forward, dir, Vector2.zero, this.onlyGroundTexturing, true );
 
         //----//
 
@@ -1546,7 +1549,7 @@ public class MetroGenerator : MonoBehaviour
                                                      rw1,
                                                      endRightFirstProfile[ ^1 ],
                                                      startRightLastProfile [ ^1 ] };
-        InstantiatePoligon( sectionGameObj.transform, "Manutenzione - Pavimento - Destra", groundRightPerimeter, false, -Vector3.forward, dir, Vector2.zero, onlyGroundTexturing );
+        InstantiatePoligon( sectionGameObj.transform, "Manutenzione - Pavimento - Destra", groundRightPerimeter, false, -Vector3.forward, dir, Vector2.zero, this.onlyGroundTexturing, true );
 
         //----//
 
@@ -1567,15 +1570,15 @@ public class MetroGenerator : MonoBehaviour
                 stationRails = MeshGenerator.CalculateBidirectionalWithBothSidesPlatformFloorMeshVertex( section, this.centerWidth, this.tunnelWidth, this.railsWidth );
 
                 // Generazione mesh planari pavimento tunnel
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Sinistra", stationsPoints, stationRails.leftL, stationRails.leftR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento divisore - Centro", stationsPoints, stationRails.centerL, stationRails.centerR, 0.0f, false, false, false, this.separatorGroundTexturing );
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Destra", stationsPoints, stationRails.rightL, stationRails.rightR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Sinistra", stationsPoints, stationRails.leftL, stationRails.leftR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento divisore - Centro", stationsPoints, stationRails.centerL, stationRails.centerR, 0.0f, false, false, false, this.separatorGroundTexturing, true );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Destra", stationsPoints, stationRails.rightL, stationRails.rightR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
 
                 // Generazione mesh extruded binari
-                InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Sinistra", stationRails.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-                InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Sinistra", stationRails.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-                InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Destra", stationRails.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-                InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Destra", stationRails.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
+                InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Sinistra", stationRails.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+                InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Sinistra", stationRails.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+                InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Destra", stationRails.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+                InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Destra", stationRails.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
 
 
                 Vector3 stationDir = stationsPoints[ ^1 ] - stationsPoints[ 0 ];
@@ -1592,19 +1595,19 @@ public class MetroGenerator : MonoBehaviour
                 List<Vector3> tunnelWallEndLeftFirstProfile = tunnelWallEndLeft.verticesStructure[ Orientation.Vertical ][ 0 ];
                 tunnelWallEndLeftFirstProfile.Reverse();
 
-                Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Sinistra", new List<Vector3>{ wallStartLeft[ ^1 ], wallEndLeft[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 0.0f, this.stationCentralPlatformSmoothFactor, true, false, this.platformFloorTexture, this.platformFloorTextureTiling ).verticesStructure;
+                Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Sinistra", new List<Vector3>{ wallStartLeft[ ^1 ], wallEndLeft[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 0.0f, this.stationCentralPlatformSmoothFactor, true, false, this.platformFloorTexturing ).verticesStructure;
 
                 List<Vector3> yellowLineLeftUp = verticesStructure[ Orientation.Horizontal ][ verticesStructure[ Orientation.Horizontal ].Count - 1 ];
                 List<Vector3> yellowLineLeftDown = new();
                 foreach( Vector3 point in yellowLineLeftUp ) {
                     yellowLineLeftDown.Add( point + stationOrthoDir * this.stationCentralYellowLineWidth );
                 }
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Sinistra", yellowLineLeftUp, yellowLineLeftUp, yellowLineLeftDown, 0.0f, true, false, false, this.yellowLineTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Sinistra", yellowLineLeftUp, yellowLineLeftUp, yellowLineLeftDown, 0.0f, true, false, false, this.yellowLineTexturing, true );
 
                 List<Vector3> stationWallBaseLineLeft = new() { yellowLineLeftDown[ 0 ] + stationOrthoDir * this.stationWidth,
                                                                 yellowLineLeftDown[ ^1 ] + stationOrthoDir * this.stationWidth };
 
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Sinistra", yellowLineLeftDown, yellowLineLeftDown, stationWallBaseLineLeft, 0.0f, true, false, false, this.separatorGroundTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Sinistra", yellowLineLeftDown, yellowLineLeftDown, stationWallBaseLineLeft, 0.0f, true, false, false, this.separatorGroundTexturing, true );
 
                 List<MeshGenerator.ProceduralMesh> stationWallLeftMeshes = InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), stationWallBaseLineLeft, Side.Left, this.stationWallShapes, null, null, 0.0f, true, false, false, true, Vector2.zero );
                 
@@ -1628,19 +1631,19 @@ public class MetroGenerator : MonoBehaviour
                 List<Vector3> tunnelWallEndRightFirstProfile = tunnelWallEndRight.verticesStructure[ Orientation.Vertical ][ 0 ];
                 tunnelWallEndRightFirstProfile.Reverse();
 
-                verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Destra", new List<Vector3>{ wallStartRight[ ^1 ], wallEndRight[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 180.0f, this.stationCentralPlatformSmoothFactor, false, false, this.platformFloorTexture, this.platformFloorTextureTiling ).verticesStructure;
+                verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Destra", new List<Vector3>{ wallStartRight[ ^1 ], wallEndRight[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 180.0f, this.stationCentralPlatformSmoothFactor, false, false, this.platformFloorTexturing ).verticesStructure;
 
                 List<Vector3> yellowLineRightUp = verticesStructure[ Orientation.Horizontal ][ verticesStructure[ Orientation.Horizontal ].Count - 1 ];
                 List<Vector3> yellowLineRightDown = new();
                 foreach( Vector3 point in yellowLineRightUp ) {
                     yellowLineRightDown.Add( point - stationOrthoDir * this.stationCentralYellowLineWidth );
                 }
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Destra", yellowLineRightUp, yellowLineRightUp, yellowLineRightDown, 0.0f, false, false, false, this.yellowLineTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Destra", yellowLineRightUp, yellowLineRightUp, yellowLineRightDown, 0.0f, false, false, false, this.yellowLineTexturing, true );
 
                 List<Vector3> stationWallBaseLineRight = new() { yellowLineRightDown[ 0 ] - stationOrthoDir * this.stationWidth,
                                                                 yellowLineRightDown[ ^1 ] - stationOrthoDir * this.stationWidth };
 
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Destra", yellowLineRightDown, yellowLineRightDown, stationWallBaseLineRight, 0.0f, false, false, false, this.separatorGroundTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Destra", yellowLineRightDown, yellowLineRightDown, stationWallBaseLineRight, 0.0f, false, false, false, this.separatorGroundTexturing, true );
 
                 List<MeshGenerator.ProceduralMesh> stationWallRightMeshes = InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), stationWallBaseLineRight, Side.Right, this.stationWallShapes, null, null, 180.0f, false, false, false, true, Vector2.zero );
                 
@@ -1656,10 +1659,10 @@ public class MetroGenerator : MonoBehaviour
 
                 List<Vector3> beamBaseLineLeft = new() { yellowLineLeftDown[ 0 ] + ( -Vector3.forward * this.beamPillarsHeight ) + ( stationOrthoDir * this.beamDistanceFromPlatform ) + ( stationDir.normalized * this.beamDistanceFromWall ),
                                                          yellowLineLeftDown[ yellowLineLeftDown.Count - 1 ] + ( -Vector3.forward * this.beamPillarsHeight ) + ( stationOrthoDir * this.beamDistanceFromPlatform ) + ( -stationDir.normalized * this.beamDistanceFromWall ) };
-                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Sinistra", beamBaseLineLeft, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexture, this.beamTextureTiling );
+                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Sinistra", beamBaseLineLeft, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexturing );
                 List<Vector3> beamBaseLineRight = new( ){ yellowLineRightDown[ 0 ]  + ( -Vector3.forward * this.beamPillarsHeight ) + ( -stationOrthoDir * this.beamDistanceFromPlatform ) + ( stationDir.normalized * this.beamDistanceFromWall ),
                                                           yellowLineRightDown[ yellowLineRightDown.Count - 1 ]  + ( -Vector3.forward * this.beamPillarsHeight ) + ( -stationOrthoDir * this.beamDistanceFromPlatform ) + ( -stationDir.normalized * this.beamDistanceFromWall ) };
-                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Destra", beamBaseLineRight, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexture, this.beamTextureTiling );
+                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Destra", beamBaseLineRight, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexturing );
 
                 Vector3 beamDir = beamBaseLineLeft[ 1 ] - beamBaseLineLeft[ 0 ];
                 float distance = beamDir.magnitude / ( this.beamPillarsNumber + 1 );
@@ -1694,14 +1697,14 @@ public class MetroGenerator : MonoBehaviour
                 stationRails = MeshGenerator.CalculateBidirectionalWithCentralPlatformFloorMeshVertex( section, this.centerWidth, this.tunnelWidth, this.railsWidth, this.stationLenght, this.stationExtensionLenght, this.stationExtensionHeight, this.stationExtensionCurvePoints );
 
                 // Generazione mesh planari pavimento tunnel
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Sinistra", stationRails.leftLine, stationRails.leftL, stationRails.leftR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Destra", stationRails.rightLine, stationRails.rightL, stationRails.rightR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Sinistra", stationRails.leftLine, stationRails.leftL, stationRails.leftR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Destra", stationRails.rightLine, stationRails.rightL, stationRails.rightR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
 
                 // Generazione mesh extruded binari
-                InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Sinistra", stationRails.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-                InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Sinistra", stationRails.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-                InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Destra", stationRails.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-                InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Destra", stationRails.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
+                InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Sinistra", stationRails.railLeftL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+                InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Sinistra", stationRails.railLeftR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+                InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Destra", stationRails.railRightL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+                InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Destra", stationRails.railRightR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
 
                 List<Vector3> centralWallStartBaseline = new();
                 List<Vector3> centralWallStartBaselineLeft = new();
@@ -1728,50 +1731,50 @@ public class MetroGenerator : MonoBehaviour
 
                 Vector3 stationDir = ( stationsPoints[ stationsPoints.Count - 1] - stationsPoints[ 0 ] ).normalized;
 
-                Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Centrale Iniziale", centralWallStartBaseline, this.stationCentralWallShape, null, this.stationCentralWallShapeScale, 0.0f, 0.0f, 0.0f, this.stationCentralWallSmoothFactor, true, false, this.tunnelWallTexture, this.tunnelWallTextureTiling ).verticesStructure;
-                InstantiatePoligon( sectionGameObj.transform, "Stazione - Soffitto - Centrale Iniziale", verticesStructure[ Orientation.Horizontal ][ this.stationCentralWallShape.Count - 1 ], false, -Vector3.forward, stationDir, Vector2.zero, ceilingTexturing );
+                Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Centrale Iniziale", centralWallStartBaseline, this.stationCentralWallShape, null, this.stationCentralWallShapeScale, 0.0f, 0.0f, 0.0f, this.stationCentralWallSmoothFactor, true, false, this.tunnelWallTexturing ).verticesStructure;
+                InstantiatePoligon( sectionGameObj.transform, "Stazione - Soffitto - Centrale Iniziale", verticesStructure[ Orientation.Horizontal ][ this.stationCentralWallShape.Count - 1 ], false, -Vector3.forward, stationDir, Vector2.zero, ceilingTexturing, false );
                 
                 List<Vector3> closingWallStart = new( verticesStructure[ Orientation.Vertical ][ 0 ] );
                 List<Vector3> tempStart = verticesStructure[ Orientation.Vertical ][ verticesStructure[ Orientation.Vertical ].Count - 1 ];
                 tempStart.Reverse();
                 closingWallStart.AddRange( tempStart );
-                InstantiatePoligon( sectionGameObj.transform, "Stazione - Muro 2 - Centrale Iniziale", closingWallStart, false, stationDir, Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * stationDir, Vector2.zero, this.stationWallTexturing );
+                InstantiatePoligon( sectionGameObj.transform, "Stazione - Muro 2 - Centrale Iniziale", closingWallStart, false, stationDir, Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * stationDir, Vector2.zero, this.stationWallTexturing, false );
 
-                verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Centrale Finale", centralWallEndBaseline, this.stationCentralWallShape, null, this.stationCentralWallShapeScale, 0.0f, 0.0f, 180.0f, this.stationCentralWallSmoothFactor, false, false, this.tunnelWallTexture, this.tunnelWallTextureTiling ).verticesStructure;
-                InstantiatePoligon( sectionGameObj.transform, "Stazione - Soffitto - Centrale Finale", verticesStructure[ Orientation.Horizontal ][ this.stationCentralWallShape.Count - 1 ], true, -Vector3.forward, stationDir, Vector2.zero, ceilingTexturing );
+                verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Centrale Finale", centralWallEndBaseline, this.stationCentralWallShape, null, this.stationCentralWallShapeScale, 0.0f, 0.0f, 180.0f, this.stationCentralWallSmoothFactor, false, false, this.tunnelWallTexturing ).verticesStructure;
+                InstantiatePoligon( sectionGameObj.transform, "Stazione - Soffitto - Centrale Finale", verticesStructure[ Orientation.Horizontal ][ this.stationCentralWallShape.Count - 1 ], true, -Vector3.forward, stationDir, Vector2.zero, ceilingTexturing, false );
 
                 List<Vector3> closingWallEnd = new( verticesStructure[ Orientation.Vertical ][ 0 ] );
                 List<Vector3> tempEnd = verticesStructure[ Orientation.Vertical ][ verticesStructure[ Orientation.Vertical ].Count - 1 ];
                 tempEnd.Reverse();
                 closingWallEnd.AddRange( tempEnd );
-                InstantiatePoligon( sectionGameObj.transform, "Stazione - Muro 2 - Centrale Finale", closingWallEnd, true, stationDir, Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * stationDir, Vector2.zero, this.stationWallTexturing );
+                InstantiatePoligon( sectionGameObj.transform, "Stazione - Muro 2 - Centrale Finale", closingWallEnd, true, stationDir, Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * stationDir, Vector2.zero, this.stationWallTexturing, false );
 
-                verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Centrale Sinistra", new List<Vector3>{ centralWallStartBaseline[ 0 ], centralWallEndBaseline[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 180.0f, this.stationCentralPlatformSmoothFactor, false, false, this.platformFloorTexture, this.platformFloorTextureTiling ).verticesStructure;
+                verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Centrale Sinistra", new List<Vector3>{ centralWallStartBaseline[ 0 ], centralWallEndBaseline[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 180.0f, this.stationCentralPlatformSmoothFactor, false, false, this.platformFloorTexturing ).verticesStructure;
 
                 List<Vector3> yellowLineLeftUp = verticesStructure[ Orientation.Horizontal ][ verticesStructure[ Orientation.Horizontal ].Count - 1 ];
                 List<Vector3> yellowLineLeftDown = new();
                 foreach( Vector3 point in yellowLineLeftUp ) {
                     yellowLineLeftDown.Add( point + ( Quaternion.Euler( 0.0f, 0.0f, -90.0f ) * stationDir.normalized * this.stationCentralYellowLineWidth ) );
                 }
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Sinistra", yellowLineLeftUp, yellowLineLeftUp, yellowLineLeftDown, 0.0f, false, false, false, this.yellowLineTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Sinistra", yellowLineLeftUp, yellowLineLeftUp, yellowLineLeftDown, 0.0f, false, false, false, this.yellowLineTexturing, true );
 
-                verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Centrale Destra", new List<Vector3>{ centralWallStartBaseline[ centralWallStartBaseline.Count - 1 ], centralWallEndBaseline[ centralWallEndBaseline.Count - 1 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 0.0f, this.stationCentralPlatformSmoothFactor, true, false, this.platformFloorTexture, this.platformFloorTextureTiling ).verticesStructure;
+                verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Centrale Destra", new List<Vector3>{ centralWallStartBaseline[ centralWallStartBaseline.Count - 1 ], centralWallEndBaseline[ centralWallEndBaseline.Count - 1 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 0.0f, this.stationCentralPlatformSmoothFactor, true, false, this.platformFloorTexturing ).verticesStructure;
                 List<Vector3> yellowLineRightUp = verticesStructure[ Orientation.Horizontal ][ verticesStructure[ Orientation.Horizontal ].Count - 1 ];
                 List<Vector3> yellowLineRightDown = new();
                 foreach( Vector3 point in yellowLineRightUp ) {
                     yellowLineRightDown.Add( point + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * stationDir.normalized * this.stationCentralYellowLineWidth ) );
                 }
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Destra", yellowLineRightUp, yellowLineRightUp, yellowLineRightDown, 0.0f, true, false, false, this.yellowLineTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Destra", yellowLineRightUp, yellowLineRightUp, yellowLineRightDown, 0.0f, true, false, false, this.yellowLineTexturing, true );
                 
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Centrale", yellowLineLeftDown, yellowLineLeftDown, yellowLineRightDown, 0.0f, false, false, false, this.separatorGroundTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Centrale", yellowLineLeftDown, yellowLineLeftDown, yellowLineRightDown, 0.0f, false, false, false, this.separatorGroundTexturing, true );
 
                 List<Vector3> beamBaseLineLeft = new() { yellowLineLeftDown[0] + (-Vector3.forward * this.beamPillarsHeight) + (Quaternion.Euler(0.0f, 0.0f, -90.0f) * stationDir.normalized * this.beamDistanceFromPlatform) + (stationDir.normalized * this.beamDistanceFromWall),
-                                                            yellowLineLeftDown[yellowLineLeftDown.Count - 1] + (-Vector3.forward * this.beamPillarsHeight) + (Quaternion.Euler(0.0f, 0.0f, -90.0f) * stationDir.normalized * this.beamDistanceFromPlatform) + (-stationDir.normalized * this.beamDistanceFromWall) };
-                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Sinistra", beamBaseLineLeft, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexture, this.beamTextureTiling );
+                                                            yellowLineLeftDown[yellowLineLeftDown.Count - 1] + (-Vector3.forward * this.beamPillarsHeight) + (Quaternion.Euler(0.0f, 0.0f, -90.0f) * stationDir.normalized * this.beamDistanceFromPlatform) + (-stationDir.normalized * this.beamDistanceFromWall ) };
+                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Sinistra", beamBaseLineLeft, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexturing );
 
                 List<Vector3> beamBaseLineRight = new( ){ yellowLineRightDown[ 0 ]  + ( -Vector3.forward * this.beamPillarsHeight ) + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * stationDir.normalized * this.beamDistanceFromPlatform ) + ( stationDir.normalized * this.beamDistanceFromWall ),
                                                             yellowLineRightDown[ yellowLineRightDown.Count - 1 ]  + ( -Vector3.forward * this.beamPillarsHeight ) + ( Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * stationDir.normalized * this.beamDistanceFromPlatform ) + ( -stationDir.normalized * this.beamDistanceFromWall ) };
-                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Destra", beamBaseLineRight, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexture, this.beamTextureTiling );
+                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Destra", beamBaseLineRight, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexturing );
 
                 Vector3 beamDir = beamBaseLineLeft[ 1 ] - beamBaseLineLeft[ 0 ];
                 float distance = beamDir.magnitude / ( this.beamPillarsNumber + 1 );
@@ -1793,7 +1796,7 @@ public class MetroGenerator : MonoBehaviour
                     pillarRight.name = "Stazione Pilastro Destro" + k; 
                     pillarRight.transform.parent = sectionGameObj.transform;
 
-                    InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto " + ( k + 1 ) + " - Centrale", new List<Vector3>{ start, end }, this.beamShape, null, this.beamShapeScale, 0.0f, 0.01f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexture, this.beamTextureTiling );
+                    InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto " + ( k + 1 ) + " - Centrale", new List<Vector3>{ start, end }, this.beamShape, null, this.beamShapeScale, 0.0f, 0.01f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexturing );
                 }
 
                 List<Vector3> leftUp = new();
@@ -1805,17 +1808,17 @@ public class MetroGenerator : MonoBehaviour
                     rightUp.Add( point - ( Vector3.forward * this.platformHeight ) );
                 }
 
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Piattaforma laterale (lato) - Sinistra", stationRails.leftLine, stationRails.leftL, leftUp, 0.0f, true, false, false, this.platformSideTexturing );
-                InstantiatePlane( sectionGameObj.transform, "STazione - Piattaforma laterale (lato) - Destra", stationRails.rightLine, stationRails.rightR, rightUp, 0.0f, false, false, false, this.platformSideTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Piattaforma laterale (lato) - Sinistra", stationRails.leftLine, stationRails.leftL, leftUp, 0.0f, true, false, false, this.platformSideTexturing, false );
+                InstantiatePlane( sectionGameObj.transform, "STazione - Piattaforma laterale (lato) - Destra", stationRails.rightLine, stationRails.rightR, rightUp, 0.0f, false, false, false, this.platformSideTexturing, false );
                 
-                MeshGenerator.ProceduralMesh platformLeft = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma laterale (pavimento) - Sinistra", leftUp, this.platformFloorShape, section.previousSection != null ? section.previousSection.sidePlatformFloorLeftLastProfile : null, this.platformFloorShapeScale, this.platformFloorHorPosCorrection, 0.0f, 0.0f, this.platformFloorSmoothFactor, true, false, this.platformFloorTexture, this.platformFloorTextureTiling );
-                MeshGenerator.ProceduralMesh platformRight = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma laterale (pavimento) - Destra", rightUp, this.platformFloorShape, section.previousSection != null ? section.previousSection.sidePlatformFloorRightLastProfile : null, this.platformFloorShapeScale, this.platformFloorHorPosCorrection, 0.0f, 180.0f, this.platformFloorSmoothFactor, false, false, this.platformFloorTexture, this.platformFloorTextureTiling );
+                MeshGenerator.ProceduralMesh platformLeft = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma laterale (pavimento) - Sinistra", leftUp, this.platformFloorShape, section.previousSection != null ? section.previousSection.sidePlatformFloorLeftLastProfile : null, this.platformFloorShapeScale, this.platformFloorHorPosCorrection, 0.0f, 0.0f, this.platformFloorSmoothFactor, true, false, this.platformFloorTexturing );
+                MeshGenerator.ProceduralMesh platformRight = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma laterale (pavimento) - Destra", rightUp, this.platformFloorShape, section.previousSection != null ? section.previousSection.sidePlatformFloorRightLastProfile : null, this.platformFloorShapeScale, this.platformFloorHorPosCorrection, 0.0f, 180.0f, this.platformFloorSmoothFactor, false, false, this.platformFloorTexturing );
                 section.sidePlatformFloorLeftLastProfile = platformLeft.lastProfileVertex;
                 section.sidePlatformFloorRightLastProfile = platformRight.lastProfileVertex;
 
-                MeshGenerator.ProceduralMesh wall = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Sinistra", platformLeft.verticesStructure[ Orientation.Horizontal ][ platformLeft.verticesStructure[ Orientation.Horizontal ].Count - 1 ], this.tunnelWallShape, section.previousSection != null ? section.previousSection.wallLeftLastProfile : null, this.tunnelWallShapeScale, 0.0f, 0.0f, 0.0f, this.tunnelWallSmoothFactor, true, false, this.tunnelWallTexture, this.tunnelWallTextureTiling);
+                MeshGenerator.ProceduralMesh wall = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Sinistra", platformLeft.verticesStructure[ Orientation.Horizontal ][ platformLeft.verticesStructure[ Orientation.Horizontal ].Count - 1 ], this.tunnelWallShape, section.previousSection != null ? section.previousSection.wallLeftLastProfile : null, this.tunnelWallShapeScale, 0.0f, 0.0f, 0.0f, this.tunnelWallSmoothFactor, true, false, this.tunnelWallTexturing);
                 section.wallLeftLastProfile = wall.lastProfileVertex;
-                MeshGenerator.ProceduralMesh tubeLeftMesh = MeshGenerator.GenerateExtrudedMesh( tubeShape, this.tubeShapeScale, null, wall.verticesStructure[ Orientation.Horizontal ][ 0 ], this.tubeHorPosCorrection, this.tubeVertPosCorrection, true, false, this.tubeTextureTiling, new Vector2( 0.0f, 0.0f ), 0.0f, this.tubeSmoothFactor );
+                MeshGenerator.ProceduralMesh tubeLeftMesh = MeshGenerator.GenerateExtrudedMesh( tubeShape, this.tubeShapeScale, null, wall.verticesStructure[ Orientation.Horizontal ][ 0 ], this.tubeHorPosCorrection, this.tubeVertPosCorrection, true, false, this.tubeTexturing.tiling, new Vector2( 0.0f, 0.0f ), 0.0f, this.tubeSmoothFactor );
                 GameObject tubeLeftGameObj = new( "Stazione - Tubo - Sinistra" );
                 tubeLeftGameObj.transform.parent = sectionGameObj.transform;
                 tubeLeftGameObj.transform.position = Vector3.zero;
@@ -1825,11 +1828,11 @@ public class MetroGenerator : MonoBehaviour
                 tubeLeftGameObj.GetComponent<MeshCollider>().sharedMesh = tubeLeftMesh.mesh;
                 tubeLeftGameObj.GetComponent<MeshCollider>().convex = false;
                 tubeLeftGameObj.AddComponent<MeshRenderer>();
-                tubeLeftGameObj.GetComponent<MeshRenderer>().material = this.tubeTexture;
+                tubeLeftGameObj.GetComponent<MeshRenderer>().SetMaterials( this.tubeTexturing.materials );
                 
-                wall = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Destra", platformRight.verticesStructure[ Orientation.Horizontal ][ platformRight.verticesStructure[ Orientation.Horizontal ].Count - 1 ], this.tunnelWallShape, section.previousSection != null ? section.previousSection.wallRightLastProfile : null, this.tunnelWallShapeScale, 0.0f, 0.0f, 180.0f, this.tunnelWallSmoothFactor, false, false, this.tunnelWallTexture, this.tunnelWallTextureTiling);
+                wall = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Destra", platformRight.verticesStructure[ Orientation.Horizontal ][ platformRight.verticesStructure[ Orientation.Horizontal ].Count - 1 ], this.tunnelWallShape, section.previousSection != null ? section.previousSection.wallRightLastProfile : null, this.tunnelWallShapeScale, 0.0f, 0.0f, 180.0f, this.tunnelWallSmoothFactor, false, false, this.tunnelWallTexturing);
                 section.wallRightLastProfile = wall.lastProfileVertex;
-                MeshGenerator.ProceduralMesh tubeRightMesh = MeshGenerator.GenerateExtrudedMesh( tubeShape, this.tubeShapeScale, null, wall.verticesStructure[ Orientation.Horizontal ][ 0 ], this.tubeHorPosCorrection, this.tubeVertPosCorrection, false, false, this.tubeTextureTiling, new Vector2( 0.0f, 0.0f ), 180.0f, this.tubeSmoothFactor );
+                MeshGenerator.ProceduralMesh tubeRightMesh = MeshGenerator.GenerateExtrudedMesh( tubeShape, this.tubeShapeScale, null, wall.verticesStructure[ Orientation.Horizontal ][ 0 ], this.tubeHorPosCorrection, this.tubeVertPosCorrection, false, false, this.tubeTexturing.tiling, new Vector2( 0.0f, 0.0f ), 180.0f, this.tubeSmoothFactor );
                 GameObject tubeRightGameObj = new( "Stazione - Tubo - Destra" );
                 tubeRightGameObj.transform.parent = sectionGameObj.transform;
                 tubeRightGameObj.transform.position = Vector3.zero;
@@ -1839,10 +1842,10 @@ public class MetroGenerator : MonoBehaviour
                 tubeRightGameObj.GetComponent<MeshCollider>().sharedMesh = tubeRightMesh.mesh;
                 tubeRightGameObj.GetComponent<MeshCollider>().convex = false;
                 tubeRightGameObj.AddComponent<MeshRenderer>();
-                tubeRightGameObj.GetComponent<MeshRenderer>().material = this.tubeTexture;
+                tubeRightGameObj.GetComponent<MeshRenderer>().SetMaterials( this.tubeTexturing.materials );
                 
-                InstantiateWallWires( sectionGameObj.transform, "Stazione - Filo Muro - Sinistra", Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformLeft.verticesStructure[ Orientation.Horizontal ][ platformLeft.verticesStructure[ Orientation.Horizontal ].Count - 1 ], this.wireShape, this.wallWireShapeScale, 0.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, true, false, this.wireTexture, this.wireTextureTiling );
-                InstantiateWallWires( sectionGameObj.transform, "Stazione - Filo Muro - Destra", Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformRight.verticesStructure[ Orientation.Horizontal ][ platformRight.verticesStructure[ Orientation.Horizontal ].Count - 1 ], this.wireShape, this.wallWireShapeScale, 180.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, false, false, this.wireTexture, this.wireTextureTiling );
+                InstantiateWallWires( sectionGameObj.transform, "Stazione - Filo Muro - Sinistra", Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformLeft.verticesStructure[ Orientation.Horizontal ][ platformLeft.verticesStructure[ Orientation.Horizontal ].Count - 1 ], this.wireShape, this.wallWireShapeScale, 0.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, true, false, this.wireTexturing );
+                InstantiateWallWires( sectionGameObj.transform, "Stazione - Filo Muro - Destra", Random.Range( this.wallWiresMinNumber, this.wallWiresMaxNumber + 1 ), this.wallWiresBezierPoints, platformRight.verticesStructure[ Orientation.Horizontal ][ platformRight.verticesStructure[ Orientation.Horizontal ].Count - 1 ], this.wireShape, this.wallWireShapeScale, 180.0f, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, this.wallWireSmoothFactor, this.wallWireMinLenght, this.wallWireMaxLenght, this.wallWireFloating, false, false, this.wireTexturing );
 
                 section.controlsPoints = stationsPoints;
                 section.floorPoints = stationRails;
@@ -1853,11 +1856,11 @@ public class MetroGenerator : MonoBehaviour
             stationRails = MeshGenerator.CalculateMonodirectionalFloorMeshVertex( stationsPoints, null, this.tunnelWidth, this.railsWidth );
 
             // Generazione mesh planari pavimento tunnel
-            InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Centro", stationsPoints, stationRails.centerL, stationRails.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing );
+            InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento binari - Centro", stationsPoints, stationRails.centerL, stationRails.centerR, 0.0f, false, false, false, this.fullRailsGroundTexturing, true );
 
             // Generazione mesh extruded binari
-            InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Sinistra", stationRails.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
-            InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Sinistra", stationRails.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexture, this.railTextureTiling, null, null );
+            InstantiateRail( sectionGameObj.transform, "Stazione - Binario L - Sinistra", stationRails.railCenterL, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
+            InstantiateRail( sectionGameObj.transform, "Stazione - Binario R - Sinistra", stationRails.railCenterR, this.railShape, null, this.railShapeScale, this.railShapeHorPosCorrection, 0.0f, this.railSmoothFactor, true, false, this.railTexturing, null, null );
 
             Vector3 stationDir = stationsPoints[ ^1 ] - stationsPoints[ 0 ];
             Vector3 stationOrthoDir = Quaternion.Euler( 0.0f, 0.0f, 90.0f ) * stationDir.normalized;
@@ -1876,19 +1879,19 @@ public class MetroGenerator : MonoBehaviour
                 List<Vector3> tunnelWallEndLeftFirstProfile = tunnelWallEndLeft.verticesStructure[ Orientation.Vertical ][ 0 ];
                 tunnelWallEndLeftFirstProfile.Reverse();
 
-                Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Sinistra", new List<Vector3>{ wallStartLeft[ ^1 ], wallEndLeft[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 0.0f, this.stationCentralPlatformSmoothFactor, true, false, this.platformFloorTexture, this.platformFloorTextureTiling ).verticesStructure;
+                Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Sinistra", new List<Vector3>{ wallStartLeft[ ^1 ], wallEndLeft[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 0.0f, this.stationCentralPlatformSmoothFactor, true, false, this.platformFloorTexturing ).verticesStructure;
 
                 List<Vector3> yellowLineLeftUp = verticesStructure[ Orientation.Horizontal ][ verticesStructure[ Orientation.Horizontal ].Count - 1 ];
                 List<Vector3> yellowLineLeftDown = new();
                 foreach( Vector3 point in yellowLineLeftUp ) {
                     yellowLineLeftDown.Add( point + stationOrthoDir * this.stationCentralYellowLineWidth );
                 }
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Sinistra", yellowLineLeftUp, yellowLineLeftUp, yellowLineLeftDown, 0.0f, true, false, false, this.yellowLineTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Sinistra", yellowLineLeftUp, yellowLineLeftUp, yellowLineLeftDown, 0.0f, true, false, false, this.yellowLineTexturing, true );
 
                 List<Vector3> stationWallBaseLineLeft = new() { yellowLineLeftDown[ 0 ] + stationOrthoDir * this.stationWidth,
                                                                 yellowLineLeftDown[ ^1 ] + stationOrthoDir * this.stationWidth };
 
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Sinistra", yellowLineLeftDown, yellowLineLeftDown, stationWallBaseLineLeft, 0.0f, true, false, false, this.separatorGroundTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Sinistra", yellowLineLeftDown, yellowLineLeftDown, stationWallBaseLineLeft, 0.0f, true, false, false, this.separatorGroundTexturing, true );
 
                 List<MeshGenerator.ProceduralMesh> stationWallLeftMeshes = InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), stationWallBaseLineLeft, Side.Left, this.stationWallShapes, null, null, 0.0f, true, false, false, true, Vector2.zero );
 
@@ -1903,7 +1906,7 @@ public class MetroGenerator : MonoBehaviour
                 // Travi
                 List<Vector3> beamBaseLineLeft = new() { yellowLineLeftDown[ 0 ] + ( -Vector3.forward * this.beamPillarsHeight ) + ( stationOrthoDir * this.beamDistanceFromPlatform ) + ( stationDir.normalized * this.beamDistanceFromWall ),
                                                          yellowLineLeftDown[ yellowLineLeftDown.Count - 1 ] + ( -Vector3.forward * this.beamPillarsHeight ) + ( stationOrthoDir * this.beamDistanceFromPlatform ) + ( -stationDir.normalized * this.beamDistanceFromWall ) };
-                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Sinistra", beamBaseLineLeft, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexture, this.beamTextureTiling );
+                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Sinistra", beamBaseLineLeft, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexturing );
             
                 Vector3 beamDir = beamBaseLineLeft[ 1 ] - beamBaseLineLeft[ 0 ];
                 float distance = beamDir.magnitude / ( this.beamPillarsNumber + 1 );
@@ -1920,7 +1923,7 @@ public class MetroGenerator : MonoBehaviour
             }
             else {
                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), stationRails.centerL, Side.Left, this.tunnelWallShapes, null, null, 0.0f, true, false, true, false, Vector2.zero );
-                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), stationRails.centerL, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexture, this.tubeTextureTiling );
+                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), stationRails.centerL, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 0.0f, this.tubeSmoothFactor, true, false, this.tubeTexturing );
             }
 
             if( side == Side.BothLeftAndRight || side == Side.Right ) { 
@@ -1935,24 +1938,24 @@ public class MetroGenerator : MonoBehaviour
                 List<Vector3> tunnelWallEndRightFirstProfile = tunnelWallEndRight.verticesStructure[ Orientation.Vertical ][ 0 ];
                 tunnelWallEndRightFirstProfile.Reverse();
 
-                Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Destra", new List<Vector3>{ wallStartRight[ ^1 ], wallEndRight[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 180.0f, this.stationCentralPlatformSmoothFactor, false, false, this.platformFloorTexture, this.platformFloorTextureTiling ).verticesStructure;
+                Dictionary<Orientation, Dictionary<int, List<Vector3>>> verticesStructure = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Piattaforma - Destra", new List<Vector3>{ wallStartRight[ ^1 ], wallEndRight[ 0 ] }, this.stationCentralPlatformShape, null, this.stationCentralPlatformShapeScale, 0.0f, 0.0f, 180.0f, this.stationCentralPlatformSmoothFactor, false, false, this.platformFloorTexturing ).verticesStructure;
 
                 List<Vector3> yellowLineRightUp = verticesStructure[ Orientation.Horizontal ][ verticesStructure[ Orientation.Horizontal ].Count - 1 ];
                 List<Vector3> yellowLineRightDown = new();
                 foreach( Vector3 point in yellowLineRightUp ) {
                     yellowLineRightDown.Add( point - stationOrthoDir * this.stationCentralYellowLineWidth );
                 }
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Destra", yellowLineRightUp, yellowLineRightUp, yellowLineRightDown, 0.0f, false, false, false, this.yellowLineTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Linea Gialla - Destra", yellowLineRightUp, yellowLineRightUp, yellowLineRightDown, 0.0f, false, false, false, this.yellowLineTexturing, true );
 
                 List<Vector3> stationWallBaseLineRight = new() { yellowLineRightDown[ 0 ] - stationOrthoDir * this.stationWidth,
                                                                  yellowLineRightDown[ ^1 ] - stationOrthoDir * this.stationWidth };
 
-                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Destra", yellowLineRightDown, yellowLineRightDown, stationWallBaseLineRight, 0.0f, false, false, false, this.separatorGroundTexturing );
+                InstantiatePlane( sectionGameObj.transform, "Stazione - Pavimento - Destra", yellowLineRightDown, yellowLineRightDown, stationWallBaseLineRight, 0.0f, false, false, false, this.separatorGroundTexturing, true );
 
                 List<Vector3> stationWallStartRightFirstProfile = new();
                 List<Vector3> stationWallEndRightLastProfile = new();
                 for( int k = 0; k < this.stationWallShapes.Count; k++ ) { 
-                    MeshGenerator.ProceduralMesh partialWall = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Destra", stationWallBaseLineRight, this.stationWallShapes[ k ].partialProfile, null, this.stationWallShapeScale, 0.0f, 0.0f, 180.0f, this.stationWallSmoothFactor, false, false, this.centralStationPlatformWallTexture, this.centralStationPlatformWallTextureTiling );
+                    MeshGenerator.ProceduralMesh partialWall = InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Muro - Destra", stationWallBaseLineRight, this.stationWallShapes[ k ].partialProfile, null, this.stationWallShapeScale, 0.0f, 0.0f, 180.0f, this.stationWallSmoothFactor, false, false, this.centralStationPlatformWallTexturing );
                     stationWallBaseLineRight = partialWall.verticesStructure[ Orientation.Horizontal ][ partialWall.verticesStructure[ Orientation.Horizontal ].Count - 1 ];
 
                     if( k < this.stationWallShapes.Count - 1 ) {
@@ -1975,7 +1978,7 @@ public class MetroGenerator : MonoBehaviour
             
                 List<Vector3> beamBaseLineRight = new( ){ yellowLineRightDown[ 0 ]  + ( -Vector3.forward * this.beamPillarsHeight ) + ( -stationOrthoDir * this.beamDistanceFromPlatform ) + ( stationDir.normalized * this.beamDistanceFromWall ),
                                                             yellowLineRightDown[ yellowLineRightDown.Count - 1 ]  + ( -Vector3.forward * this.beamPillarsHeight ) + ( -stationOrthoDir * this.beamDistanceFromPlatform ) + ( -stationDir.normalized * this.beamDistanceFromWall ) };
-                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Destra", beamBaseLineRight, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexture, this.beamTextureTiling );
+                InstantiateExtrudedMesh( sectionGameObj.transform, "Stazione - Trave Soffitto - Destra", beamBaseLineRight, this.beamShape, null, this.beamShapeScale, 0.0f, 0.0f, 0.0f, this.beamSmoothFactor, true, false, this.beamTexturing );
 
                 Vector3 beamDir = beamBaseLineRight[ 1 ] - beamBaseLineRight[ 0 ];
                 float distance = beamDir.magnitude / ( this.beamPillarsNumber + 1 );
@@ -1992,7 +1995,7 @@ public class MetroGenerator : MonoBehaviour
             }
             else {
                 InstantiateComposedExtrudedMesh( section, MeshType.PerimeterWall, section.type.ToString(), stationRails.centerR, Side.Right, this.tunnelWallShapes, null, null, 180.0f, false, false, true, false, Vector2.zero );
-                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), stationRails.centerR, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexture, this.tubeTextureTiling );
+                InstantiateWallPipe( sectionGameObj.transform, section.type.ToString() + " - Tubo - " + Side.Right.ToString(), stationRails.centerR, tubeShape, null, this.tubeShapeScale, this.tubeHorPosCorrection, this.tubeVertPosCorrection, 180.0f, this.tubeSmoothFactor, false, false, this.tubeTexturing );
                 
             }
 
@@ -2002,7 +2005,7 @@ public class MetroGenerator : MonoBehaviour
         }
     }
 
-    private MeshGenerator.ProceduralMesh InstantiatePlane( Transform parentTransform, string gameObjName, List<Vector3> curve, List<Vector3> curveLeft, List<Vector3> curveRight, float verticalPosCorrection, bool clockwiseRotation, bool closeMesh, bool centerTexture, Utils.Texturing texturing ) {
+    private MeshGenerator.ProceduralMesh InstantiatePlane( Transform parentTransform, string gameObjName, List<Vector3> curve, List<Vector3> curveLeft, List<Vector3> curveRight, float verticalPosCorrection, bool clockwiseRotation, bool closeMesh, bool centerTexture, Utils.Texturing texturing, bool walkable ) {
         
         MeshGenerator.ProceduralMesh planarMesh = MeshGenerator.GeneratePlanarMesh( curve, MeshGenerator.ConvertListsToMatrix_2xM( curveLeft, curveRight ), clockwiseRotation, closeMesh, centerTexture, texturing.tiling );
         planarMesh.mesh.name = "Procedural Planar Mesh";
@@ -2014,11 +2017,16 @@ public class MetroGenerator : MonoBehaviour
         planarGameObj.AddComponent<MeshRenderer>();
         planarGameObj.GetComponent<MeshFilter>().sharedMesh = planarMesh.mesh;
         planarGameObj.GetComponent<MeshRenderer>().SetMaterials( texturing.materials );
+        if( walkable ) {
+            planarGameObj.layer = LayerMask.NameToLayer( "Walkable" );
+        }
+
+        planarMesh.gameObj = planarGameObj;
 
         return planarMesh;
     }
 
-    public static void InstantiatePoligon( Transform parentTransform, string gameObjName, List<Vector3> perimeter, bool clockwiseRotation, Vector3 normal, Vector3 textureDir, Vector2 textureOffset, Utils.Texturing texturing ) {
+    public static void InstantiatePoligon( Transform parentTransform, string gameObjName, List<Vector3> perimeter, bool clockwiseRotation, Vector3 normal, Vector3 textureDir, Vector2 textureOffset, Utils.Texturing texturing, bool walkable ) {
 
         Vector3 center = MeshGenerator.CalculatePoligonCenterPoint( perimeter );
         Mesh planarMesh = MeshGenerator.GenerateConvexPoligonalMesh( perimeter, center, clockwiseRotation, normal, textureDir, texturing.tiling, textureOffset );
@@ -2030,6 +2038,10 @@ public class MetroGenerator : MonoBehaviour
         planarGameObj.AddComponent<MeshRenderer>();
         planarGameObj.GetComponent<MeshFilter>().sharedMesh = planarMesh;
         planarGameObj.GetComponent<MeshRenderer>().SetMaterials( texturing.materials );
+
+        if( walkable ) {
+            planarGameObj.layer = LayerMask.NameToLayer( "Walkable" );
+        }
     }
 
     private MeshGenerator.ProceduralMesh InstantiateJointMesh( Transform parentTransform, string gameObjName, List<Vector3> points, Vector3 up, Vector3 right, bool clockwiseRotation, Utils.Texturing texturing ) {
@@ -2064,6 +2076,7 @@ public class MetroGenerator : MonoBehaviour
         planarGameObj.AddComponent<MeshRenderer>();
         planarGameObj.GetComponent<MeshFilter>().sharedMesh = planarMesh.mesh;
         planarGameObj.GetComponent<MeshRenderer>().SetMaterials( texturing.materials );
+        planarGameObj.layer = LayerMask.NameToLayer( "Walkable" );
 
         return planarMeshVertices;
     }
@@ -2129,15 +2142,15 @@ public class MetroGenerator : MonoBehaviour
         return newMeshes;
     }
 
-    private MeshGenerator.ProceduralMesh InstantiateExtrudedMesh( /*Orientation extrusionOrientation,*/ Transform parentTransform, string gameObjName, List<Vector3> baseLine, List<Vector3> profileShape, List<Vector3> previousProfileShape, 
-                                           float profileScale, float profileHorPositionCorrection, float profileVertPositionCorrection, float profileRotationCorrection, float profileSmoothFactor, 
-                                           bool clockwiseRotation, bool closeMesh, Material textureMaterial, Vector2 textureTiling ) {
+    public static MeshGenerator.ProceduralMesh InstantiateExtrudedMesh( /*Orientation extrusionOrientation,*/ Transform parentTransform, string gameObjName, List<Vector3> baseLine, List<Vector3> profileShape, List<Vector3> previousProfileShape, 
+                                                                        float profileScale, float profileHorPositionCorrection, float profileVertPositionCorrection, float profileRotationCorrection, float profileSmoothFactor, 
+                                                                        bool clockwiseRotation, bool closeMesh, Utils.Texturing texturing ) {
 
         if( previousProfileShape == null || previousProfileShape.Count == 0 ) {
             previousProfileShape = null;
         }
         
-        MeshGenerator.ProceduralMesh extrudedMesh = MeshGenerator.GenerateExtrudedMesh( /*extrusionOrientation,*/ profileShape, profileScale, previousProfileShape, baseLine, profileHorPositionCorrection, profileVertPositionCorrection, clockwiseRotation, closeMesh, textureTiling, new Vector2( 0.0f, 0.0f ), profileRotationCorrection, profileSmoothFactor );
+        MeshGenerator.ProceduralMesh extrudedMesh = MeshGenerator.GenerateExtrudedMesh( /*extrusionOrientation,*/ profileShape, profileScale, previousProfileShape, baseLine, profileHorPositionCorrection, profileVertPositionCorrection, clockwiseRotation, closeMesh, texturing.tiling, new Vector2( 0.0f, 0.0f ), profileRotationCorrection, profileSmoothFactor );
         extrudedMesh.mesh.name = "Procedural Extruded Mesh";
 
         GameObject extrudedGameObj = new( gameObjName );
@@ -2146,7 +2159,7 @@ public class MetroGenerator : MonoBehaviour
         extrudedGameObj.AddComponent<MeshFilter>();
         extrudedGameObj.AddComponent<MeshRenderer>();
         extrudedGameObj.GetComponent<MeshFilter>().sharedMesh = extrudedMesh.mesh;
-        extrudedGameObj.GetComponent<MeshRenderer>().material = textureMaterial;
+        extrudedGameObj.GetComponent<MeshRenderer>().SetMaterials( texturing.materials );
 
         extrudedMesh.gameObj = extrudedGameObj;
 
@@ -2156,7 +2169,7 @@ public class MetroGenerator : MonoBehaviour
     private void InstantiateGroundWires( Transform parentTransform, string gameObjName, int wiresNumber, GameObject fuseBoxPrefab, List<Vector3> baseLine, List<Vector3> profileShape, 
                                         float profileScale, float profileRotationCorrection, float profileSmoothFactor, 
                                         float minLenght, float maxLenght, float floating,
-                                        bool clockwiseRotation, bool closeMesh, Material textureMaterial, Vector2 textureTiling ) {
+                                        bool clockwiseRotation, bool closeMesh, Utils.Texturing texturing ) {
 
         List<Vector3>[] wiresBaseLines = new List<Vector3>[ wiresNumber ];
 
@@ -2193,14 +2206,14 @@ public class MetroGenerator : MonoBehaviour
         for( int i = 0; i < wiresNumber; i++ ) {
             wiresBaseLines[ i ].Add( baseLine[ baseLine.Count - 1 ] );
 
-            InstantiateExtrudedMesh( parentTransform, gameObjName, wiresBaseLines[ i ], profileShape, null, profileScale, 0.0f, 0.0f, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, textureMaterial, textureTiling );
+            InstantiateExtrudedMesh( parentTransform, gameObjName, wiresBaseLines[ i ], profileShape, null, profileScale, 0.0f, 0.0f, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, texturing );
         }
     }
 
     private void InstantiateGroundWires2( Transform parentTransform, string gameObjName, int wiresNumber, GameObject fuseBoxPrefab, List<Vector3> baseLine, List<Vector3> profileShape, 
                                         float profileScale, float profileRotationCorrection, float profileSmoothFactor, 
                                         int controlPointsNumber, int bezierPointsNumber, float floating,
-                                        bool clockwiseRotation, bool closeMesh, Material textureMaterial, Vector2 textureTiling ) {
+                                        bool clockwiseRotation, bool closeMesh, Utils.Texturing texturing ) {
         
         //List<Vector3>[] wiresControlPoints = new List<Vector3>[ wiresNumber ];
         List<Vector3>[] wiresBaseLines = new List<Vector3>[ wiresNumber ];
@@ -2241,13 +2254,13 @@ public class MetroGenerator : MonoBehaviour
         fuseBox.name = "Fuse Box";
 
         for( int k = 0; k < wiresNumber; k++ ) {
-            InstantiateExtrudedMesh( parentTransform, gameObjName, wiresBaseLines[ k ], profileShape, null, profileScale, 0.0f, 0.0f, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, textureMaterial, textureTiling );
+            InstantiateExtrudedMesh( parentTransform, gameObjName, wiresBaseLines[ k ], profileShape, null, profileScale, 0.0f, 0.0f, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, texturing );
         }
     }
 
     private void InstantiateWallWires( Transform parentTransform, string gameObjName, int wiresNumber, int bezierPoints, /*GameObject fuseBoxPrefab,*/ List<Vector3> baseLine, List<Vector3> profileShape, 
                                         float profileScale, float profileRotationCorrection, float profileHorPosCorrection, float profileVertPosCorrection, float profileSmoothFactor, 
-                                        float minLenght, float maxLenght, float floating, bool clockwiseRotation, bool closeMesh, Material textureMaterial, Vector2 textureTiling ) {
+                                        float minLenght, float maxLenght, float floating, bool clockwiseRotation, bool closeMesh, Utils.Texturing texturing ) {
         
         List<Vector3> wiresControlPoints = new();
         List<Vector3>[] wiresBaseLines = new List<Vector3>[ wiresNumber ];
@@ -2290,7 +2303,7 @@ public class MetroGenerator : MonoBehaviour
 
         for( int k = 0; k < wiresNumber; k++ ) {   
             if( wiresBaseLines[ k ].Count > 1 ) {
-                MeshGenerator.ProceduralMesh wire = InstantiateExtrudedMesh( parentTransform, gameObjName, wiresBaseLines[ k ], profileShape, null, profileScale, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, textureMaterial, textureTiling );
+                MeshGenerator.ProceduralMesh wire = InstantiateExtrudedMesh( parentTransform, gameObjName, wiresBaseLines[ k ], profileShape, null, profileScale, this.wallWireHorPosCorrection, this.wallWireVertPosCorrection, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, texturing );
             }
         }
     }
@@ -2298,25 +2311,27 @@ public class MetroGenerator : MonoBehaviour
 
     private MeshGenerator.ProceduralMesh InstantiateWallPipe( Transform parentTransform, string gameObjName, List<Vector3> baseLine, List<Vector3> profileShape, List<Vector3> previousProfileShape, 
                                               float profileScale, float profileHorPositionCorrection, float profileVertPositionCorrection, float profileRotationCorrection, float profileSmoothFactor, 
-                                              bool clockwiseRotation, bool closeMesh, Material textureMaterial, Vector2 textureTiling ) {
+                                              bool clockwiseRotation, bool closeMesh, Utils.Texturing texturing ) {
 
-        MeshGenerator.ProceduralMesh pipe = InstantiateExtrudedMesh( parentTransform, gameObjName, baseLine, profileShape, previousProfileShape, profileScale, profileHorPositionCorrection, profileVertPositionCorrection, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, textureMaterial, textureTiling );
+        MeshGenerator.ProceduralMesh pipe = InstantiateExtrudedMesh( parentTransform, gameObjName, baseLine, profileShape, previousProfileShape, profileScale, profileHorPositionCorrection, profileVertPositionCorrection, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, texturing );
 
         return pipe;
     }
 
     private List<Vector3> InstantiateRail( Transform parentTransform, string gameObjName, List<Vector3> baseLine, List<Vector3> profileShape, List<Vector3> previousProfileShape, 
                                            float profileScale, float profileHorPositionCorrection, float profileRotationCorrection, float profileSmoothFactor, 
-                                           bool clockwiseRotation, bool closeMesh, Material textureMaterial, Vector2 textureTiling,
+                                           bool clockwiseRotation, bool closeMesh, Utils.Texturing texturing,
                                            LineSection section, SwitchDirection? switchDirection ) {
 
-        MeshGenerator.ProceduralMesh rail = InstantiateExtrudedMesh( parentTransform, gameObjName, baseLine, profileShape, previousProfileShape, profileScale, profileHorPositionCorrection, 0.0f, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, textureMaterial, textureTiling );
+        MeshGenerator.ProceduralMesh rail = InstantiateExtrudedMesh( parentTransform, gameObjName, baseLine, profileShape, previousProfileShape, profileScale, profileHorPositionCorrection, 0.0f, profileRotationCorrection, profileSmoothFactor, clockwiseRotation, closeMesh, texturing );
 
         if( section != null && section.type == Type.Switch && switchDirection != null ) {
             
             rail.gameObj.AddComponent<RailHighlighter>();
             rail.gameObj.GetComponent<RailHighlighter>().section = section;
             rail.gameObj.GetComponent<RailHighlighter>().direction = ( SwitchDirection )switchDirection;
+
+            this.switchRails.Add( rail.gameObj );
         }
 
         return rail.lastProfileVertex;
@@ -2960,7 +2975,7 @@ public class MetroGenerator : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if( lineGizmos ) {
+        if( lineGizmos && this.ready ) {
             foreach( string lineName in this.lines.Keys ) {
 
                 foreach( LineSection segment in this.lines[ lineName ] ) {
@@ -3034,217 +3049,217 @@ public class MetroGenerator : MonoBehaviour
                     }
                 }
             }   
-        }
 
-        foreach( string line in lines.Keys ) {
+            foreach( string line in lines.Keys ) {
 
-            foreach( LineSection segment in lines[ line ] ) {
+                foreach( LineSection segment in lines[ line ] ) {
 
-                if(  segment.type == Type.Switch ) {
+                    if(  segment.type == Type.Switch ) {
 
-                    if( segment.switchType == SwitchType.BiToBi ) {
-                        for( int i = 0; i < segment.floorPoints.leftLine.Count; i++ ) {
-                            
-                            if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.LeftToLeft ) {
-                                    Gizmos.color = Color.green;
-                                }
-                                else {
-                                    Gizmos.color = Color.yellow;
-                                }
-                                Gizmos.DrawLine( segment.floorPoints.leftLine[ i - 1 ], segment.floorPoints.leftLine[ i ] );
-
-                                if( segment.activeSwitch == SwitchDirection.RightToRight ) {
-                                    Gizmos.color = Color.green;
-                                }
-                                else {
-                                    Gizmos.color = Color.blue;
-                                }
-                                Gizmos.DrawLine( segment.floorPoints.rightLine[ i - 1 ], segment.floorPoints.rightLine[ i ] );
-                            }
-                        }
-                        for( int i = 0; i < segment.floorPoints.leftRightLine.Count; i++ ) {
-                            
-                            if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.LeftToRight ) {
-                                    Gizmos.color = Color.green;
-                                }
-                                else {
-                                    Gizmos.color = Color.yellow;
-                                }
-                                Gizmos.DrawLine( segment.floorPoints.leftRightLine[ i - 1 ], segment.floorPoints.leftRightLine[ i ] );
-                                if( segment.activeSwitch == SwitchDirection.RightToLeft ) {
-                                    Gizmos.color = Color.green;
-                                }
-                                else {
-                                    Gizmos.color = Color.blue;
-                                }
-                                Gizmos.DrawLine( segment.floorPoints.rightLeftLine[ i - 1 ], segment.floorPoints.rightLeftLine[ i ] );
-                            }
-                        }
-                    }
-                    else if( segment.switchType == SwitchType.BiToMono || segment.switchType == SwitchType.MonoToBi ) {
-                        for( int i = 0; i < segment.floorPoints.leftCenterLine.Count; i++ ) {
-                            if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.LeftToCenter ) {
-                                    Gizmos.color = Color.green;
-                                }
-                                else {
-                                    Gizmos.color = Color.yellow;
-                                }
-                                Gizmos.DrawLine( segment.floorPoints.leftCenterLine[ i - 1 ], segment.floorPoints.leftCenterLine[ i ] );
-                            }
-                        }
-                        for( int i = 0; i < segment.floorPoints.rightCenterLine.Count; i++ ) {
-                            if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.RightToCenter ) {
-                                    Gizmos.color = Color.green;
-                                }
-                                else {
-                                    Gizmos.color = Color.blue;
-                                }
-                                Gizmos.DrawLine( segment.floorPoints.rightCenterLine[ i - 1 ], segment.floorPoints.rightCenterLine[ i ] );
-                            }
-                        }
-                    }
-
-                    if( segment.switchType == SwitchType.MonoToNewMono ) {
-                        for( int i = 0; i < segment.floorPoints.centerLine.Count; i++ ) {
-                            if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.CenterToCenter ) {
-                                    Gizmos.color = Color.green;
-                                }
-                                else {
-                                    Gizmos.color = Color.yellow;
-                                }
-                                Gizmos.DrawLine( segment.floorPoints.centerLine[ i - 1 ], segment.floorPoints.centerLine[ i ] );
-                            }
-                        }
-                        if( segment.floorPoints.centerEntranceLeft != null ) {
-                            for( int i = 0; i < segment.floorPoints.centerEntranceLeft.Count; i++ ) {
+                        if( segment.switchType == SwitchType.BiToBi ) {
+                            for( int i = 0; i < segment.floorPoints.leftLine.Count; i++ ) {
+                                
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
+                                    if( segment.activeSwitch == SwitchDirection.LeftToLeft ) {
+                                        Gizmos.color = Color.green;
+                                    }
+                                    else {
+                                        Gizmos.color = Color.yellow;
+                                    }
+                                    Gizmos.DrawLine( segment.floorPoints.leftLine[ i - 1 ], segment.floorPoints.leftLine[ i ] );
+
+                                    if( segment.activeSwitch == SwitchDirection.RightToRight ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
                                         Gizmos.color = Color.blue;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.centerEntranceLeft[ i - 1 ], segment.floorPoints.centerEntranceLeft[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.rightLine[ i - 1 ], segment.floorPoints.rightLine[ i ] );
                                 }
                             }
-                        }
-                        if( segment.floorPoints.centerEntranceRight != null ) {
-                            for( int i = 0; i < segment.floorPoints.centerEntranceRight.Count; i++ ) {
+                            for( int i = 0; i < segment.floorPoints.leftRightLine.Count; i++ ) {
+                                
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.CenterToEntranceRight ) {
+                                    if( segment.activeSwitch == SwitchDirection.LeftToRight ) {
+                                        Gizmos.color = Color.green;
+                                    }
+                                    else {
+                                        Gizmos.color = Color.yellow;
+                                    }
+                                    Gizmos.DrawLine( segment.floorPoints.leftRightLine[ i - 1 ], segment.floorPoints.leftRightLine[ i ] );
+                                    if( segment.activeSwitch == SwitchDirection.RightToLeft ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
                                         Gizmos.color = Color.blue;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.centerEntranceRight[ i - 1 ], segment.floorPoints.centerEntranceRight[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.rightLeftLine[ i - 1 ], segment.floorPoints.rightLeftLine[ i ] );
                                 }
                             }
                         }
-                        if( segment.floorPoints.centerExitLeft != null ) {
-                            for( int i = 0; i < segment.floorPoints.centerExitLeft.Count; i++ ) {
+                        else if( segment.switchType == SwitchType.BiToMono || segment.switchType == SwitchType.MonoToBi ) {
+                            for( int i = 0; i < segment.floorPoints.leftCenterLine.Count; i++ ) {
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.CenterToExitLeft ) {
+                                    if( segment.activeSwitch == SwitchDirection.LeftToCenter ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
-                                        Gizmos.color = Color.red;
+                                        Gizmos.color = Color.yellow;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.centerExitLeft[ i - 1 ], segment.floorPoints.centerExitLeft[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.leftCenterLine[ i - 1 ], segment.floorPoints.leftCenterLine[ i ] );
                                 }
                             }
-                        }
-                        if( segment.floorPoints.centerExitRight != null ) {
-                            for( int i = 0; i < segment.floorPoints.centerExitRight.Count; i++ ) {
+                            for( int i = 0; i < segment.floorPoints.rightCenterLine.Count; i++ ) {
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.CenterToExitRight ) {
-                                        Gizmos.color = Color.green;
-                                    }
-                                    else {
-                                        Gizmos.color = Color.red;
-                                    }
-                                    Gizmos.DrawLine( segment.floorPoints.centerExitRight[ i - 1 ], segment.floorPoints.centerExitRight[ i ] );
-                                }
-                            }
-                        }
-                    }
-                    else if( segment.switchType == SwitchType.BiToNewBi ) {
-                        for( int i = 0; i < segment.floorPoints.leftLine.Count; i++ ) {
-                            if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.LeftToLeft ) {
-                                    Gizmos.color = Color.green;
-                                }
-                                else {
-                                    Gizmos.color = Color.yellow;
-                                }
-                                Gizmos.DrawLine( segment.floorPoints.leftLine[ i - 1 ], segment.floorPoints.leftLine[ i ] );
-                            }
-                        }
-                        for( int i = 0; i < segment.floorPoints.rightLine.Count; i++ ) {
-                            if( i > 0 ) {
-                                if( segment.activeSwitch == SwitchDirection.RightToRight ) {
-                                    Gizmos.color = Color.green;
-                                }
-                                else {
-                                    Gizmos.color = Color.yellow;
-                                }
-                                Gizmos.DrawLine( segment.floorPoints.rightLine[ i - 1 ], segment.floorPoints.rightLine[ i ] );
-                            }
-                        }
-                        if( segment.floorPoints.leftEntranceLeft != null ) {
-                            for( int i = 0; i < segment.floorPoints.leftEntranceLeft.Count; i++ ) {
-                                if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.LeftToEntranceLeft ) {
+                                    if( segment.activeSwitch == SwitchDirection.RightToCenter ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
                                         Gizmos.color = Color.blue;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.leftEntranceLeft[ i - 1 ], segment.floorPoints.leftEntranceLeft[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.rightCenterLine[ i - 1 ], segment.floorPoints.rightCenterLine[ i ] );
                                 }
                             }
                         }
-                        if( segment.floorPoints.rightEntranceRight != null ) {
-                            for( int i = 0; i < segment.floorPoints.rightEntranceRight.Count; i++ ) {
+
+                        if( segment.switchType == SwitchType.MonoToNewMono ) {
+                            for( int i = 0; i < segment.floorPoints.centerLine.Count; i++ ) {
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.RightToEntranceRight ) {
+                                    if( segment.activeSwitch == SwitchDirection.CenterToCenter ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
-                                        Gizmos.color = Color.blue;
+                                        Gizmos.color = Color.yellow;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.rightEntranceRight[ i - 1 ], segment.floorPoints.rightEntranceRight[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.centerLine[ i - 1 ], segment.floorPoints.centerLine[ i ] );
+                                }
+                            }
+                            if( segment.floorPoints.centerEntranceLeft != null ) {
+                                for( int i = 0; i < segment.floorPoints.centerEntranceLeft.Count; i++ ) {
+                                    if( i > 0 ) {
+                                        if( segment.activeSwitch == SwitchDirection.CenterToEntranceLeft ) {
+                                            Gizmos.color = Color.green;
+                                        }
+                                        else {
+                                            Gizmos.color = Color.blue;
+                                        }
+                                        Gizmos.DrawLine( segment.floorPoints.centerEntranceLeft[ i - 1 ], segment.floorPoints.centerEntranceLeft[ i ] );
+                                    }
+                                }
+                            }
+                            if( segment.floorPoints.centerEntranceRight != null ) {
+                                for( int i = 0; i < segment.floorPoints.centerEntranceRight.Count; i++ ) {
+                                    if( i > 0 ) {
+                                        if( segment.activeSwitch == SwitchDirection.CenterToEntranceRight ) {
+                                            Gizmos.color = Color.green;
+                                        }
+                                        else {
+                                            Gizmos.color = Color.blue;
+                                        }
+                                        Gizmos.DrawLine( segment.floorPoints.centerEntranceRight[ i - 1 ], segment.floorPoints.centerEntranceRight[ i ] );
+                                    }
+                                }
+                            }
+                            if( segment.floorPoints.centerExitLeft != null ) {
+                                for( int i = 0; i < segment.floorPoints.centerExitLeft.Count; i++ ) {
+                                    if( i > 0 ) {
+                                        if( segment.activeSwitch == SwitchDirection.CenterToExitLeft ) {
+                                            Gizmos.color = Color.green;
+                                        }
+                                        else {
+                                            Gizmos.color = Color.red;
+                                        }
+                                        Gizmos.DrawLine( segment.floorPoints.centerExitLeft[ i - 1 ], segment.floorPoints.centerExitLeft[ i ] );
+                                    }
+                                }
+                            }
+                            if( segment.floorPoints.centerExitRight != null ) {
+                                for( int i = 0; i < segment.floorPoints.centerExitRight.Count; i++ ) {
+                                    if( i > 0 ) {
+                                        if( segment.activeSwitch == SwitchDirection.CenterToExitRight ) {
+                                            Gizmos.color = Color.green;
+                                        }
+                                        else {
+                                            Gizmos.color = Color.red;
+                                        }
+                                        Gizmos.DrawLine( segment.floorPoints.centerExitRight[ i - 1 ], segment.floorPoints.centerExitRight[ i ] );
+                                    }
                                 }
                             }
                         }
-                        if( segment.floorPoints.leftExitLeft != null ) {
-                            for( int i = 0; i < segment.floorPoints.leftExitLeft.Count; i++ ) {
+                        else if( segment.switchType == SwitchType.BiToNewBi ) {
+                            for( int i = 0; i < segment.floorPoints.leftLine.Count; i++ ) {
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.LeftToExitLeft ) {
+                                    if( segment.activeSwitch == SwitchDirection.LeftToLeft ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
-                                        Gizmos.color = Color.red;
+                                        Gizmos.color = Color.yellow;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.leftExitLeft[ i - 1 ], segment.floorPoints.leftExitLeft[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.leftLine[ i - 1 ], segment.floorPoints.leftLine[ i ] );
                                 }
                             }
-                        }
-                        if( segment.floorPoints.rightExitRight != null ) {
-                            for( int i = 0; i < segment.floorPoints.rightExitRight.Count; i++ ) {
+                            for( int i = 0; i < segment.floorPoints.rightLine.Count; i++ ) {
                                 if( i > 0 ) {
-                                    if( segment.activeSwitch == SwitchDirection.RightToExitRight ) {
+                                    if( segment.activeSwitch == SwitchDirection.RightToRight ) {
                                         Gizmos.color = Color.green;
                                     }
                                     else {
-                                        Gizmos.color = Color.red;
+                                        Gizmos.color = Color.yellow;
                                     }
-                                    Gizmos.DrawLine( segment.floorPoints.rightExitRight[ i - 1 ], segment.floorPoints.rightExitRight[ i ] );
+                                    Gizmos.DrawLine( segment.floorPoints.rightLine[ i - 1 ], segment.floorPoints.rightLine[ i ] );
+                                }
+                            }
+                            if( segment.floorPoints.leftEntranceLeft != null ) {
+                                for( int i = 0; i < segment.floorPoints.leftEntranceLeft.Count; i++ ) {
+                                    if( i > 0 ) {
+                                        if( segment.activeSwitch == SwitchDirection.LeftToEntranceLeft ) {
+                                            Gizmos.color = Color.green;
+                                        }
+                                        else {
+                                            Gizmos.color = Color.blue;
+                                        }
+                                        Gizmos.DrawLine( segment.floorPoints.leftEntranceLeft[ i - 1 ], segment.floorPoints.leftEntranceLeft[ i ] );
+                                    }
+                                }
+                            }
+                            if( segment.floorPoints.rightEntranceRight != null ) {
+                                for( int i = 0; i < segment.floorPoints.rightEntranceRight.Count; i++ ) {
+                                    if( i > 0 ) {
+                                        if( segment.activeSwitch == SwitchDirection.RightToEntranceRight ) {
+                                            Gizmos.color = Color.green;
+                                        }
+                                        else {
+                                            Gizmos.color = Color.blue;
+                                        }
+                                        Gizmos.DrawLine( segment.floorPoints.rightEntranceRight[ i - 1 ], segment.floorPoints.rightEntranceRight[ i ] );
+                                    }
+                                }
+                            }
+                            if( segment.floorPoints.leftExitLeft != null ) {
+                                for( int i = 0; i < segment.floorPoints.leftExitLeft.Count; i++ ) {
+                                    if( i > 0 ) {
+                                        if( segment.activeSwitch == SwitchDirection.LeftToExitLeft ) {
+                                            Gizmos.color = Color.green;
+                                        }
+                                        else {
+                                            Gizmos.color = Color.red;
+                                        }
+                                        Gizmos.DrawLine( segment.floorPoints.leftExitLeft[ i - 1 ], segment.floorPoints.leftExitLeft[ i ] );
+                                    }
+                                }
+                            }
+                            if( segment.floorPoints.rightExitRight != null ) {
+                                for( int i = 0; i < segment.floorPoints.rightExitRight.Count; i++ ) {
+                                    if( i > 0 ) {
+                                        if( segment.activeSwitch == SwitchDirection.RightToExitRight ) {
+                                            Gizmos.color = Color.green;
+                                        }
+                                        else {
+                                            Gizmos.color = Color.red;
+                                        }
+                                        Gizmos.DrawLine( segment.floorPoints.rightExitRight[ i - 1 ], segment.floorPoints.rightExitRight[ i ] );
+                                    }
                                 }
                             }
                         }

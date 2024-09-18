@@ -28,67 +28,85 @@ public class CameraController : MonoBehaviour
     float smoothDelta = 0.0f;
     Vector3 prevPos = Vector3.zero;
 
-    void Start() {
-        Camera thisCamera = this.GetComponent<Camera>();
-        if( thisCamera.orthographic ) {
+    private bool ignoreInputs = false;
+
+    public bool ready = false;
+
+    // void Start() {
+    //     Camera thisCamera = this.GetComponent<Camera>();
+    //     if( thisCamera.orthographic ) {
             
-            thisCamera.orthographicSize = orthographicMinSize;
-        }
-    }
+    //         thisCamera.orthographicSize = orthographicMinSize;
+    //     }
+    // }
+
+
+    public void UpdateCamera( Vector3 pos, Transform target ) {
+        this.transform.position = pos;
+        this.transform.LookAt( target, -Vector3.forward );
+    } 
 
     void LateUpdate() {
 
-        if(Input.GetKey( KeyCode.Escape ) || Input.GetButton( "A" ) )
-        {
-            Application.Quit();
+        if( this.ready ) {
+
+            if( Input.GetKey( KeyCode.Escape ) || Input.GetButton( "A" ) )
+            {
+                Application.Quit();
+            }
+            
+            if( train == null ) {
+                train = GameObject.Find( "Train" );
+            }
+            else {
+
+                if( Input.GetKey( KeyCode.Q ) ) {
+                    rotation.z -= horizontalButtonRotationSpeed * Time.deltaTime;
+                    //rotation.z = rotation.z - ( ( int )( rotation.z / 360.0f ) * 360.0f );
+                }
+                else if( Input.GetKey( KeyCode.E ) ) {
+                    rotation.z += horizontalButtonRotationSpeed * Time.deltaTime;
+                    //rotation.z = rotation.z + ( ( int )( rotation.z / 360.0f ) * 360.0f );
+                }
+
+                if( !this.ignoreInputs && ( Mathf.Abs( Input.GetAxis( "Horizontal" ) ) > horizontalAxisDeadZone ) && !Input.GetKey( KeyCode.A ) && !Input.GetKey( KeyCode.D ) ) {
+                    rotation.z += horizontalAxisRotationSpeed * Input.GetAxis( "Horizontal" ) * Time.deltaTime;
+                    //rotation.z = rotation.z - ( ( int )( rotation.z / 360.0f ) * 360.0f );
+                }
+
+                newPos = train.transform.position + Quaternion.Euler( rotation.x, rotation.y, rotation.z ) * ( offset + -Vector3.forward );
+
+                //this.transform.position = Vector3.SmoothDamp( this.transform.position, newPos, ref velocity, smoothTime );
+                UpdateCamera( newPos, train.transform );
+
+                prevPos = newPos;
+
+                Camera thisCamera = this.GetComponent<Camera>();
+                if( thisCamera.orthographic ) {
+                    
+                    TrainController trainController = train.GetComponent<TrainController>();
+
+                    float speedPercent = Mathf.Abs( trainController.speed ) / trainController.maxSpeed;
+                    float zoomPercent = this.zoomCurve.Evaluate( speedPercent );
+
+                    thisCamera.orthographicSize = orthographicMinSize + ( orthographicMaxSize - orthographicMinSize ) * zoomPercent;
+                }
+            }
         }
-        
-        if( train == null ) {
-            train = GameObject.Find( "Train" );
-        }
-        else {
-
-            if( Input.GetKey( KeyCode.Q ) ) {
-                rotation.z -= horizontalButtonRotationSpeed * Time.deltaTime;
-                //rotation.z = rotation.z - ( ( int )( rotation.z / 360.0f ) * 360.0f );
-            }
-            else if( Input.GetKey( KeyCode.E ) ) {
-                rotation.z += horizontalButtonRotationSpeed * Time.deltaTime;
-                //rotation.z = rotation.z + ( ( int )( rotation.z / 360.0f ) * 360.0f );
-            }
-
-            if( ( Mathf.Abs( Input.GetAxis( "Horizontal" ) ) > horizontalAxisDeadZone ) && !Input.GetKey( KeyCode.A ) && !Input.GetKey( KeyCode.D ) ) {
-                rotation.z += horizontalAxisRotationSpeed * Input.GetAxis( "Horizontal" ) * Time.deltaTime;
-                //rotation.z = rotation.z - ( ( int )( rotation.z / 360.0f ) * 360.0f );
-            }
-
-            newPos = train.transform.position + Quaternion.Euler( rotation.x, rotation.y, rotation.z ) * ( offset + -Vector3.forward );
-
-            this.transform.position = Vector3.SmoothDamp( this.transform.position, newPos, ref velocity, smoothTime );
-            //this.transform.position = newPos;
-            this.transform.LookAt( train.transform, -Vector3.forward );
-
-            prevPos = newPos;
-
-            Camera thisCamera = this.GetComponent<Camera>();
-            if( thisCamera.orthographic ) {
-                
-                TrainController trainController = train.GetComponent<TrainController>();
-
-                float speedPercent = Mathf.Abs( trainController.speed ) / trainController.maxSpeed;
-                float zoomPercent = this.zoomCurve.Evaluate( speedPercent );
-
-                thisCamera.orthographicSize = orthographicMinSize + ( orthographicMaxSize - orthographicMinSize ) * zoomPercent;
-            }
-        }
-
     }
 
-    private void OnDrawGizmos() { 
-        Gizmos.color = Color.green;
-        Gizmos.DrawLine( this.transform.position, train.transform.position );
-        Gizmos.color = Color.red;
-        Gizmos.DrawLine( newPos, train.transform.position );
-        Gizmos.DrawSphere( newPos, smoothDelta );
-    }
+    public void IgnoreInputs( bool ignore ) {
+        this.ignoreInputs = ignore;
+    } 
+
+
+    // private void OnDrawGizmos() { 
+    //     if( this.ready ) {
+    //         Gizmos.color = Color.green;
+    //         Gizmos.DrawLine( this.transform.position, train.transform.position );
+    //         Gizmos.color = Color.red;
+    //         Gizmos.DrawLine( newPos, train.transform.position );
+    //         Gizmos.DrawSphere( newPos, smoothDelta );
+    //     }
+    // }
 }
